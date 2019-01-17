@@ -11,6 +11,7 @@ export, __all__ = strax.exporter()
 @export
 def pax_to_records(input_filename,
                    samples_per_record=strax.DEFAULT_RECORD_LENGTH,
+                   digitizer_sample_length=2,
                    events_per_chunk=10):
     """Return pulse records array from pax zip input_filename
 
@@ -63,12 +64,12 @@ def pax_to_records(input_filename,
             for rec_i in range(n_records):
                 r = records[output_record_index]
                 r['time'] = (event.start_time
-                             + p.left * 10
-                             + rec_i * samples_per_record * 10)
+                             + p.left * digitizer_sample_length
+                             + rec_i * samples_per_record * digitizer_sample_length)
                 r['channel'] = p.channel
                 r['pulse_length'] = p.length
                 r['record_i'] = rec_i
-                r['dt'] = 10
+                r['dt'] = digitizer_sample_length
 
                 # How much are we storing in this record?
                 if rec_i != n_records - 1:
@@ -105,7 +106,9 @@ def pax_to_records(input_filename,
     strax.Option('stop_after_zips', default=0, track=False,
                  help="Convert only this many zip files. 0 = all."),
     strax.Option('events_per_chunk', default=50, track=False,
-                 help="Number of events to yield per chunk")
+                 help="Number of events to yield per chunk"),
+    strax.Option('tpc_name', default='XAMS', track=False,
+                 help="Name of your detector"),
 )
 class RecordsFromPax(strax.Plugin):
     provides = 'raw_records'
@@ -119,7 +122,7 @@ class RecordsFromPax(strax.Plugin):
         if not os.path.exists(self.config['pax_raw_dir']):
             raise FileNotFoundError(self.config['pax_raw_dir'])
         input_dir = os.path.join(self.config['pax_raw_dir'], self.run_id)
-        pax_files = sorted(glob.glob(input_dir + '/XENON*.zip'))
+        pax_files = sorted(glob.glob(f'{input_dir}/{self.config["tpc_name"]}*.zip'))
         pax_sizes = np.array([os.path.getsize(x)
                               for x in pax_files])
         print(f"Found {len(pax_files)} files, {pax_sizes.sum() / 1e9:.2f} GB")
