@@ -14,11 +14,6 @@ import strax
 
 export, __all__ = strax.exporter()
 
-# Convert an integer into full bitstring
-# get_bin = lambda x, n: format(x, 'b').zfill(n)
-def get_bin(x, n):
-    return format(x, 'b').zfill(n)
-
 @numba.jit(nopython=True, nogil=True, cache=True)
 def decode_control_word(n0, n1):
     '''
@@ -45,40 +40,78 @@ def decode_control_word(n0, n1):
     return is_zle, n_samples
 
 @numba.jit(nopython=True, nogil=True, cache=True)
-def split_data(d, zle=True, invert=True):
+def find_pulse_locations(d, zle=True):
     '''
-    Read data from doc and split it into list of ZLE chunks (i.e. pulses) and their offset
-    If ZLE is off, this will just pass a list with one element (i.e. one big pulse) and a list with offset zero.
+    Reads ZLE data control words and returns a list with the pulse start samples and the pulse lenght.
     '''
-
+    
     if not zle:
-        # There is just one giant pulse here
-        return [d], [0]
+        # If no ZLE: the whole waveform is a single pulse (trivial)
+        return [0], [len(d)]
+    # Skip first word for unknown reason
+    # probably encodes length of entire pulse
+    
+    pulse_start_samples = []
+    pulse_lengths = []
+    
+    i = 2
     sample_index = 0
-    i = 2  # Skip the first control word for unknown reason
-    pulses = []
-    pulses_start_samples = []
-    while i < len(d):
-        is_zle, n_samples = decode_control_word(d[i], d[i+1])      
-        if is_zle:
-            sample_index += n_samples
-        else:
-            if invert:
-                pulses.append(-d[i + 2:i + 2 + n_samples])
-            else:
-                pulses.append(d[i + 2:i + 2 + n_samples])
-            pulses_start_samples.append(sample_index)
-            sample_index += n_samples
+    while i< len(d):
+        is_zle, n_samples = decode_control_word(d[i], d[i+1]) 
+        if not is_zle:
+            pulse_start_samples.append(i + 2)
+            pulse_lengths.append(n_samples)
             i += n_samples
-        i += 2
-    return pulses, pulses_start_samples
+        sample_index += n_samples    
+        i += 2 # move to next control word
+    return pulse_start_samples, pulse_lengths
+
+@numba.jit(nopython=True, nogil=True, cache=True)
+def fill_records(records, d, pulse_start_samples, pulse_lengths, n_records_list, time_offset, samples_per_record, invert, dt):
+    ''' Fill the record array with record-by-record data for the pulses in d
+    '''
+    output_record_index = 0  # Record offset in data
+    for start, length, n_records in zip(pulse_start_samples, pulse_lengths, n_records_list):
+        for rec_i in range(n_records):
+            r = records[output_record_index]
+            r['time'] = (time_offset
+                         + start * dt # TODO remove hard coding here
+                         + rec_i * samples_per_record * dt)
+            r['pulse_length'] = length
+            r['record_i'] = rec_i
+
+
+            # How much are we storing in this record?
+            if rec_i != n_records - 1:
+                # There's more chunks coming, so we store a full chunk
+                n_store = samples_per_record
+                assert length > samples_per_record * (rec_i + 1)
+            else:
+                # Just enough to store the rest of the data
+                # Note it's not p.length % samples_per_record!!!
+                # (that would be zero if we have to store a full record)
+                n_store = length - samples_per_record * rec_i
+
+            assert 0 <= n_store <= samples_per_record
+            r['length'] = n_store
+
+            offset = rec_i * samples_per_record + start
+            if invert:
+                r['data'][:n_store] = - d[offset:offset + n_store]
+            else:
+                r['data'][:n_store] = d[offset:offset + n_store]
+            output_record_index += 1
+    return records
 
 
 @export
-#@numba.jit(nopython=True, nogil=True, cache=True)
+# @numba.jit(nopython=True, nogil=True, cache=True)
 def mongo_to_records(collection_name,
                      samples_per_record=strax.DEFAULT_RECORD_LENGTH,
-                     events_per_chunk=10):
+                     events_per_chunk=1000,
+                     invert_channels = [8,9,10,11,12,13,14,15],
+                     zle_channels = [8,9,10,11,12,13,14,15],
+                    ):
     """Return pulse records array from mongo database
     """
 
@@ -102,57 +135,44 @@ def mongo_to_records(collection_name,
 
     for doc in cursor:
         d = np.frombuffer(snappy.decompress(doc['data']), dtype='<i2')
-        pulses, pulses_start_samples = split_data(d, zle=True, invert=True)  # todo remove hard coding
-        pulse_lengths = np.array([len(pulse) for pulse in pulses])
-
-        n_records_tot = strax.records_needed(pulse_lengths,
-                                             samples_per_record).sum()
+        
+        # Extract channel- or digitizer-dependent properties
+        channel = doc['channel'] + int(doc['module'] == 1724) * 8
+        zle = True if channel in zle_channels else False
+        invert = True if channel in invert_channels else False
+        dt = 10 if doc['module'] == 1724 else 2
+        
+        # get arrays containing the pulse-by-pulse properties
+        pulse_start_samples, pulse_lengths = find_pulse_locations(d, zle=zle)
+        n_records_list = strax.records_needed(np.array(pulse_lengths),
+                                             samples_per_record)
+        # Build record array for this document data
+        n_records_tot = n_records_list.sum()
         records = np.zeros(n_records_tot,
                            dtype=strax.record_dtype(samples_per_record))
-        output_record_index = 0  # Record offset in data
-
-        for p, p_start in zip(pulses, pulses_start_samples):
-            n_records = strax.records_needed(len(p), samples_per_record)
-
-            for rec_i in range(n_records):
-                r = records[output_record_index]
-                r['time'] = (doc['time']
-                             + p_start * 10
-                             + rec_i * samples_per_record * 10)
-                r['channel'] = doc['channel'] + int(doc['module'] == 1724) * 8  # add 8 channels for V1724
-                r['pulse_length'] = len(p)
-                r['record_i'] = rec_i
-                r['dt'] = 10
-
-                # How much are we storing in this record?
-                if rec_i != n_records - 1:
-                    # There's more chunks coming, so we store a full chunk
-                    n_store = samples_per_record
-                    assert len(p) > samples_per_record * (rec_i + 1)
-                else:
-                    # Just enough to store the rest of the data
-                    # Note it's not p.length % samples_per_record!!!
-                    # (that would be zero if we have to store a full record)
-                    n_store = len(p) - samples_per_record * rec_i
-
-                assert 0 <= n_store <= samples_per_record
-                r['length'] = n_store
-
-                offset = rec_i * samples_per_record
-                r['data'][:n_store] = p[offset:offset + n_store]
-                output_record_index += 1
-
+        # These are the same for this whole pulse
+        records['channel'] = channel
+        records['dt'] = dt
+        
+        # Heavy lifting in jit-ed loop
+        records = fill_records(records, d, pulse_start_samples, pulse_lengths, n_records_list, 
+                               doc['time'], samples_per_record, invert, dt)
         results.append(records)
         if len(results) >= events_per_chunk:
             yield finish_results()
+
 
 
 @export
 @strax.takes_config(
     strax.Option('collection_name', default='', track=False,
                  help="Collection used, example: '190124_110558'"),
-    strax.Option('events_per_chunk', default=50, track=False,
-                 help="Number of events to yield per chunk"),
+    strax.Option('events_per_chunk', default=1000, track=False,
+                 help="Number of events to yield per chunk",),
+    strax.Option('invert_channels', default=[8, 9, 10, 11, 12, 13, 14, 15], track=False,
+                 help="List containing the channel numbers to invert",),
+    strax.Option('zle_channels', default=[8, 9, 10, 11, 12, 13, 14, 15], track=False,
+                 help="List containing the channel numbers that have ZLE enabled",),
 )
 class RecordsFromMongo(strax.Plugin):
     provides = 'raw_records'
@@ -165,7 +185,9 @@ class RecordsFromMongo(strax.Plugin):
     def iter(self, *args, **kwargs):
             yield from mongo_to_records(
                 self.config['collection_name'],
-                events_per_chunk=self.config['events_per_chunk']
+                events_per_chunk=self.config['events_per_chunk'],
+                invert_channels = self.config['invert_channels'],
+                zle_channels = self.config['zle_channels']
 
 )
 
