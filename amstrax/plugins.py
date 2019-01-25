@@ -143,7 +143,8 @@ class Records(strax.Plugin):
     strax.Option('min_hits', default=2,
                  help="Minimum number of hits to make a peak"),
     strax.Option('diagnose_sorting', track=False, default=False,
-                 help="Enable runtime checks for sorting and disjointness"))
+                 help="Enable runtime checks for sorting and disjointness"),
+    strax.Option('threshold', default = 15,help= 'Min ACD count threshold'))
 class Peaks(strax.Plugin):
     depends_on = ('records',)
     data_kind = 'peaks'
@@ -153,9 +154,8 @@ class Peaks(strax.Plugin):
 
     def compute(self, records):
         r = records
-        hits = strax.find_hits(r)       # TODO: Duplicate work
+        hits = strax.find_hits(r,threshold=self.config['threshold'])       # TODO: Duplicate work
         hits = strax.sort_by_time(hits)
-
         peaks = strax.find_peaks(hits, to_pe,
                                  min_hits=self.config['min_hits'],
                                  result_dtype=self.dtype)
