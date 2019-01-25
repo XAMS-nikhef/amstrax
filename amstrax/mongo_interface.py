@@ -15,48 +15,58 @@ import strax
 export, __all__ = strax.exporter()
 
 # Convert an integer into full bitstring
-get_bin = lambda x, n: format(x, 'b').zfill(n)
+# get_bin = lambda x, n: format(x, 'b').zfill(n)
+def get_bin(x, n):
+    return format(x, 'b').zfill(n)
 
-
+@numba.jit(nopython=True, nogil=True, cache=True)
 def decode_control_word(n0, n1):
     '''
     Read the control word used in ZLE data (see CAEN V1724 manual)
+    WARNING: untested for stretches of > 32,768 samples
     '''
-    # Convert the two 16-bit ints into one 32-bit string
-    # Need to flip the order because it is converted as little-endian
-    bits = get_bin(n1, 16) + get_bin(n0, 16)
-    # Check if this is a control word for good or ZLE data
-    is_zle = False
-    if bits[0] == '0':
+    # The 32-bit control word is split into two numbers, which is why the order is flipped (little-endian numbers)
+    if n1 < 0:
+        # This means the first bit is 1, signaling real data coming up
+        n1 = - n1 - 32768
+        is_zle = False
+    else:
         is_zle = True
-    n_samples = int(bits[11:], 2) * 2  # not sure where the factor of 2 came from
+        
+    if n0 < 0:
+        # this means the first bit is a 1, which should indicate 2**15
+        n0 = - n0
+        print('[mongo_interface] Warning: very long waveform stretch detected.')
+
+    n_samples = 2 * (n0 + n1 * 2**16)
+    # Warning only in nopython mode
+    if n1 > 0:
+        print('[mongo_interface] Warning: very long waveform stretch detected. Number of samples:', n_samples)
     return is_zle, n_samples
 
-
-def split_data(doc, zle=True):
+@numba.jit(nopython=True, nogil=True, cache=True)
+def split_data(d, zle=True, invert=True):
     '''
     Read data from doc and split it into list of ZLE chunks (i.e. pulses) and their offset
     If ZLE is off, this will just pass a list with one element (i.e. one big pulse) and a list with offset zero.
     '''
-    # First decompress
-    d = snappy.decompress(doc['data'])
-    # Then read bytestring
-    d = np.fromstring(d, dtype='<i2')
+
     if not zle:
         # There is just one giant pulse here
         return [d], [0]
-
     sample_index = 0
     i = 2  # Skip the first control word for unknown reason
     pulses = []
     pulses_start_samples = []
     while i < len(d):
-        is_zle, n_samples = decode_control_word(*d[i:i + 2])
+        is_zle, n_samples = decode_control_word(d[i], d[i+1])      
         if is_zle:
             sample_index += n_samples
         else:
-            # TODO WARNING minus sign hardcoded
-            pulses.append(-d[i + 2:i + 2 + n_samples])
+            if invert:
+                pulses.append(-d[i + 2:i + 2 + n_samples])
+            else:
+                pulses.append(d[i + 2:i + 2 + n_samples])
             pulses_start_samples.append(sample_index)
             sample_index += n_samples
             i += n_samples
@@ -91,7 +101,8 @@ def mongo_to_records(collection_name,
     cursor = client[dbname][collection_name].find()
 
     for doc in cursor:
-        pulses, pulses_start_samples = split_data(doc, zle=True)  # todo remove hard coding
+        d = np.frombuffer(snappy.decompress(doc['data']), dtype='<i2')
+        pulses, pulses_start_samples = split_data(d, zle=True, invert=True)  # todo remove hard coding
         pulse_lengths = np.array([len(pulse) for pulse in pulses])
 
         n_records_tot = strax.records_needed(pulse_lengths,
