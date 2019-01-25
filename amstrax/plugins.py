@@ -117,9 +117,13 @@ class DAQReader(strax.ParallelSourcePlugin):
 
 
 @export
+@strax.takes_config(
+    strax.Option('software_zle_channels', default = [], help= 'Channels to apply software ZLE to'),
+    strax.Option('software_zle_hitfinder_threshold', default = 15, help= 'Min ADC count threshold used if ZLE is applied'),
+    strax.Option('software_zle_extension', default=50, help='Number of samples to save around a hit')
+)                      
 class Records(strax.Plugin):
     __version__ = '0.0.3'
-
     depends_on = ('raw_records',)
     data_kind = 'records'   # TODO: indicate cuts have been done?
     compressor = 'zstd'
@@ -128,23 +132,27 @@ class Records(strax.Plugin):
     dtype = strax.record_dtype()
 
     def compute(self, raw_records):
-        # Experimental data reduction: disabled
-        # Seems to remove many S2s since it triggers on S1s!
-        # (perhaps due to larger amount of afterpuless
-        #r = strax.exclude_tails(r, to_pe)
-
-        #hits = strax.find_hits(r)
-        #strax.cut_outside_hits(r, hits)
+        # Select the records corresponding to channels that need software zle
+        to_zle = np.any(np.array([raw_records['channel'] == channel 
+                                  for channel in self.config['software_zle_channels']]), axis=0)
+        r = raw_records[to_zle]
+        # If there is nothing to do, kip
+        if len(r) :
+            # Data reduction here
+            hits = strax.find_hits(r, threshold = self.config['software_zle_hitfinder_threshold'])
+            strax.cut_outside_hits(r, hits, left_extension=self.config['software_zle_extension'],
+                                                right_extension=self.config['software_zle_extension'])
+        raw_records[to_zle] = r
         return raw_records
 
 
 @export
 @strax.takes_config(
-    strax.Option('min_hits', default=2,
+    strax.Option('min_hits', default=1,
                  help="Minimum number of hits to make a peak"),
     strax.Option('diagnose_sorting', track=False, default=False,
                  help="Enable runtime checks for sorting and disjointness"),
-    strax.Option('threshold', default = 15,help= 'Min ACD count threshold'))
+    strax.Option('hitfinder_threshold', default = 15, help= 'Min ADC count threshold'))
 class Peaks(strax.Plugin):
     depends_on = ('records',)
     data_kind = 'peaks'
@@ -154,16 +162,16 @@ class Peaks(strax.Plugin):
 
     def compute(self, records):
         r = records
-        hits = strax.find_hits(r,threshold=self.config['threshold'])       # TODO: Duplicate work
+        hits = strax.find_hits(r,threshold=self.config['hitfinder_threshold'])       # TODO: Duplicate work
         hits = strax.sort_by_time(hits)
         peaks = strax.find_peaks(hits, to_pe,
                                  min_hits=self.config['min_hits'],
                                  result_dtype=self.dtype)
-        strax.sum_waveform(peaks, r, to_pe)
+        # strax.sum_waveform(peaks, r, to_pe, n_channels = len(to_pe))
 
         # peaks = strax.split_peaks(peaks, r, to_pe)
 
-        strax.compute_widths(peaks)
+        # strax.compute_widths(peaks)
 
         if self.config['diagnose_sorting']:
             assert np.diff(r['time']).min() >= 0, "Records not sorted"
@@ -173,6 +181,7 @@ class Peaks(strax.Plugin):
 
         return peaks
 
+    
 
 @export
 class PeakBasics(strax.Plugin):
