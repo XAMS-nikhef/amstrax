@@ -154,9 +154,13 @@ def mongo_to_records(collection_name,
         records['channel'] = channel
         records['dt'] = dt
         
+        if doc['module'] == 1724:
+            pulse_time_offset = doc['time'] * 10
+        elif doc['module'] == 1730:
+            pulse_time_offset = doc['time'] * 8
         # Heavy lifting in jit-ed loop
         records = fill_records(records, d, pulse_start_samples, pulse_lengths, n_records_list, 
-                               doc['time'], samples_per_record, invert, dt)
+                               pulse_time_offset, samples_per_record, invert, dt)
         results.append(records)
         if len(results) >= events_per_chunk:
             yield finish_results()

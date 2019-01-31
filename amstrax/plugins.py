@@ -152,7 +152,11 @@ class Records(strax.Plugin):
                  help="Minimum number of hits to make a peak"),
     strax.Option('diagnose_sorting', track=False, default=False,
                  help="Enable runtime checks for sorting and disjointness"),
-    strax.Option('hitfinder_threshold', default = 15, help= 'Min ADC count threshold'))
+    strax.Option('hitfinder_threshold', default = 10, help= 'Threshold in ADC counts'),
+    strax.Option('left_extension', default = 20, help= 'Extend peaks by this many ns left'),
+    strax.Option('right_extension', default = 150, help= 'Extend peaks by this many ns right'),
+    strax.Option('gap_threshold', default = 300, help= 'No hits for this much ns means new peak'),
+)
 class Peaks(strax.Plugin):
     depends_on = ('records',)
     data_kind = 'peaks'
@@ -166,12 +170,15 @@ class Peaks(strax.Plugin):
         hits = strax.sort_by_time(hits)
         peaks = strax.find_peaks(hits, to_pe,
                                  min_hits=self.config['min_hits'],
+                                 left_extension = self.config['left_extension'],
+                                 right_extension = self.config['right_extension'],
+                                 gap_threshold = self.config['gap_threshold'],
                                  result_dtype=self.dtype)
-        # strax.sum_waveform(peaks, r, to_pe, n_channels = len(to_pe))
+        strax.sum_waveform(peaks, r, to_pe, n_channels = len(to_pe))
 
-        # peaks = strax.split_peaks(peaks, r, to_pe)
+        peaks = strax.split_peaks(peaks, r, to_pe)
 
-        # strax.compute_widths(peaks)
+        strax.compute_widths(peaks)
 
         if self.config['diagnose_sorting']:
             assert np.diff(r['time']).min() >= 0, "Records not sorted"
