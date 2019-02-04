@@ -7,114 +7,10 @@ import numba
 
 import strax
 from straxen.itp_map import InterpolatingMap
-from amstrax.common import to_pe, pax_file, get_resource, get_elife
+from amstrax.common import to_pe, pax_file, get_resource, get_elife, select_channels
 export, __all__ = strax.exporter()
 
-
-first_sr1_run = 170118_1327
-
-
-@export
-@strax.takes_config(
-    strax.Option('safe_break_in_pulses', default=1000,
-                 help="Time (ns) between pulse starts indicating a safe break "
-                      "in the datastream -- peaks will not span this."),
-    strax.Option('input_dir', type=str, track=False,
-                 help="Directory where readers put data"),
-    strax.Option('n_readout_threads', type=int, track=False,
-                 help="Number of readout threads producing strax data files"),
-    strax.Option('erase', default=False, track=False,
-                 help="Delete reader data after processing"))
-class DAQReader(strax.ParallelSourcePlugin):
-    provides = 'raw_records'
-    depends_on = tuple()
-    dtype = strax.record_dtype()
-    rechunk_on_save = False
-
-    def _path(self, chunk_i):
-        return self.config["input_dir"] + f'/{chunk_i:06d}'
-
-    def _chunk_paths(self, chunk_i):
-        """Return paths to previous, current and next chunk
-        If any of them does not exist, or they are not yet populated
-        with data from all readers, their path is replaced by False.
-        """
-        p = self._path(chunk_i)
-        result = []
-        for q in [p + '_pre', p, p + '_post']:
-            if os.path.exists(q):
-                n_files = len(os.listdir(q))
-                if n_files >= self.config['n_readout_threads']:
-                    result.append(q)
-                else:
-                    print(f"Found incomplete folder {q}: contains {n_files} files but "
-                          f"expected {self.config['n_readout_threads']}. Waiting for more data.")
-                    result.append(False)
-            else:
-                result.append(False)
-        return tuple(result)
-
-    def source_finished(self):
-        end_dir = self.config["input_dir"] + '/THE_END'
-        if not os.path.exists(end_dir):
-            return False
-        else:
-            return len(os.listdir(end_dir)) >= self.config['n_readout_threads']
-
-    def is_ready(self, chunk_i):
-        ended = self.source_finished()
-        pre, current, post = self._chunk_paths(chunk_i)
-        next_ahead = os.path.exists(self._path(chunk_i + 1))
-        if (current and (
-                (pre and post
-                 or chunk_i == 0 and post
-                 or ended and (pre and not next_ahead)))):
-            return True
-        return False
-
-    def _load_chunk(self, path, kind='central'):
-        records = [strax.load_file(fn,
-                                   compressor='blosc',
-                                   dtype=strax.record_dtype())
-                   for fn in sorted(glob.glob(f'{path}/*'))]
-        records = np.concatenate(records)
-        records = strax.sort_by_time(records)
-        if kind == 'central':
-            result = records
-        else:
-            result = strax.from_break(
-                records,
-                safe_break=self.config['safe_break_in_pulses'],
-                left=kind == 'post',
-                tolerant=True)
-        if self.config['erase']:
-            shutil.rmtree(path)
-        return result
-
-    def compute(self, chunk_i):
-        pre, current, post = self._chunk_paths(chunk_i)
-        if chunk_i == 0 and pre:
-            pre = False
-            print(f"There should be no {pre} dir for chunk 0: ignored")
-        records = np.concatenate(
-            ([self._load_chunk(pre, kind='pre')] if pre else [])
-            + [self._load_chunk(current)]
-            + ([self._load_chunk(post, kind='post')] if post else [])
-        )
-
-        strax.baseline(records)
-        strax.integrate(records)
-
-        if len(records):
-            timespan_sec = (records[-1]['time'] - records[0]['time']) / 1e9
-            print(f'{chunk_i}: read {records.nbytes/1e6:.2f} MB '
-                  f'({len(records)} records, '
-                  f'{timespan_sec:.2f} sec) from readers')
-        else:
-            print(f'{chunk_i}: read an empty chunk!')
-
-        return records
-
+first_sr1_run = ''
 
 @export
 @strax.takes_config(
@@ -150,12 +46,15 @@ class Records(strax.Plugin):
 @strax.takes_config(
     strax.Option('min_hits', default=1,
                  help="Minimum number of hits to make a peak"),
+    strax.Option('min_area', default=0,
+                 help="Minimum area of peak"),
     strax.Option('diagnose_sorting', track=False, default=False,
                  help="Enable runtime checks for sorting and disjointness"),
     strax.Option('hitfinder_threshold', default = 10, help= 'Threshold in ADC counts'),
     strax.Option('left_extension', default = 20, help= 'Extend peaks by this many ns left'),
     strax.Option('right_extension', default = 150, help= 'Extend peaks by this many ns right'),
     strax.Option('gap_threshold', default = 300, help= 'No hits for this much ns means new peak'),
+    strax.Option('use_channels', default = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], help= 'Channels that correspond to TPC channels'),
 )
 class Peaks(strax.Plugin):
     depends_on = ('records',)
@@ -166,6 +65,8 @@ class Peaks(strax.Plugin):
 
     def compute(self, records):
         r = records
+        # Remove non-TPC channels
+        r = select_channels(r, self.config['use_channels'])
         hits = strax.find_hits(r,threshold=self.config['hitfinder_threshold'])       # TODO: Duplicate work
         hits = strax.sort_by_time(hits)
         peaks = strax.find_peaks(hits, to_pe,
@@ -177,6 +78,8 @@ class Peaks(strax.Plugin):
         strax.sum_waveform(peaks, r, to_pe, n_channels = len(to_pe))
 
         peaks = strax.split_peaks(peaks, r, to_pe)
+
+        peaks = peaks[peaks['area'] >= self.config['min_area']]
 
         strax.compute_widths(peaks)
 
@@ -231,8 +134,8 @@ class PeakBasics(strax.Plugin):
         r['max_pmt_area'] = np.max(p['area_per_channel'], axis=1)
 
         # TODO: get n_top_pmts from config...
-        area_top = (p['area_per_channel'][:, :127]
-                    * to_pe[:127].reshape(1, -1)).sum(axis=1)
+        area_top = (p['area_per_channel'][:, :8]
+                    * to_pe[:8].reshape(1, -1)).sum(axis=1)
         # Negative-area peaks get 0 AFT - TODO why not NaN?
         m = p['area'] > 0
         r['area_fraction_top'][m] = area_top[m]/p['area'][m]
@@ -241,20 +144,19 @@ class PeakBasics(strax.Plugin):
 
 @export
 @strax.takes_config(
-    strax.Option(
-        'nn_architecture',
-        help='Path to JSON of neural net architecture',
-        default_by_run=[
-            (0, pax_file('XENON1T_tensorflow_nn_pos_20171217_sr0.json')),
-            (first_sr1_run, pax_file('XENON1T_tensorflow_nn_pos_20171217_sr1.json'))]),   # noqa
+#     strax.Option(
+#         'nn_architecture',
+#         help='Path to JSON of neural net architecture',
+#         default_by_run=[
+#             (0, pax_file('XENON1T_tensorflow_nn_pos_20171217_sr0.json')),
+#             ('', pax_file('XENON1T_tensorflow_nn_pos_20171217_sr1.json'))]),   # noqa
 
-    strax.Option(
-        'nn_weights',
-        help='Path to HDF5 of neural net weights',
-        default_by_run=[
-            (0, pax_file('XENON1T_tensorflow_nn_pos_weights_20171217_sr0.h5')),
-            (first_sr1_run, pax_file('XENON1T_tensorflow_nn_pos_weights_20171217_sr1.h5'))]),   # noqa
-
+#     strax.Option(
+#         'nn_weights',
+#         help='Path to HDF5 of neural net weights',
+#         default_by_run=[
+#             (0, pax_file('XENON1T_tensorflow_nn_pos_weights_20171217_sr0.h5')),
+#             (first_sr1_run, pax_file('XENON1T_tensorflow_nn_pos_weights_20171217_sr1.h5'))]),   # noqa
     strax.Option('min_reconstruction_area',
                  help='Skip reconstruction if area (PE) is less than this',
                  default=10)
@@ -266,64 +168,18 @@ class PeakPositions(strax.Plugin):
               'Reconstructed S2 Y position (cm), uncorrected')]
     depends_on = ('peaks',)
 
-    # TODO
-    # Parallelization doesn't seem to make it go faster
-    # Is there much pure-python stuff in tensorflow?
-    # Process-level paralellization might work, but you'd have to do setup
-    # in each process, which probably negates the benefits,
-    # except for huge chunks
-    parallel = False
 
-    n_top_pmts = 127
 
     def setup(self):
         import keras
         import tensorflow as tf
 
-        self.pmt_mask = to_pe[:self.n_top_pmts] > 0
-
-        nn = keras.models.model_from_json(
-            get_resource(self.config['nn_architecture']))
-        temp_f = '_temp.h5'
-        with open(temp_f, mode='wb') as f:
-            f.write(get_resource(self.config['nn_weights'],
-                                 binary=True))
-        nn.load_weights(temp_f)
-        self.nn = nn
-
-        # Workaround for using keras/tensorflow in a threaded environment. See:
-        # https://github.com/keras-team/keras/issues/5640#issuecomment-345613052
-        self.nn._make_predict_function()
-        self.graph = tf.get_default_graph()
 
     def compute(self, peaks):
-        # Keep large peaks only
-        peak_mask = peaks['area'] > self.config['min_reconstruction_area']
-        x = peaks['area_per_channel'][peak_mask, :]
-
-        if len(x) == 0:
-            # Nothing to do, and .predict crashes on empty arrays
-            return dict(x=np.zeros(0, dtype=np.float32),
-                        y=np.zeros(0, dtype=np.float32))
-
-        # Gain correction. This also changes int->float, so can't do *=
-        x = x * to_pe.reshape(1, -1)
-
-        # Keep good top PMTS
-        x = x[:, :self.n_top_pmts][:, self.pmt_mask]
-
-        # Normalize
-        with np.errstate(divide='ignore', invalid='ignore'):
-            x /= x.sum(axis=1).reshape(-1, 1)
-
-        result = np.ones((len(peaks), 2), dtype=np.float32) * float('nan')
-        with self.graph.as_default():
-            result[peak_mask, :] = self.nn.predict(x)
-
-        # Convert from mm to cm... why why why
-        result /= 10
-
-        return dict(x=result[:, 0], y=result[:, 1])
+        
+        x = np.zeros(len(peaks), dtype=float)
+        y = np.zeros(len(peaks), dtype=float)
+        return dict(x=x, y=y)
 
 
 @export
@@ -347,7 +203,7 @@ class PeakClassification(strax.Plugin):
         p = peaks
         r = np.zeros(len(p), dtype=self.dtype)
 
-        is_s1 = p['n_channels'] > self.config['s1_min_n_channels']
+        is_s1 = p['n_channels'] >= self.config['s1_min_n_channels']
         is_s1 &= p['range_50p_area'] < self.config['s1_max_width']
         r['type'][is_s1] = 1
 
@@ -358,6 +214,7 @@ class PeakClassification(strax.Plugin):
         return r
 
 
+@export
 @strax.takes_config(
     strax.Option('min_area_fraction', default=0.5,
                  help='The area of competing peaks must be at least '
@@ -367,7 +224,8 @@ class PeakClassification(strax.Plugin):
                       'in ns count as nearby.'),
 )
 class NCompeting(strax.OverlapWindowPlugin):
-    depends_on = ('peak_basics',)
+    depends_on = ('peak_basics',)    
+    provides = 'n_competing'
     dtype = [
         ('n_competing', np.int32,
             'Number of nearby larger or slightly smaller peaks')]

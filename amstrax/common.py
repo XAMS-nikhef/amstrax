@@ -99,3 +99,10 @@ def get_secret(x):
     if hasattr(xenon_secrets, x):
         return getattr(xenon_secrets, x)
     raise ValueError(message + " and the secret is not in xenon_secrets.py")
+
+@export
+def select_channels(arr, channel_list):
+    """Select only the values in arr that have arr['channel'] in channel_list
+    """
+    sel = np.sum([arr['channel'] == channel for channel in channel_list], axis=0) > 0
+    return arr[sel]
