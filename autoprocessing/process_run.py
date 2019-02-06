@@ -1,11 +1,16 @@
 version = '0.0.0' 
 print(f'This is process_run version {version} initializing...')
+
 import sys
 import json
 import strax
 import amstrax
-import shutil
+# import shutil
 import os
+from sshtunnel import SSHTunnelForwarder
+import pymongo
+import os
+
 
 nargs = 1
 
@@ -26,6 +31,22 @@ except:
     print(f'ERROR: could not load configuration from data/xenon/xams/processing_folder/config/{run_name}.json.')
     sys.exit(2)
 
+MONGO_HOST = "145.102.133.174"
+MONGO_DB = "xamsdata0"
+MONGO_USER = "xams"
+if "MONGO_PASS" not in dict(os.environ).keys():
+    raise RuntimeError("DAQ password not set. Please define in .bashrc file. (i.e. 'export MONGO_PASS = <secret password>')")
+MONGO_PASS = os.environ['MONGO_PASS']
+
+print('Initializing server...')
+server = SSHTunnelForwarder(
+    MONGO_HOST,
+    ssh_username=MONGO_USER,
+    ssh_password=MONGO_PASS,
+    remote_bind_address=('127.0.0.1', 27017)
+)
+server.start()
+print('Server started.')
     
 print(f'Writing to folder location {run_doc['data_folder']}')
 st = strax.Context(storage=strax.DataDirectory(run_doc['data_folder']),
@@ -36,6 +57,8 @@ print('Initialized strax.')
 print('Building records...')
 st.make(run_name, 'records')
 print('Record building done.')
+
+
 
 if run_doc['delete_raw_records']:
     print('Deleting raw records...')
