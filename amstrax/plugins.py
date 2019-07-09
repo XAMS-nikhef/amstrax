@@ -22,6 +22,7 @@ class Records(strax.Plugin):
     __version__ = '0.0.3'
     depends_on = ('raw_records',)
     data_kind = 'records'   # TODO: indicate cuts have been done?
+    provides= 'records'
     compressor = 'zstd'
     parallel = True
     rechunk_on_save = False
@@ -59,9 +60,10 @@ class Records(strax.Plugin):
 class Peaks(strax.Plugin):
     depends_on = ('records',)
     data_kind = 'peaks'
-    parallel = True
+    parallel = 'process'
     rechunk_on_save = True
     dtype = strax.peak_dtype(n_channels=len(to_pe))
+    __version__ = '0.0.1'
 
     def compute(self, records):
         r = records
