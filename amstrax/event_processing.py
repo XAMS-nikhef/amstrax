@@ -4,6 +4,7 @@ import numpy as np
 
 from amstrax.common import pax_file, get_resource, get_elife, first_sr1_run
 from amstrax.itp_map import InterpolatingMap
+from .SiPMdata import *
 export, __all__ = strax.exporter()
 
 
@@ -155,74 +156,63 @@ class EventBasics(strax.LoopPlugin):
 
         return result
 
-
 @export
-@strax.takes_config(
-    strax.Option(
-        name='electron_drift_velocity',
-        help='Vertical electron drift velocity in cm/ns (1e4 m/ms)',
-        default=1.3325e-4
-    ),
-    strax.Option(
-        'fdc_map',
-        help='3D field distortion correction map path',
-        default_by_run=[
-            (0, pax_file('XENON1T_FDC_SR0_data_driven_3d_correction_tf_nn_v0.json.gz')),  # noqa
-            (first_sr1_run, pax_file('XENON1T_FDC_SR1_data_driven_time_dependent_3d_correction_tf_nn_part1_v1.json.gz')),  # noqa
-            (170411_0611, pax_file('XENON1T_FDC_SR1_data_driven_time_dependent_3d_correction_tf_nn_part2_v1.json.gz')),  # noqa
-            (170704_0556, pax_file('XENON1T_FDC_SR1_data_driven_time_dependent_3d_correction_tf_nn_part3_v1.json.gz')),  # noqa
-            (170925_0622, pax_file('XENON1T_FDC_SR1_data_driven_time_dependent_3d_correction_tf_nn_part4_v1.json.gz'))]),  # noqa
-)
-class EventPositions(strax.Plugin):
-    depends_on = ('event_basics',)
+class EventPositions(strax.LoopPlugin):
+    depends_on = ('events', 'event_basics', 'peaks', 'peak_classification')
     dtype = [
-        ('x', np.float32,
-         'Interaction x-position, field-distortion corrected (cm)'),
-        ('y', np.float32,
-         'Interaction y-position, field-distortion corrected (cm)'),
-        ('z', np.float32,
-         'Interaction z-position, field-distortion corrected (cm)'),
-        ('r', np.float32,
-         'Interaction radial position, field-distortion corrected (cm)'),
-        ('z_naive', np.float32,
-         'Interaction z-position using mean drift velocity only (cm)'),
-        ('r_naive', np.float32,
-         'Interaction r-position using observed S2 positions directly (cm)'),
-        ('r_field_distortion_correction', np.float32,
-         'Correction added to r_naive for field distortion (cm)'),
-        ('theta', np.float32,
-         'Interaction angular position (radians)')]
+        ('xr', np.float32,
+         'Interaction x-position'),
+        ('yr', np.float32,
+         'Interaction y-position'),
+    ]
 
     def setup(self):
-        self.map = InterpolatingMap(
-            get_resource(self.config['fdc_map'], fmt='binary'))
+        # z position of the in-plane SiPMs
+        z_plane = 10
+        # radius of the cyinder for SiPMs at the side
+        r_cylinder = 22
+        # radius of a SiPM - I assume circular SiPMs with a radius to make the area correspond to a 3x3mm2 square.
+        r_sipm = 1.6925
+        # build geometry
+        geo = GeoParameters(z_plane=z_plane, r_cylinder=r_cylinder, r_sipm=r_sipm)
 
-    def compute(self, events):
-        z_obs = - self.config['electron_drift_velocity'] * events['drift_time']
+        sipm = SiPM(type="plane", position=[0, -15, z_plane], qeff=0.25)
+        geo.add_sipm(sipm)
+        sipm = SiPM(type="plane", position=[-13, -7.5, z_plane], qeff=0.25)
+        geo.add_sipm(sipm)
+        sipm = SiPM(type="plane", position=[13, -7.5, z_plane], qeff=0.25)
+        geo.add_sipm(sipm)
+        sipm = SiPM(type="plane", position=[-4, 0, z_plane], qeff=0.25)
+        geo.add_sipm(sipm)
+        sipm = SiPM(type="plane", position=[4, 0, z_plane], qeff=0.25)
+        geo.add_sipm(sipm)
+        sipm = SiPM(type="plane", position=[-13, 7.5, z_plane], qeff=0.25)
+        geo.add_sipm(sipm)
+        sipm = SiPM(type="plane", position=[13, 7.5, z_plane], qeff=0.25)
+        geo.add_sipm(sipm)
 
-        orig_pos = np.vstack([events['x_s2'], events['y_s2'], z_obs]).T
-        r_obs = np.linalg.norm(orig_pos[:, :2], axis=1)
+        self.geo = geo
 
-        delta_r = self.map(orig_pos)
-        with np.errstate(invalid='ignore', divide='ignore'):
-            r_cor = r_obs + delta_r
-            scale = r_cor / r_obs
+    def compute_loop(self, events, peaks):
+        result = dict()
 
-        result = dict(x=orig_pos[:, 0] * scale,
-                      y=orig_pos[:, 1] * scale,
-                      r=r_cor,
-                      z_naive=z_obs,
-                      r_naive=r_obs,
-                      r_field_distortion_correction=delta_r,
-                      theta=np.arctan2(orig_pos[:, 1], orig_pos[:, 0]))
+        if not len(peaks):
+            return result
 
-        with np.errstate(invalid='ignore'):
-            z_cor = -(z_obs ** 2 - delta_r ** 2) ** 0.5
-            invalid = np.abs(z_obs) < np.abs(delta_r)        # Why??
-        z_cor[invalid] = z_obs[invalid]
-        result['z'] = z_cor
+        s2_index = events['s2_index']
+        if s2_index == -1 or s2_index > len(peaks[(peaks['type'] == 2)]) - 1:
+            return result
 
+        s2_peak = peaks[(peaks['type'] == 2)][s2_index]
+        for i, area in enumerate(s2_peak['area_per_channel'][:7]):
+            self.geo.sipms[i].set_number_of_hits(area)
+
+        posrec = Reconstruction(self.geo)
+        pos = posrec.reconstruct_position('CHI2')
+        for key in ['xr', 'yr']:
+            result[key] = pos[key]
         return result
+
 
 @export
 @strax.takes_config(
@@ -300,7 +290,7 @@ class EnergyEstimates(strax.Plugin):
 class EventInfo(strax.MergeOnlyPlugin):
     depends_on = ['events',
                   'event_basics',
-                  # 'event_positions',
+                  'event_positions',
                   # 'energy_estimates',
                   ]
     provides = 'event_info'
