@@ -35,6 +35,7 @@ def decode_control_word(n0, n1):
         # this means the first bit is a 1, which should indicate 2**15
         n0 = - n0
         print('[mongo_interface] Warning: very long waveform stretch detected.')
+
     n_samples = 2 * (n0 + n1 * 2**16)
     # Warning only in nopython mode
     # if n1 > 0:
@@ -60,16 +61,16 @@ def find_pulse_locations(d, zle=True):
     sample_index = 0
     while i< len(d):
         is_zle, n_samples = decode_control_word(d[i], d[i+1])
+        print(is_zle)
         if not is_zle:
             pulse_start_samples.append(i + 2)
             pulse_lengths.append(n_samples)
             i += n_samples
-            print('her')
         sample_index += n_samples    
         i += 2 # move to next control word
     return pulse_start_samples, pulse_lengths
 
-# @numba.jit(nopython=True, nogil=True, cache=True)
+@numba.jit(nopython=True, nogil=True, cache=True)
 def fill_records(records, d, pulse_start_samples, pulse_lengths, n_records_list, time_offset, samples_per_record, invert, dt):
     ''' Fill the record array with record-by-record data for the pulses in d
     '''
@@ -139,8 +140,10 @@ def mongo_to_records(collection_name,
     cursor = client[dbname][collection_name].find({})
 
     for i,doc in enumerate(cursor):
+        if i % 500==0:
+            print(i)
         d = np.frombuffer(snappy.decompress(doc['data']), dtype='<i2')
-
+        
         # Extract channel- or digitizer-dependent properties
         channel = doc['channel'] + int(doc['module'] == 1724) * 8
         zle = True if channel in zle_channels else False
@@ -148,6 +151,7 @@ def mongo_to_records(collection_name,
         dt = 10 if doc['module'] == 1724 else 2
 
         # get arrays containing the pulse-by-pulse properties
+        print(channel, zle)
         pulse_start_samples, pulse_lengths = find_pulse_locations(d, zle=zle)
         n_records_list = records_needed(np.array(pulse_lengths),
                                              samples_per_record)
@@ -164,11 +168,10 @@ def mongo_to_records(collection_name,
         elif doc['module'] == 1730:
             pulse_time_offset = doc['time'] * 8
         # Heavy lifting in jit-ed loop
-        if len(pulse_start_samples):
-            records = fill_records(records, d, pulse_start_samples, pulse_lengths, n_records_list,
+        # if len(pulse_start_samples):
+
+        records = fill_records(records, d, pulse_start_samples, pulse_lengths, n_records_list,
                                pulse_time_offset, samples_per_record, invert, dt)
-        else:
-            continue
         results.append(records)
         if len(results) >= events_per_chunk:
             yield finish_results()
@@ -181,14 +184,12 @@ def mongo_to_records(collection_name,
                  help="Collection used, example: '190124_110558'"),
     strax.Option('events_per_chunk', default=1000, track=False,
                  help="Number of events to yield per chunk",),
-    # strax.Option('invert_channels', default=[8, 9, 10, 11, 12, 13, 14, 15], track=False,
-    #              help="List containing the channel numbers to invert",),
-    # strax.Option('zle_channels', default=[8, 9, 10, 11, 12, 13, 14, 15], track=False,
-    #              help="List containing the channel numbers that have ZLE enabled",),
-    strax.Option('invert_channels', default=[0,1,2,3,4,5,6,7,8,9], track=False,
+    strax.Option('invert_channels', default=[8, 9, 10, 11, 12, 13, 14, 15], track=False,
                  help="List containing the channel numbers to invert",),
-    strax.Option('zle_channels', default=[], track=False,
+    strax.Option('zle_channels', default=[8, 9, 10, 11, 12, 13, 14, 15], track=False,
                  help="List containing the channel numbers that have ZLE enabled",),
+    # strax.Option('zle_channels', default=[0,1,2,3,4,5,6,7], track=False,
+    #              help="List containing the channel numbers that have ZLE enabled",),
 )
 class RecordsFromMongo(strax.Plugin):
     provides = 'raw_records'

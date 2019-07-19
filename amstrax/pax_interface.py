@@ -7,6 +7,8 @@ import glob
 import strax
 export, __all__ = strax.exporter()
 
+def records_needed(pulse_length, samples_per_record):
+    return np.ceil(pulse_length / samples_per_record).astype(np.int)
 
 @export
 def pax_to_records(input_filename,
@@ -52,14 +54,13 @@ def pax_to_records(input_filename,
         pulse_lengths = np.array([p.length
                                   for p in event.pulses])
 
-        n_records_tot = strax.records_needed(pulse_lengths,
+        n_records_tot = records_needed(pulse_lengths,
                                              samples_per_record).sum()
         records = np.zeros(n_records_tot,
                            dtype=strax.record_dtype(samples_per_record))
         output_record_index = 0  # Record offset in data
-
         for p in event.pulses:
-            n_records = strax.records_needed(p.length, samples_per_record)
+            n_records = records_needed(p.length, samples_per_record)
 
             for rec_i in range(n_records):
                 r = records[output_record_index]
