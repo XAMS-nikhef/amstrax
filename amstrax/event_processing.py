@@ -25,6 +25,7 @@ export, __all__ = strax.exporter()
 class Events(strax.OverlapWindowPlugin):
     depends_on = ['peak_basics', 'n_competing']
     data_kind = 'events'
+    parallel= False
     dtype = [
         ('event_number', np.int64, 'Event number in this dataset'),
         ('time', np.int64, 'Event start time in ns since the unix epoch'),

@@ -17,23 +17,25 @@ n_tpc = 248
 class PulseProcessing(strax.Plugin):
     __version__ = '0.0.3'
     depends_on = ('raw_records',)
-    provides = 'records'   # TODO: indicate cuts have been done?
+    provides = ('records')   # TODO: indicate cuts have been done?
     data_kind = 'records'
     compressor = 'zstd'
-    parallel = True
-    rechunk_on_save = False
+    parallel = False
+    rechunk_on_save = True
     dtype = strax.record_dtype()
 
     def compute(self, raw_records):
         # Select the records corresponding to channels that need software zle
         # to_zle = np.any(np.array([raw_records['channel'] == channel
                                   # for channel in self.config['software_zle_channels']]), axis=0)
-
+        raw_records = np.sort(raw_records,order ='time')
         hits = strax.find_hits(raw_records, threshold = self.config['software_zle_hitfinder_threshold'])
+        hits = strax.sort_by_time(hits)
         r = fill_records(raw_records,hits, trigger_window = self.config['software_zle_extension'])
 
-        r = strax.sort_by_time(r)
+        # r = strax.sort_by_time(r)
         # strax.baseline(r)
+        r = np.sort(r, order='time')
         strax.integrate(r)
         return r
 
@@ -157,9 +159,25 @@ def channel_split(rr, first_other_ch):
     """Return """
     return _mask_and_not(rr, rr['channel'] < first_other_ch)
 
+@numba.jit(nopython=True,nogil=True, cache=True)
+def get_record_index(raw_records, channel, direction):
+    if direction == -1:
+        for i in range(-1, -len(raw_records), -1):
+            if raw_records[i]['channel'] == channel:
+                return i
+        else:
+            return  0
+
+    if direction == +1:
+        for i in range(1, len(raw_records), 1):
+            if raw_records[i]['channel'] == channel:
+                return i
+        else:
+            return len(raw_records)
+
 @export
-@strax.growing_result(strax.record_dtype(), chunk_size=int(1e4))
-@numba.jit(nopython=False, nogil=True, cache=True)
+@strax.growing_result(strax.record_dtype(), chunk_size=int(1e6))
+@numba.jit(nopython=False, nogil=False, cache=True)
 def fill_records(raw_records, hits, trigger_window,_result_buffer = None):
 
     samples_per_record = strax.DEFAULT_RECORD_LENGTH
@@ -168,72 +186,110 @@ def fill_records(raw_records, hits, trigger_window,_result_buffer = None):
 
     offset = 0
     skipper = 0
+    for ch in np.unique(hits['channel']):
+        hit_ch = hits[(hits['channel'] == ch)
+                     &(hits['length'] > 1)]
+        for h in hit_ch:
+            if skipper != 0:
+                skipper -= 1
+                continue
+            dt = h['dt']
+            hit = []
+            hit.append(h)
+            h_c = hit_ch[(hit_ch['time'] > h['time'])]
+            max_t = h['time']
+            for h_ in h_c:
+                if h_['time'] > max_t and h_['time'] < max_t + dt * tw:
+                    hit.append(h_)
+                    max_t = h_['time']
+                elif h_['time'] > max_t + dt * tw:
+                    break
 
-    for i, h in enumerate(hits):
-        if skipper != 0:
-            # print(skipper)
-            skipper -= 1
-            continue
+            hit_buffer = np.zeros(len(hit), dtype=strax.hit_dtype)
+            for i in np.arange(len(hit)):
+                # print(hit[i])
+                hit_buffer[i] = hit[i]
 
-        hit = []
-        hit.append(h)
-        h_c = hits[hits['channel'] == h['channel']]
-        for h_ in h_c:
-            if h_['time'] > hit[-1]['time'] and h_['time'] < (hit[-1]['time'] + h['dt'] * tw):
-                hit.append(h_)
-            if h_['time'] > (hit[-1]['time'] + h['dt'] * tw):
-                break
+            dt = hit_buffer[0]['dt']
+            start = hit_buffer[0]['time'] - dt * tw
+            end = hit_buffer[-1]['time'] + dt * tw
+            p_length = int((end - start) / dt)
+            # records_needed = int(np.ceil(p_length / (samples_per_record)))
 
-        hit_buffer = np.zeros(len(hit), dtype=strax.hit_dtype)
-        for i in range(len(hit)):
-            hit_buffer[i] = hit[i]
-
-        dt = hit_buffer[0]['dt']
-        start = np.min(hit_buffer['time']) - dt * tw
-        end = np.max(hit_buffer['time']) + dt * tw
-        p_length = int((end - start) / dt)
-        records_needed = int(np.ceil((end - start) / (samples_per_record * dt)))
-
-        p_offset = hit_buffer[0]['left'] - tw
-        p_end = hit_buffer[-1]['right'] + tw
-        input_record_index = [np.unique(hit_buffer['record_i']).tolist()][0]
-
-        if p_offset < 0:
-            p_offset += samples_per_record
-            input_record_index.append(hit_buffer[0]['record_i'] - 7)
+            p_offset = hit[0]['left'] - tw
+            p_end = hit[-1]['right'] + tw
 
 
-        if p_end > samples_per_record:
-            input_record_index.append(hit_buffer[-1]['record_i'] + 7)
+            input_record_index = [np.unique(hit_buffer['record_i']).tolist()][0]
 
-        input_record_index.sort()
-        record_buffer = []
-        for i in input_record_index:
-            record_buffer.extend(list(raw_records[i]['data']))
+            assert input_record_index != [0]
+            #     print('Dit hoort niet')
+            #     print(hit)
+            #     continue
+            if p_offset < 0:
+                previous = hit_buffer[0]['record_i'] + get_record_index(raw_records[:hit_buffer[0]['record_i']],
+                                                             hit_buffer[0]['channel'],
+                                                             -1)
+                # print(previous)
+                if previous  <  0 or previous == hit_buffer[0]['record_i']:
+                    p_length +=  p_offset
+                    p_offset = 0
 
-        n_store = 0
-        for rec_i in range(records_needed):
-            r_ = buffer[offset + rec_i]
-            r_['dt'] = dt
-            r_['channel'] = hit_buffer[0]['channel']
-            r_['pulse_length'] = p_length
-            r_['record_i'] = rec_i
-            r_['time'] = start + rec_i * samples_per_record * dt
-            r_['baseline'] = raw_records[i]['baseline']
+                if previous >  0:
+                    p_offset += samples_per_record
+                    input_record_index.append(previous)
 
-            p_offset += n_store
-            if rec_i != records_needed - 1:
-                n_store = samples_per_record
-            else:
-                n_store = p_length - samples_per_record * rec_i
-            r_['data'][:n_store] = record_buffer[p_offset:p_offset + n_store]
-            r_['length'] = n_store
+            if p_end > samples_per_record:
+                next = hit_buffer[-1]['record_i'] + get_record_index(raw_records[hit_buffer[-1]['record_i']:],
+                                                                                      hit_buffer[-1]['channel'],
+                                                                                      +1)
+                # print(next)
+                if next < len(raw_records):
+                    input_record_index.append(next)
 
-        skipper = len(hit_buffer) - 1
-        offset += records_needed
-        if offset >= 750:
-            yield offset
-            offset = 0
+                if next > len(raw_records):
+                    p_length -= (p_end  % samples_per_record)
+                    # print('hmm')
+
+            # if len(np.unique(raw_records['channel'][input_record_index])) !=1:
+            #     print('fuck')
+
+            input_record_index.sort()
+            record_buffer = []
+            # print(input_record_index)
+            for i in input_record_index:
+                if i > len(raw_records) -1 :
+                    p_length -= tw * dt
+                    # print('here')
+                    continue
+                record_buffer.extend(list(raw_records[i]['data']))
+
+            records_needed = int(np.ceil(p_length / samples_per_record))
+
+            n_store = 0
+            for rec_i in range(records_needed):
+                r_ = buffer[offset + rec_i]
+                r_['dt'] = dt
+                r_['channel'] = hit[0]['channel']
+                r_['pulse_length'] = p_length
+                r_['record_i'] = rec_i
+                r_['time'] = start + rec_i * samples_per_record * dt
+                r_['baseline'] = raw_records[input_record_index[0]]['baseline']
+
+                p_offset += n_store
+                if rec_i != records_needed - 1:
+                    n_store = samples_per_record
+                else:
+                    n_store = p_length - samples_per_record * rec_i
+                # print(p_length , records_needed, rec_i, n_store, p_offset , len(record_buffer))
+                r_['data'][:n_store] = record_buffer[p_offset:p_offset + n_store]
+                r_['length'] = n_store
+
+            skipper = len(hit) - 1
+            offset += records_needed
+            if offset >= 750:
+                yield offset
+                offset = 0
 
     print('Almost done!')
     yield offset

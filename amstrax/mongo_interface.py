@@ -7,7 +7,7 @@ import numpy as np
 import os
 import glob
 from pymongo import MongoClient
-import snappy
+# import snappy
 import numba
 
 import strax

@@ -28,7 +28,7 @@ export, __all__ = strax.exporter()
     strax.Option('peak_split_min_ratio', default=4,
                  help="Minimum ratio between local sum waveform"
                       "minimum and maxima on either side, to trigger a split"),
-    strax.Option('diagnose_sorting', track=False, default=False,
+    strax.Option('diagnose_sorting', track=False, default=True,
                  help="Enable runtime checks for sorting and disjointness"),
     strax.Option('use_channels', default=[0, 1, 2, 3, 4, 5, 6, 7],
                  help='Channels that correspond to TPC channels'),
@@ -36,16 +36,19 @@ export, __all__ = strax.exporter()
 class Peaks(strax.Plugin):
     depends_on = ('records',)
     data_kind = 'peaks'
-    parallel = 'process'
+    parallel = False
     rechunk_on_save = True
-    provides = 'peaks'
-    dtype = strax.peak_dtype(n_channels=len(to_pe))
-
+    provides = ('peaks')
     __version__ = '0.0.1'
+
+    def infer_dtype(self):
+        return strax.peak_dtype(len(self.config['use_channels']))
+
 
     def compute(self, records):
         r = records
-
+        r = strax.sort_by_time(r)
+        r = np.sort(r, order='time', kind='mergesort')
         # Remove non-TPC channels
         r = select_channels(r, self.config['use_channels'])
 
@@ -73,11 +76,14 @@ class Peaks(strax.Plugin):
 
         peaks = peaks[peaks['area'] >= self.config['min_area']]
 
+        peaks = strax.sort_by_time(peaks)
+        peaks = np.sort(peaks, order='time', kind='mergesort')
         strax.compute_widths(peaks)
 
         if self.config['diagnose_sorting']:
             assert np.diff(r['time']).min() >= 0, "Records not sorted"
             assert np.diff(hits['time']).min() >= 0, "Hits not sorted"
+            assert np.diff(peaks['time']).min() >= 0, "Peaks not sorted"
             assert np.all(peaks['time'][1:]
                           >= strax.endtime(peaks)[:-1]), "Peaks not disjoint"
 
@@ -115,9 +121,10 @@ class TriggerPeaks(strax.Plugin):
     # provides = 'TriggerPeaks'
     parallel = 'process'
     rechunk_on_save = True
-    dtype = strax.peak_dtype(n_channels=len(to_pe))
-
     __version__ = '0.0.1'
+
+    def infer_dtype(self):
+        return strax.peak_dtype(len(self.config['use_channels']))
 
     def compute(self, records):
         r = records
@@ -162,8 +169,9 @@ class TriggerPeaks(strax.Plugin):
 @export
 class PeakBasics(strax.Plugin):
     __version__ = "0.0.1"
-    parallel = True
+    parallel = False
     depends_on = ('peaks',)
+    rechunk_on_save = True
     dtype = [
         (('Start time of the peak (ns since unix epoch)',
           'time'), np.int64),
@@ -190,6 +198,7 @@ class PeakBasics(strax.Plugin):
 
     def compute(self, peaks):
         p = peaks
+        p = strax.sort_by_time(p)
         r = np.zeros(len(p), self.dtype)
         for q in 'time length dt area'.split():
             r[q] = p[q]
