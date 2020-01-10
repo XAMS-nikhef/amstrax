@@ -3,12 +3,11 @@ import re
 import typing
 import socket
 
-import botocore.client
 from tqdm import tqdm
 import pymongo
 
 import strax
-import straxen
+import amstrax
 export, __all__ = strax.exporter()
 
 
@@ -39,10 +38,9 @@ class RunDB(strax.StorageFrontend):
                  mongo_dbname=None,
                  mongo_collname=None,
                  runid_field='name',
-                 s3_kwargs=None,
-                 local_only=False,
+                 local_only=True,
                  new_data_path=None,
-                 reader_ini_name_is_mode=True,
+                 reader_ini_name_is_mode=False,
                  *args, **kwargs):
         """
         :param mongo_url: URL to Mongo runs database (including auth)
@@ -52,7 +50,6 @@ class RunDB(strax.StorageFrontend):
             Defaults to None: do not write new data
             New files will be registered in the runs db!
             TODO: register under hostname alias (e.g. 'dali')
-        :param s3_kwargs: Arguments to initialize S3 backend (including auth)
         :param runid_field: Rundb field to which strax's run_id concept
             corresponds. Can be either
             - 'name': values must be strings, for XENON1T
@@ -75,22 +72,13 @@ class RunDB(strax.StorageFrontend):
 
         if self.runid_field not in ['name', 'number']:
             raise ValueError("Unrecognized runid_field option %s" % self.runid_field)
-
-        if s3_kwargs is None:
-            s3_kwargs = dict(
-                aws_access_key_id=straxen.get_secret('s3_access_key_id'),
-                aws_secret_access_key=straxen.get_secret('s3_secret_access_key'),      # noqa
-                endpoint_url='http://ceph-s3.mwt2.org',
-                service_name='s3',
-                config=botocore.client.Config(
-                    connect_timeout=5,
-                    retries=dict(max_attempts=10)))
+        #
 
         if mongo_url is None:
             mongo_url = default_mongo_url
         self.client = pymongo.MongoClient(mongo_url.format(
-            username=straxen.get_secret('rundb_username'),
-            password=straxen.get_secret('rundb_password')))
+            username="user",
+            password="password"))
 
         if mongo_dbname is None:
             mongo_dbname = default_mongo_dbname
@@ -99,7 +87,6 @@ class RunDB(strax.StorageFrontend):
         self.collection = self.client[mongo_dbname][mongo_collname]
 
         self.backends = [
-            strax.S3Backend(**s3_kwargs),
             strax.FileSytemBackend(),
         ]
 

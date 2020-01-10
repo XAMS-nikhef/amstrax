@@ -6,7 +6,7 @@ from straxen import get_to_pe
 export, __all__ = strax.exporter()
 
 # Number of TPC PMTs. Hardcoded for now...
-n_tpc = 248
+n_tpc = 16
 
 @export
 @strax.takes_config(
