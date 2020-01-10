@@ -16,7 +16,7 @@ default_mongo_url = (
     'gcp.mongodb.net:27017,rundbcluster-shard-00-01-cfaei.gcp.mongodb.net'
     ':27017,rundbcluster-shard-00-02-cfaei.gcp.mongodb.net:27017/test?'
     'ssl=true&replicaSet=RunDBCluster-shard-0&authSource=admin')
-default_mongo_dbname = 'xenon1t'
+default_mongo_dbname = 'run'
 default_mongo_collname = 'runs'
 
 

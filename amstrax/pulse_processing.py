@@ -10,34 +10,80 @@ n_tpc = 16
 
 @export
 @strax.takes_config(
-    strax.Option('software_zle_channels', default = [], help= 'Channels to apply software ZLE to'),
-    strax.Option('software_zle_hitfinder_threshold', default = 15, help= 'Min ADC count threshold used if ZLE is applied'),
-    strax.Option('software_zle_extension', default=50, help='Number of samples to save around a hit')
+    strax.Option(
+        'save_outside_hits',
+        default=(3, 3),
+        help='Save (left, right) samples besides hits; cut the rest'),
+
+    strax.Option(
+        'hit_threshold',
+        default=15,
+        help='Hitfinder threshold in ADC counts above baseline')
 )
 class PulseProcessing(strax.Plugin):
+    """
+    1. Split raw_records into:
+     - tpc_records
+     - diagnostic_records
+     - aqmon_records
+    Perhaps this should be done by DAQreader in the future
+
+    For TPC records, apply basic processing:
+
+    2. Apply software HE veto after high-energy peaks.
+    3. Find hits, apply linear filter, and zero outside hits.
+    """
     __version__ = '0.0.3'
-    depends_on = ('raw_records',)
-    provides = ('records')   # TODO: indicate cuts have been done?
-    data_kind = 'records'
+
+    parallel = 'process'
+    rechunk_on_save = False
     compressor = 'zstd'
-    parallel = False
-    rechunk_on_save = True
-    dtype = strax.record_dtype()
+
+    depends_on = 'raw_records'
+
+    provides = ('records', 'pulse_counts')
+    data_kind = {k: k for k in provides}
+
+    def infer_dtype(self):
+        # Get record_length from the plugin making raw_records
+        rr_dtype = self.deps['raw_records'].dtype_for('raw_records')
+        record_length = len(np.zeros(1, rr_dtype)[0]['data'])
+
+        dtype = dict()
+        for p in self.provides:
+            if p.endswith('records'):
+                dtype[p] = strax.record_dtype(record_length)
+
+        dtype['pulse_counts'] = pulse_count_dtype(n_tpc)
+        return dtype
 
     def compute(self, raw_records):
-        # Select the records corresponding to channels that need software zle
-        # to_zle = np.any(np.array([raw_records['channel'] == channel
-                                  # for channel in self.config['software_zle_channels']]), axis=0)
-        raw_records = np.sort(raw_records,order ='time')
-        hits = strax.find_hits(raw_records, threshold = self.config['software_zle_hitfinder_threshold'])
-        hits = strax.sort_by_time(hits)
-        r = fill_records(raw_records,hits, trigger_window = self.config['software_zle_extension'])
+        # Do not trust in DAQ + strax.baseline to leave the
+        # out-of-bounds samples to zero.
+        strax.zero_out_of_bounds(raw_records)
 
-        # r = strax.sort_by_time(r)
-        # strax.baseline(r)
-        r = np.sort(r, order='time')
-        strax.integrate(r)
-        return r
+        ##
+        # Split off non-TPC records and count TPC pulses
+        # (perhaps we should migrate this to DAQRreader in the future)
+        ##
+        r, other = channel_split(raw_records, n_tpc)
+        pulse_counts = count_pulses(r, n_tpc)
+
+        # Find hits
+        # -- before filtering,since this messes with the with the S/N
+        hits = strax.find_hits(r, threshold=self.config['hit_threshold'])
+
+        le, re = self.config['save_outside_hits']
+        r = strax.cut_outside_hits(r, hits,
+                                   left_extension=le,
+                                   right_extension=re)
+
+        # Probably overkill, but just to be sure...
+        strax.zero_out_of_bounds(r)
+
+        return dict(records=r,
+                    pulse_counts=pulse_counts,
+                    )
 
 
 @numba.njit

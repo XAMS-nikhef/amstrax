@@ -8,102 +8,19 @@ from amstrax.common import to_pe, pax_file, get_resource, first_sr1_run,get_elif
 export, __all__ = strax.exporter()
 
 
-@export
 @strax.takes_config(
-    strax.Option('peak_gap_threshold', default=300,
+    strax.Option('peak_gap_threshold', default=3000,
                  help="No hits for this many ns triggers a new peak"),
-    strax.Option('peak_left_extension', default=30,
+    strax.Option('peak_left_extension', default=1000,
                  help="Include this many ns left of hits in peaks"),
-    strax.Option('peak_right_extension', default=30,
+    strax.Option('peak_right_extension', default=1000,
                  help="Include this many ns right of hits in peaks"),
+    strax.Option('peak_min_area', default=0,
+                 help="Minimum contributing PMTs needed to define a peak"),
     strax.Option('peak_min_pmts', default=1,
                  help="Minimum contributing PMTs needed to define a peak"),
     strax.Option('single_channel_peaks', default=False,
                  help='Whether single-channel peaks should be reported'),
-    strax.Option('min_area', default=5,
-                 help="Minimum area of peak"),
-    strax.Option('peak_split_min_height', default=25,
-                 help="Minimum height in PE above a local sum waveform"
-                      "minimum, on either side, to trigger a split"),
-    strax.Option('peak_split_min_ratio', default=4,
-                 help="Minimum ratio between local sum waveform"
-                      "minimum and maxima on either side, to trigger a split"),
-    strax.Option('diagnose_sorting', track=False, default=True,
-                 help="Enable runtime checks for sorting and disjointness"),
-    strax.Option('use_channels', default=[0, 1, 2, 3, 4, 5, 6, 7],
-                 help='Channels that correspond to TPC channels'),
-)
-class Peaks(strax.Plugin):
-    depends_on = ('records',)
-    data_kind = 'peaks'
-    parallel = False
-    rechunk_on_save = True
-    provides = ('peaks')
-    __version__ = '0.0.1'
-
-    def infer_dtype(self):
-        return strax.peak_dtype(len(self.config['use_channels']))
-
-
-    def compute(self, records):
-        r = records
-        r = strax.sort_by_time(r)
-        r = np.sort(r, order='time', kind='mergesort')
-        # Remove non-TPC channels
-        r = select_channels(r, self.config['use_channels'])
-
-        hits = strax.find_hits(r)
-
-        # Remove hits in zero-gain channels
-        # they should not affect the clustering!
-        hits = hits[to_pe[hits['channel']] != 0]
-
-        hits = strax.sort_by_time(hits)
-
-        peaks = strax.find_peaks(
-            hits, to_pe,
-            gap_threshold=self.config['peak_gap_threshold'],
-            left_extension=self.config['peak_left_extension'],
-            right_extension=self.config['peak_right_extension'],
-            min_channels=self.config['peak_min_pmts'],
-            result_dtype=self.dtype)
-        strax.sum_waveform(peaks, r, to_pe)
-
-        # peaks = strax.split_peaks(
-        #     peaks, r, to_pe,
-        #     min_height=self.config['peak_split_min_height'],
-        #     min_ratio=self.config['peak_split_min_ratio'])
-
-        peaks = peaks[peaks['area'] >= self.config['min_area']]
-
-        peaks = strax.sort_by_time(peaks)
-        peaks = np.sort(peaks, order='time', kind='mergesort')
-        strax.compute_widths(peaks)
-
-        if self.config['diagnose_sorting']:
-            assert np.diff(r['time']).min() >= 0, "Records not sorted"
-            assert np.diff(hits['time']).min() >= 0, "Hits not sorted"
-            assert np.diff(peaks['time']).min() >= 0, "Peaks not sorted"
-            assert np.all(peaks['time'][1:]
-                          >= strax.endtime(peaks)[:-1]), "Peaks not disjoint"
-
-        return peaks
-
-
-@export
-@strax.takes_config(
-    strax.Option('peak_gap_threshold', default=300,
-                 help="No hits for this many ns triggers a new peak"),
-    strax.Option('peak_left_extension', default=30,
-                 help="Include this many ns left of hits in peaks"),
-    strax.Option('peak_right_extension', default=30,
-                 help="Include this many ns right of hits in peaks"),
-    strax.Option('peak_min_pmts', default=1,
-                 help="Minimum contributing PMTs needed to define a peak"),
-    strax.Option('single_channel_peaks', default=False,
-                 help='Whether single-channel peaks should be reported'),
-    strax.Option('min_area', default=5,
-                 help="Minimum area of peak"),
     strax.Option('peak_split_min_height', default=25,
                  help="Minimum height in PE above a local sum waveform"
                       "minimum, on either side, to trigger a split"),
@@ -111,67 +28,128 @@ class Peaks(strax.Plugin):
                  help="Minimum ratio between local sum waveform"
                       "minimum and maxima on either side, to trigger a split"),
     strax.Option('diagnose_sorting', track=False, default=False,
-                 help="Enable runtime checks for sorting and disjointness"),
-    strax.Option('use_channels', default=[9],
-                 help='Channels that correspond to TPC channels'),
-)
-class TriggerPeaks(strax.Plugin):
+                 help="Enable runtime checks for sorting and disjointness"), )
+class Peaks(strax.Plugin):
     depends_on = ('records',)
-    data_kind = 'peaks'
-    # provides = 'TriggerPeaks'
+    data_kind = dict(peaks_top='peaks',
+                     peaks_bottom='peaks')
     parallel = 'process'
+    provides = ('peaks_top', 'peaks_bottom')
     rechunk_on_save = True
-    __version__ = '0.0.1'
 
-    def infer_dtype(self):
-        return strax.peak_dtype(len(self.config['use_channels']))
+    __version__ = '0.1.0'
+    dtype = dict(peaks_top = strax.peak_dtype(n_channels=8),
+                 peaks_bottom = strax.peak_dtype(n_channels=8))
 
     def compute(self, records):
         r = records
-
-        # Remove non-TPC channels
-        r = select_channels(r, self.config['use_channels'])
+        self.to_pe = np.ones(16)
 
         hits = strax.find_hits(r)
 
         # Remove hits in zero-gain channels
         # they should not affect the clustering!
-        hits = hits[to_pe[hits['channel']] != 0]
 
         hits = strax.sort_by_time(hits)
+        hits_bottom, hits_top = hits[hits['channel'] < 8], hits[hits['channel'] >= 8]
+        r_bottom, r_top = r[r['channel'] < 8], r[r['channel'] >= 8]
 
-        peaks = strax.find_peaks(
-            hits, to_pe,
+        peaks_bottom = strax.find_peaks(
+            hits_bottom, self.to_pe,
             gap_threshold=self.config['peak_gap_threshold'],
             left_extension=self.config['peak_left_extension'],
             right_extension=self.config['peak_right_extension'],
             min_channels=self.config['peak_min_pmts'],
-            result_dtype=self.dtype)
-        strax.sum_waveform(peaks, r, to_pe)
+            result_dtype=self.dtype['peaks_bottom'])
+        strax.sum_waveform(peaks_bottom, r_bottom, self.to_pe)
 
-        # peaks = strax.split_peaks(
-        #     peaks, r, to_pe,
-        #     min_height=self.config['peak_split_min_height'],
-        #     min_ratio=self.config['peak_split_min_ratio'])
+        peaks_bottom = strax.split_peaks(
+            peaks_bottom, r_bottom, self.to_pe,
+            min_height=self.config['peak_split_min_height'],
+            min_ratio=self.config['peak_split_min_ratio'])
 
-        peaks = peaks[peaks['area'] >= self.config['min_area']]
+        strax.compute_widths(peaks_bottom)
 
-        strax.compute_widths(peaks)
+        peaks_top = strax.find_peaks(
+            hits_top, self.to_pe,
+            gap_threshold=self.config['peak_gap_threshold'],
+            left_extension=self.config['peak_left_extension'],
+            right_extension=self.config['peak_right_extension'],
+            min_area=self.config['peak_min_area'],
+            min_channels=self.config['peak_min_pmts'],
+            result_dtype=self.dtype['peaks_top'])
+        strax.sum_waveform(peaks_top, r_top, self.to_pe)
 
-        if self.config['diagnose_sorting']:
-            assert np.diff(r['time']).min() >= 0, "Records not sorted"
-            assert np.diff(hits['time']).min() >= 0, "Hits not sorted"
-            assert np.all(peaks['time'][1:]
-                          >= strax.endtime(peaks)[:-1]), "Peaks not disjoint"
+        peaks_top = strax.split_peaks(
+            peaks_top, r_top, self.to_pe,
+            min_height=self.config['peak_split_min_height'],
+            min_ratio=self.config['peak_split_min_ratio'])
 
-        return peaks
+        strax.compute_widths(peaks_top)
+
+        return dict(peaks_top=peaks_top,
+                    peaks_bottom=peaks_bottom,
+                    )
+
 
 @export
-class PeakBasics(strax.Plugin):
-    __version__ = "0.0.1"
-    parallel = False
-    depends_on = ('peaks',)
+class PeakBasicsTop(strax.Plugin):
+    provides = ('peakbasics_top')
+    depends_on = ('peaks_top')
+    data_kind = ('peaks')
+    parallel = 'False'
     rechunk_on_save = True
+    __version__ = '0.1.0'
+    dtype = [
+        (('Start time of the peak (ns since unix epoch)',
+          'time'), np.int64),
+        (('End time of the peak (ns since unix epoch)',
+          'endtime'), np.int64),
+        (('Peak integral in PE',
+            'area'), np.float32),
+        (('Number of PMTs contributing to the peak',
+            'n_channels'), np.int16),
+        (('PMT number which contributes the most PE',
+            'max_pmt'), np.int16),
+        (('Area of signal in the largest-contributing PMT (PE)',
+            'max_pmt_area'), np.int32),
+        (('Width (in ns) of the central 50% area of the peak',
+            'range_50p_area'), np.float32),
+        (('Fraction of area seen by the top array',
+            'area_fraction_top'), np.float32),
+
+        (('Length of the peak waveform in samples',
+          'length'), np.int32),
+        (('Time resolution of the peak waveform in ns',
+          'dt'), np.int16),
+        ]
+
+    def compute(self, peaks):
+        p = peaks
+        p = strax.sort_by_time(p)
+        r = np.zeros(len(p), self.dtype)
+        for q in 'time length dt area'.split():
+            r[q] = p[q]
+        r['endtime'] = p['time'] + p['dt'] * p['length']
+        r['n_channels'] = (p['area_per_channel'] > 0).sum(axis=1)
+        r['range_50p_area'] = p['width'][:, 5]
+        r['max_pmt'] = np.argmax(p['area_per_channel'], axis=1)
+        r['max_pmt_area'] = np.max(p['area_per_channel'], axis=1)
+
+        area_top = p['area_per_channel'][:, :8].sum(axis=1)
+        # Negative-area peaks get 0 AFT - TODO why not NaN?
+        m = p['area'] > 0
+        r['area_fraction_top'][m] = area_top[m]/p['area'][m]
+        return r
+
+@export
+class PeakBasicsBottom(strax.Plugin):
+    provides = ('peakbasics_bottom')
+    depends_on = ('peaks_bottom')
+    data_kind = ('peaks')
+    parallel = 'False'
+    rechunk_on_save = True
+    __version__ = '0.1.0'
     dtype = [
         (('Start time of the peak (ns since unix epoch)',
           'time'), np.int64),
@@ -239,7 +217,7 @@ class PeakPositions(strax.Plugin):
               'Reconstructed S2 X position (cm), uncorrected'),
              ('y', np.float32,
               'Reconstructed S2 Y position (cm), uncorrected')]
-    depends_on = ('peaks',)
+    depends_on = ('peaks_top',)
 
     def setup(self):
         import keras
@@ -261,9 +239,40 @@ class PeakPositions(strax.Plugin):
                  help="Minimum area (PE) for S2s"),
     strax.Option('s2_min_width', default=200,
                  help="Minimum width for S2s"))
-class PeakClassification(strax.Plugin):
+class PeakClassificationTop(strax.Plugin):
     __version__ = '0.0.1'
-    depends_on = ('peak_basics',)
+    depends_on = ('peak_basics_top',)
+    dtype = [
+        ('type', np.int8, 'Classification of the peak.')]
+    parallel = True
+
+    def compute(self, peaks):
+        p = peaks
+        r = np.zeros(len(p), dtype=self.dtype)
+
+        is_s1 = p['n_channels'] >= self.config['s1_min_n_channels']
+        is_s1 &= p['range_50p_area'] < self.config['s1_max_width']
+        r['type'][is_s1] = 1
+
+        is_s2 = p['area'] > self.config['s2_min_area']
+        is_s2 &= p['range_50p_area'] > self.config['s2_min_width']
+        r['type'][is_s2] = 2
+
+        return r
+
+@export
+@strax.takes_config(
+    strax.Option('s1_max_width', default=75,
+                 help="Maximum (IQR) width of S1s"),
+    strax.Option('s1_min_n_channels', default=1,
+                 help="Minimum number of PMTs that must contribute to a S1"),
+    strax.Option('s2_min_area', default=10,
+                 help="Minimum area (PE) for S2s"),
+    strax.Option('s2_min_width', default=200,
+                 help="Minimum width for S2s"))
+class PeakClassificationBottom(strax.Plugin):
+    __version__ = '0.0.1'
+    depends_on = ('peakbasics_bottom',)
     dtype = [
         ('type', np.int8, 'Classification of the peak.')]
     parallel = True
