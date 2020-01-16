@@ -74,9 +74,9 @@ parser = argparse.ArgumentParser(
     description="XENONnT online processing manager")
 parser.add_argument('--debug', action='store_true',
                     help="Start strax processes with debug logging.")
-parser.add_argument('--cores', type=int, default=10,
+parser.add_argument('--cores', type=int, default=1,
                     help="Maximum number of workers to use in a strax process")
-parser.add_argument('--target', default='raw_records',
+parser.add_argument('--target', default='records',
                     help="Strax data type name that should be produced")
 
 actions = parser.add_mutually_exclusive_group()
@@ -101,7 +101,7 @@ run_collname = 'run'
 
 # Folder to place new processed data in
 # TODO: Perhaps check that ssh mount exists?
-output_folder = '/data/xenon/xams/strax_processed/'
+output_folder = '/data/xenon/xams/strax_processed_gas/'
 
 # Timeouts in seconds
 timeouts = {
@@ -166,7 +166,7 @@ def new_context():
         storage=amstrax.RunDB(
             mongo_url=mongo_url,
             mongo_dbname='run',
-            mongo_collname='runs',
+            mongo_collname='runs_gas',
             runid_field='number',
             new_data_path=output_folder),
         **amstrax.contexts.common_opts)
@@ -176,7 +176,7 @@ def new_context():
 st = new_context()
 
 run_db = st.storage[0].client
-run_coll = run_db[run_collname]['runs']
+run_coll = run_db[run_collname]['runs_gas']
 bs_coll = run_db['bootstrax']['bootstrax']
 log_coll = run_db['log']['log']
 usage_coll = run_db['usage']['usage']

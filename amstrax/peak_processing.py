@@ -2,6 +2,7 @@ import json
 
 import numpy as np
 import numba
+from .SiPMdata import *
 
 import strax
 from amstrax.common import to_pe, pax_file, get_resource, first_sr1_run,get_elife, select_channels
@@ -28,7 +29,9 @@ export, __all__ = strax.exporter()
                  help="Minimum ratio between local sum waveform"
                       "minimum and maxima on either side, to trigger a split"),
     strax.Option('diagnose_sorting', track=False, default=False,
-                 help="Enable runtime checks for sorting and disjointness"), )
+                 help="Enable runtime checks for sorting and disjointness"),
+    strax.Option('pmt_channel', default =0,
+                 help="PMT channel for splitting pmt and sipms"),)
 class Peaks(strax.Plugin):
     depends_on = ('records',)
     data_kind = dict(peaks_top='peaks',
@@ -36,10 +39,13 @@ class Peaks(strax.Plugin):
     parallel = 'process'
     provides = ('peaks_top', 'peaks_bottom')
     rechunk_on_save = True
+    # data_kind = 'peaks'
+    # provides = 'peaks'
 
     __version__ = '0.1.0'
     dtype = dict(peaks_top = strax.peak_dtype(n_channels=8),
                  peaks_bottom = strax.peak_dtype(n_channels=8))
+    # dtype = strax.peak_dtype(n_channels=8)
 
     def compute(self, records):
         r = records
@@ -51,8 +57,8 @@ class Peaks(strax.Plugin):
         # they should not affect the clustering!
 
         hits = strax.sort_by_time(hits)
-        hits_bottom, hits_top = hits[hits['channel'] < 8], hits[hits['channel'] >= 8]
-        r_bottom, r_top = r[r['channel'] < 8], r[r['channel'] >= 8]
+        hits_bottom, hits_top = hits[hits['channel'] == self.config['pmt_channel']], hits[hits['channel'] !=self.config['pmt_channel']]
+        r_bottom, r_top = r[r['channel'] == self.config['pmt_channel']], r[r['channel'] != self.config['pmt_channel']]
 
         peaks_bottom = strax.find_peaks(
             hits_bottom, self.to_pe,
@@ -90,62 +96,13 @@ class Peaks(strax.Plugin):
         return dict(peaks_top=peaks_top,
                     peaks_bottom=peaks_bottom,
                     )
+        # return peaks
 
 
 @export
-class PeakBasicsTop(strax.Plugin):
-    provides = ('peakbasics_top')
-    depends_on = ('peaks_top')
-    data_kind = ('peaks')
-    parallel = 'False'
-    rechunk_on_save = True
-    __version__ = '0.1.0'
-    dtype = [
-        (('Start time of the peak (ns since unix epoch)',
-          'time'), np.int64),
-        (('End time of the peak (ns since unix epoch)',
-          'endtime'), np.int64),
-        (('Peak integral in PE',
-            'area'), np.float32),
-        (('Number of PMTs contributing to the peak',
-            'n_channels'), np.int16),
-        (('PMT number which contributes the most PE',
-            'max_pmt'), np.int16),
-        (('Area of signal in the largest-contributing PMT (PE)',
-            'max_pmt_area'), np.int32),
-        (('Width (in ns) of the central 50% area of the peak',
-            'range_50p_area'), np.float32),
-        (('Fraction of area seen by the top array',
-            'area_fraction_top'), np.float32),
-
-        (('Length of the peak waveform in samples',
-          'length'), np.int32),
-        (('Time resolution of the peak waveform in ns',
-          'dt'), np.int16),
-        ]
-
-    def compute(self, peaks):
-        p = peaks
-        p = strax.sort_by_time(p)
-        r = np.zeros(len(p), self.dtype)
-        for q in 'time length dt area'.split():
-            r[q] = p[q]
-        r['endtime'] = p['time'] + p['dt'] * p['length']
-        r['n_channels'] = (p['area_per_channel'] > 0).sum(axis=1)
-        r['range_50p_area'] = p['width'][:, 5]
-        r['max_pmt'] = np.argmax(p['area_per_channel'], axis=1)
-        r['max_pmt_area'] = np.max(p['area_per_channel'], axis=1)
-
-        area_top = p['area_per_channel'][:, :8].sum(axis=1)
-        # Negative-area peaks get 0 AFT - TODO why not NaN?
-        m = p['area'] > 0
-        r['area_fraction_top'][m] = area_top[m]/p['area'][m]
-        return r
-
-@export
-class PeakBasicsBottom(strax.Plugin):
-    provides = ('peakbasics_bottom')
-    depends_on = ('peaks_bottom')
+class PeakBasics(strax.Plugin):
+    # provides = ('peakbasics_top')
+    depends_on = ('peaks')
     data_kind = ('peaks')
     parallel = 'False'
     rechunk_on_save = True
@@ -194,39 +151,57 @@ class PeakBasicsBottom(strax.Plugin):
 
 
 @export
-@strax.takes_config(
-    #     strax.Option(
-    #         'nn_architecture',
-    #         help='Path to JSON of neural net architecture',
-    #         default_by_run=[
-    #             (0, pax_file('XENON1T_tensorflow_nn_pos_20171217_sr0.json')),
-    #             ('', pax_file('XENON1T_tensorflow_nn_pos_20171217_sr1.json'))]),   # noqa
-
-    #     strax.Option(
-    #         'nn_weights',
-    #         help='Path to HDF5 of neural net weights',
-    #         default_by_run=[
-    #             (0, pax_file('XENON1T_tensorflow_nn_pos_weights_20171217_sr0.h5')),
-    #             (first_sr1_run, pax_file('XENON1T_tensorflow_nn_pos_weights_20171217_sr1.h5'))]),   # noqa
-    strax.Option('min_reconstruction_area',
-                 help='Skip reconstruction if area (PE) is less than this',
-                 default=10)
-)
 class PeakPositions(strax.Plugin):
-    dtype = [('x', np.float32,
-              'Reconstructed S2 X position (cm), uncorrected'),
-             ('y', np.float32,
-              'Reconstructed S2 Y position (cm), uncorrected')]
-    depends_on = ('peaks_top',)
+    depends_on = ('peaks', 'peak_classification_top')
+    dtype = [
+        ('xr', np.float32,
+         'Interaction x-position'),
+        ('yr', np.float32,
+         'Interaction y-position'),
+    ]
 
     def setup(self):
-        import keras
-        import tensorflow as tf
+        # z position of the in-plane SiPMs
+        z_plane = 10
+        # radius of the cyinder for SiPMs at the side
+        r_cylinder = 22
+        # radius of a SiPM - I assume circular SiPMs with a radius to make the area correspond to a 3x3mm2 square.
+        r_sipm = 1.6925
+        # build geometry
+        geo = GeoParameters(z_plane=z_plane, r_cylinder=r_cylinder, r_sipm=r_sipm)
+
+        sipm = SiPM(type="plane", position=[0, -15, z_plane], qeff=0.25)
+        geo.add_sipm(sipm)
+        sipm = SiPM(type="plane", position=[-13, -7.5, z_plane], qeff=0.25)
+        geo.add_sipm(sipm)
+        sipm = SiPM(type="plane", position=[13, -7.5, z_plane], qeff=0.25)
+        geo.add_sipm(sipm)
+        sipm = SiPM(type="plane", position=[-4, 0, z_plane], qeff=0.25)
+        geo.add_sipm(sipm)
+        sipm = SiPM(type="plane", position=[4, 0, z_plane], qeff=0.25)
+        geo.add_sipm(sipm)
+        sipm = SiPM(type="plane", position=[-13, 7.5, z_plane], qeff=0.25)
+        geo.add_sipm(sipm)
+        sipm = SiPM(type="plane", position=[13, 7.5, z_plane], qeff=0.25)
+        geo.add_sipm(sipm)
+
+        self.geo = geo
 
     def compute(self, peaks):
-        x = np.zeros(len(peaks), dtype=float)
-        y = np.zeros(len(peaks), dtype=float)
-        return dict(x=x, y=y)
+        result = np.zeros(len(peaks),dtype=self.dtype)
+
+        if not len(peaks):
+            return result
+        for ix,p in enumerate(peaks):
+            for i, area in enumerate(p['area_per_channel'][1:]):
+                self.geo.sipms[i].set_number_of_hits(area)
+
+            posrec = Reconstruction(self.geo)
+            pos = posrec.reconstruct_position('CHI2')
+            for key in ['xr', 'yr']:
+                result[key][ix] = pos[key]
+        return result
+
 
 
 @export
@@ -241,38 +216,7 @@ class PeakPositions(strax.Plugin):
                  help="Minimum width for S2s"))
 class PeakClassificationTop(strax.Plugin):
     __version__ = '0.0.1'
-    depends_on = ('peak_basics_top',)
-    dtype = [
-        ('type', np.int8, 'Classification of the peak.')]
-    parallel = True
-
-    def compute(self, peaks):
-        p = peaks
-        r = np.zeros(len(p), dtype=self.dtype)
-
-        is_s1 = p['n_channels'] >= self.config['s1_min_n_channels']
-        is_s1 &= p['range_50p_area'] < self.config['s1_max_width']
-        r['type'][is_s1] = 1
-
-        is_s2 = p['area'] > self.config['s2_min_area']
-        is_s2 &= p['range_50p_area'] > self.config['s2_min_width']
-        r['type'][is_s2] = 2
-
-        return r
-
-@export
-@strax.takes_config(
-    strax.Option('s1_max_width', default=75,
-                 help="Maximum (IQR) width of S1s"),
-    strax.Option('s1_min_n_channels', default=1,
-                 help="Minimum number of PMTs that must contribute to a S1"),
-    strax.Option('s2_min_area', default=10,
-                 help="Minimum area (PE) for S2s"),
-    strax.Option('s2_min_width', default=200,
-                 help="Minimum width for S2s"))
-class PeakClassificationBottom(strax.Plugin):
-    __version__ = '0.0.1'
-    depends_on = ('peakbasics_bottom',)
+    depends_on = ('peak_basics')
     dtype = [
         ('type', np.int8, 'Classification of the peak.')]
     parallel = True

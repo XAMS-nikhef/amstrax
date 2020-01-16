@@ -2,11 +2,10 @@ import numba
 import numpy as np
 
 import strax
-from straxen import get_to_pe
 export, __all__ = strax.exporter()
 
 # Number of TPC PMTs. Hardcoded for now...
-n_tpc = 16
+n_tpc = 8
 
 @export
 @strax.takes_config(
@@ -17,7 +16,7 @@ n_tpc = 16
 
     strax.Option(
         'hit_threshold',
-        default=15,
+        default=10,
         help='Hitfinder threshold in ADC counts above baseline')
 )
 class PulseProcessing(strax.Plugin):
