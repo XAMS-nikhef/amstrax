@@ -102,7 +102,7 @@ class Peaks(strax.Plugin):
 @export
 class PeakBasics(strax.Plugin):
     # provides = ('peakbasics_top')
-    depends_on = ('peaks')
+    depends_on = ('peaks_top')
     data_kind = ('peaks')
     parallel = 'False'
     rechunk_on_save = True
@@ -152,7 +152,7 @@ class PeakBasics(strax.Plugin):
 
 @export
 class PeakPositions(strax.Plugin):
-    depends_on = ('peaks', 'peak_classification_top')
+    depends_on = ('peaks_top', 'peak_classification')
     dtype = [
         ('xr', np.float32,
          'Interaction x-position'),
@@ -188,11 +188,12 @@ class PeakPositions(strax.Plugin):
         self.geo = geo
 
     def compute(self, peaks):
-        result = np.zeros(len(peaks),dtype=self.dtype)
+        result = np.empty(len(peaks),dtype=self.dtype)
 
         if not len(peaks):
             return result
-        for ix,p in enumerate(peaks):
+        for ix, p in enumerate(peaks):
+            if p['area_per_channel']
             for i, area in enumerate(p['area_per_channel'][1:]):
                 self.geo.sipms[i].set_number_of_hits(area)
 
@@ -214,7 +215,7 @@ class PeakPositions(strax.Plugin):
                  help="Minimum area (PE) for S2s"),
     strax.Option('s2_min_width', default=200,
                  help="Minimum width for S2s"))
-class PeakClassificationTop(strax.Plugin):
+class PeakClassification(strax.Plugin):
     __version__ = '0.0.1'
     depends_on = ('peak_basics')
     dtype = [
