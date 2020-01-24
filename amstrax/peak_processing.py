@@ -18,7 +18,7 @@ export, __all__ = strax.exporter()
                  help="Include this many ns right of hits in peaks"),
     strax.Option('peak_min_area', default=0,
                  help="Minimum contributing PMTs needed to define a peak"),
-    strax.Option('peak_min_pmts', default=2,
+    strax.Option('peak_min_pmts', default=1,
                  help="Minimum contributing PMTs needed to define a peak"),
     strax.Option('single_channel_peaks', default=False,
                  help='Whether single-channel peaks should be reported'),
@@ -42,7 +42,7 @@ class Peaks(strax.Plugin):
     # data_kind = 'peaks'
     # provides = 'peaks'
 
-    __version__ = '0.1.1'
+    __version__ = '0.1.11'
     dtype = dict(peaks_top = strax.peak_dtype(n_channels=8),
                  peaks_bottom = strax.peak_dtype(n_channels=8))
     # dtype = strax.peak_dtype(n_channels=8)
