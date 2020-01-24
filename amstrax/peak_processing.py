@@ -18,7 +18,7 @@ export, __all__ = strax.exporter()
                  help="Include this many ns right of hits in peaks"),
     strax.Option('peak_min_area', default=0,
                  help="Minimum contributing PMTs needed to define a peak"),
-    strax.Option('peak_min_pmts', default=1,
+    strax.Option('peak_min_pmts', default=2,
                  help="Minimum contributing PMTs needed to define a peak"),
     strax.Option('single_channel_peaks', default=False,
                  help='Whether single-channel peaks should be reported'),
@@ -42,7 +42,7 @@ class Peaks(strax.Plugin):
     # data_kind = 'peaks'
     # provides = 'peaks'
 
-    __version__ = '0.1.0'
+    __version__ = '0.1.1'
     dtype = dict(peaks_top = strax.peak_dtype(n_channels=8),
                  peaks_bottom = strax.peak_dtype(n_channels=8))
     # dtype = strax.peak_dtype(n_channels=8)
@@ -65,7 +65,7 @@ class Peaks(strax.Plugin):
             gap_threshold=self.config['peak_gap_threshold'],
             left_extension=self.config['peak_left_extension'],
             right_extension=self.config['peak_right_extension'],
-            min_channels=self.config['peak_min_pmts'],
+            min_channels=1,
             result_dtype=self.dtype['peaks_bottom'])
         strax.sum_waveform(peaks_bottom, r_bottom, self.to_pe)
 
@@ -100,7 +100,7 @@ class Peaks(strax.Plugin):
 
 
 @export
-class PeakBasics(strax.Plugin):
+class PeakBasicsTop(strax.Plugin):
     # provides = ('peakbasics_top')
     depends_on = ('peaks_top')
     data_kind = ('peaks')
@@ -151,13 +151,67 @@ class PeakBasics(strax.Plugin):
 
 
 @export
+class PeakBasicsBottom(strax.Plugin):
+    # provides = ('peakbasics_top')
+    depends_on = ('peaks_bottom')
+    data_kind = ('peaks')
+    parallel = 'False'
+    rechunk_on_save = True
+    __version__ = '0.1.0'
+    dtype = [
+        (('Start time of the peak (ns since unix epoch)',
+          'time'), np.int64),
+        (('End time of the peak (ns since unix epoch)',
+          'endtime'), np.int64),
+        (('Peak integral in PE',
+            'area'), np.float32),
+        (('Number of PMTs contributing to the peak',
+            'n_channels'), np.int16),
+        (('PMT number which contributes the most PE',
+            'max_pmt'), np.int16),
+        (('Area of signal in the largest-contributing PMT (PE)',
+            'max_pmt_area'), np.int32),
+        (('Width (in ns) of the central 50% area of the peak',
+            'range_50p_area'), np.float32),
+        (('Fraction of area seen by the top array',
+            'area_fraction_top'), np.float32),
+
+        (('Length of the peak waveform in samples',
+          'length'), np.int32),
+        (('Time resolution of the peak waveform in ns',
+          'dt'), np.int16),
+        ]
+
+    def compute(self, peaks):
+        p = peaks
+        p = strax.sort_by_time(p)
+        r = np.zeros(len(p), self.dtype)
+        for q in 'time length dt area'.split():
+            r[q] = p[q]
+        r['endtime'] = p['time'] + p['dt'] * p['length']
+        r['n_channels'] = (p['area_per_channel'] > 0).sum(axis=1)
+        r['range_50p_area'] = p['width'][:, 5]
+        r['max_pmt'] = np.argmax(p['area_per_channel'], axis=1)
+        r['max_pmt_area'] = np.max(p['area_per_channel'], axis=1)
+
+        area_top = p['area_per_channel'][:, :8].sum(axis=1)
+        # Negative-area peaks get 0 AFT - TODO why not NaN?
+        m = p['area'] > 0
+        r['area_fraction_top'][m] = area_top[m]/p['area'][m]
+        return r
+
+
+@export
 class PeakPositions(strax.Plugin):
     depends_on = ('peaks_top', 'peak_classification')
+    __version__ = '0.0.1'
     dtype = [
         ('xr', np.float32,
          'Interaction x-position'),
         ('yr', np.float32,
          'Interaction y-position'),
+        ('r', np.float32,
+         'radial distance'),
     ]
 
     def setup(self):
@@ -188,12 +242,12 @@ class PeakPositions(strax.Plugin):
         self.geo = geo
 
     def compute(self, peaks):
-        result = np.empty(len(peaks),dtype=self.dtype)
+        result = np.empty(len(peaks), dtype=self.dtype)
 
         if not len(peaks):
             return result
         for ix, p in enumerate(peaks):
-            if p['area_per_channel']
+            # if p['area_per_channel']
             for i, area in enumerate(p['area_per_channel'][1:]):
                 self.geo.sipms[i].set_number_of_hits(area)
 
@@ -201,6 +255,7 @@ class PeakPositions(strax.Plugin):
             pos = posrec.reconstruct_position('CHI2')
             for key in ['xr', 'yr']:
                 result[key][ix] = pos[key]
+        result['r'] = (result['xr']**2+result['yr']**2)**(1/2)
         return result
 
 
@@ -215,7 +270,7 @@ class PeakPositions(strax.Plugin):
                  help="Minimum area (PE) for S2s"),
     strax.Option('s2_min_width', default=200,
                  help="Minimum width for S2s"))
-class PeakClassification(strax.Plugin):
+class PeakClassificationTop(strax.Plugin):
     __version__ = '0.0.1'
     depends_on = ('peak_basics')
     dtype = [
