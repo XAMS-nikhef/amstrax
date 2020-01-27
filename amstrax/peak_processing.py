@@ -98,6 +98,23 @@ class Peaks(strax.Plugin):
                     )
         # return peaks
 
+@export
+@strax.takes_config(
+    strax.Option(
+        'hit_threshold',
+        default=10,
+        help='Hitfinder threshold in ADC counts above baseline')
+)
+class Hits(strax.Plugin):
+    depends_on = 'records'
+    data_kind = 'peaks'
+    parallel = 'False'
+    __version__ = '0.0.1'
+    dtype= strax.hit_dtype
+
+    def compute(self, records):
+        hits = strax.find_hits(records, threshold=self.config['hit_threshold'])
+        return hits
 
 @export
 class PeakBasicsTop(strax.Plugin):
@@ -203,8 +220,8 @@ class PeakBasicsBottom(strax.Plugin):
 
 @export
 class PeakPositions(strax.Plugin):
-    depends_on = ('peaks_top', 'peak_classification')
-    __version__ = '0.0.1'
+    depends_on = ('peaks_top', 'peak_classification_top')
+    __version__ = '0.0.13'
     dtype = [
         ('xr', np.float32,
          'Interaction x-position'),
@@ -242,6 +259,8 @@ class PeakPositions(strax.Plugin):
         self.geo = geo
 
     def compute(self, peaks):
+
+        peaks = peaks[peaks['type']==2]
         result = np.empty(len(peaks), dtype=self.dtype)
 
         if not len(peaks):
@@ -262,17 +281,17 @@ class PeakPositions(strax.Plugin):
 
 @export
 @strax.takes_config(
-    strax.Option('s1_max_width', default=75,
+    strax.Option('s1_max_width', default=60,
                  help="Maximum (IQR) width of S1s"),
-    strax.Option('s1_min_n_channels', default=1,
+    strax.Option('s1_min_area', default=4000,
                  help="Minimum number of PMTs that must contribute to a S1"),
-    strax.Option('s2_min_area', default=10,
+    strax.Option('s2_min_area', default=4000,
                  help="Minimum area (PE) for S2s"),
-    strax.Option('s2_min_width', default=200,
+    strax.Option('s2_min_width', default=100,
                  help="Minimum width for S2s"))
 class PeakClassificationTop(strax.Plugin):
     __version__ = '0.0.1'
-    depends_on = ('peak_basics')
+    depends_on = ('peak_basics_top')
     dtype = [
         ('type', np.int8, 'Classification of the peak.')]
     parallel = True
@@ -281,7 +300,39 @@ class PeakClassificationTop(strax.Plugin):
         p = peaks
         r = np.zeros(len(p), dtype=self.dtype)
 
-        is_s1 = p['n_channels'] >= self.config['s1_min_n_channels']
+        is_s1 = p['area'] >= self.config['s1_min_area']
+        is_s1 &= p['range_50p_area'] < self.config['s1_max_width']
+        r['type'][is_s1] = 1
+
+        is_s2 = p['area'] > self.config['s2_min_area']
+        is_s2 &= p['range_50p_area'] > self.config['s2_min_width']
+        r['type'][is_s2] = 2
+
+        return r
+
+
+@export
+@strax.takes_config(
+    strax.Option('s1_max_width', default=60,
+                 help="Maximum (IQR) width of S1s"),
+    strax.Option('s1_min_area', default=4000,
+                 help="Minimum number of PMTs that must contribute to a S1"),
+    strax.Option('s2_min_area', default=4000,
+                 help="Minimum area (PE) for S2s"),
+    strax.Option('s2_min_width', default=100,
+                 help="Minimum width for S2s"))
+class PeakClassificationBottom(strax.Plugin):
+    __version__ = '0.0.1'
+    depends_on = ('peak_basics_Bottom')
+    dtype = [
+        ('type', np.int8, 'Classification of the peak.')]
+    parallel = True
+
+    def compute(self, peaks):
+        p = peaks
+        r = np.zeros(len(p), dtype=self.dtype)
+
+        is_s1 = p['area'] >= self.config['s1_min_area']
         is_s1 &= p['range_50p_area'] < self.config['s1_max_width']
         r['type'][is_s1] = 1
 

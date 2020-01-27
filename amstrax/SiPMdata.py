@@ -175,12 +175,12 @@ class Reconstruction:
                 self.status = 1
             else:
 
-                for sipm in self.geo.get_sipms():
-                    print(sipm, " n = ", sipm.get_number_of_hits())
+                # for sipm in self.geo.get_sipms():
+                #     print(sipm, " n = ", sipm.get_number_of_hits())
 
-                print('m_status =', m_status[0].has_accurate_covar)
+                # print('m_status =', m_status[0].has_accurate_covar)
                 self.rate0 = 0
-                self.xrec = [-999, -999, -999]
+                self.xrec = [np.nan,np.nan, np.nan]
                 self.status = 0
 
         #if method != "COG":
