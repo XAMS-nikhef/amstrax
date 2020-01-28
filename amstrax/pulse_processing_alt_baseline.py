@@ -2,10 +2,12 @@ import numba
 import numpy as np
 
 import strax
+
 export, __all__ = strax.exporter()
 
 # Number of TPC PMTs. Hardcoded for now...
 n_tpc = 8
+
 
 @export
 @strax.takes_config(
@@ -13,11 +15,6 @@ n_tpc = 8
         'save_outside_hits',
         default=(3, 3),
         help='Save (left, right) samples besides hits; cut the rest'),
-
-    strax.Option(
-        'hit_threshold',
-        default=10,
-        help='Hitfinder threshold in ADC counts above baseline')
 )
 class PulseProcessing(strax.Plugin):
     """
@@ -51,7 +48,7 @@ class PulseProcessing(strax.Plugin):
         dtype = dict()
         for p in self.provides:
             if p.endswith('records'):
-                dtype[p] = strax.record_dtype(record_length)
+                dtype[p] = record_dtype(record_length)
 
         dtype['pulse_counts'] = pulse_count_dtype(n_tpc)
         return dtype
@@ -59,6 +56,7 @@ class PulseProcessing(strax.Plugin):
     def compute(self, raw_records):
         # Do not trust in DAQ + strax.baseline to leave the
         # out-of-bounds samples to zero.
+        baseline(raw_records)
         strax.zero_out_of_bounds(raw_records)
 
         ##
@@ -70,7 +68,7 @@ class PulseProcessing(strax.Plugin):
 
         # Find hits
         # -- before filtering,since this messes with the with the S/N
-        hits = strax.find_hits(r, threshold=self.config['hit_threshold'])
+        hits = find_hits(r)
 
         le, re = self.config['save_outside_hits']
         r = strax.cut_outside_hits(r, hits,
@@ -83,6 +81,170 @@ class PulseProcessing(strax.Plugin):
         return dict(records=r,
                     pulse_counts=pulse_counts,
                     )
+
+
+# Base dtype for interval-like objects (pulse, peak, hit)
+interval_dtype = [
+    (('Channel/PMT number',
+      'channel'), np.int16),
+    (('Time resolution in ns',
+      'dt'), np.int16),
+    (('Start time of the interval (ns since unix epoch)',
+      'time'), np.int64),
+    # Don't try to make O(second) long intervals!
+    (('Length of the interval in samples',
+      'length'), np.int32),
+    # Sub-dtypes MUST contain an area field
+    # However, the type varies: float for sum waveforms (area in PE)
+    # and int32 for per-channel waveforms (area in ADC x samples)
+]
+
+
+def record_dtype(samples_per_record=DEFAULT_RECORD_LENGTH):
+    """Data type for a waveform record.
+
+    Length can be shorter than the number of samples in data,
+    this indicates a record with zero-padding at the end.
+    """
+    return interval_dtype + [
+        (("Integral in ADC x samples",
+          'area'), np.int32),
+        # np.int16 is not enough for some PMT flashes...
+        (('Length of pulse to which the record belongs (without zero-padding)',
+          'pulse_length'), np.int32),
+        (('Fragment number in the pulse',
+          'record_i'), np.int16),
+        (('Baseline in ADC counts. data = int(baseline) - data_orig',
+          'baseline'), np.float32),
+        (('Level of data reduction applied (strax.ReductionLevel enum)',
+          'reduction_level'), np.uint8),
+        # Note this is defined as a SIGNED integer, so we can
+        # still represent negative values after subtracting baselines
+        (('Waveform data in ADC counts above baseline',
+          'data'), np.int16, samples_per_record),
+        (('Baseline standard deviation', np.int16, baseline_std)),
+
+    ]
+
+@numba.jit(nopython=True, nogil=True, cache=True)
+def baseline(records, baseline_samples=40):
+    """Subtract pulses from int(baseline), store baseline in baseline field
+    :param baseline_samples: number of samples at start of pulse to average
+    Assumes records are sorted in time (or at least by channel, then time)
+
+    Assumes record_i information is accurate (so don't cut pulses before
+    baselining them!)
+    """
+    if not len(records):
+        return records
+    samples_per_record = len(records[0]['data'])
+
+    # Array for looking up last baseline seen in channel
+    # We only care about the channels in this set of records; a single .max()
+    # is worth avoiding the hassle of passing n_channels around
+    last_bl_in = np.zeros(records['channel'].max() + 1, dtype=np.int16)
+    last_bl_std_in = np.zeros(records['channel'].max() + 1, dtype=np.int16)
+
+    for d_i, d in enumerate(records):
+
+        # Compute the baseline if we're the first record of the pulse,
+        # otherwise take the last baseline we've seen in the channel
+        if d.record_i == 0:
+            bl = last_bl_in[d.channel] = d.data[:baseline_samples].mean()
+            bl_std = last_bl_std_in[d.channel] = d.data[:baseline_samples].stdev()
+        else:
+            bl = last_bl_in[d.channel]
+            bl_std = last_bl_std_in[d.channel]
+
+        # Subtract baseline from all data samples in the record
+        # (any additional zeros should be kept at zero)
+        last = min(samples_per_record,
+                   d.pulse_length - d.record_i * samples_per_record)
+        d.data[:last] = int(bl) - d.data[:last]
+        d.baseline = bl
+        d.baseline_std = bl_std
+
+@strax.growing_result(strax.hit_dtype, chunk_size=int(1e4))
+@numba.jit(nopython=True, nogil=True, cache=True)
+def find_hits(records, _result_buffer=None):
+    """Return hits (intervals above threshold) found in records.
+    Hits that straddle record boundaries are split (TODO: fix this?)
+
+    NB: returned hits are NOT sorted yet!
+    """
+    buffer = _result_buffer
+    if not len(records):
+        return
+    samples_per_record = len(records[0]['data'])
+    offset = 0
+
+    for record_i, r in enumerate(records):
+        # print("Starting record ', record_i)
+        in_interval = False
+        hit_start = -1
+        area = 0
+
+        for i in range(samples_per_record):
+            # We can't use enumerate over r['data'],
+            # numba gives errors if we do.
+            # TODO: file issue?
+            x = r['data'][i]
+            above_threshold = x > 3*r['baseline_std']
+            # print(r['data'][i], above_threshold, in_interval, hit_start)
+
+            if not in_interval and above_threshold:
+                # Start of a hit
+                in_interval = True
+                hit_start = i
+
+            if in_interval:
+                if not above_threshold:
+                    # Hit ends at the start of this sample
+                    hit_end = i
+                    in_interval = False
+
+                elif i == samples_per_record - 1:
+                    # Hit ends at the *end* of this sample
+                    # (because the record ends)
+                    hit_end = i + 1
+                    area += x
+                    in_interval = False
+
+                else:
+                    area += x
+
+                if not in_interval:
+                    # print('saving hit')
+                    # Hit is done, add it to the result
+                    if hit_end == hit_start:
+                        print(r['time'], r['channel'], hit_start)
+                        raise ValueError(
+                            "Caught attempt to save zero-length hit!")
+                    res = buffer[offset]
+                    res['left'] = hit_start
+                    res['right'] = hit_end
+                    res['time'] = r['time'] + hit_start * r['dt']
+                    # Note right bound is exclusive, no + 1 here:
+                    res['length'] = hit_end - hit_start
+                    res['dt'] = r['dt']
+                    res['channel'] = r['channel']
+                    res['record_i'] = record_i
+                    area += int(round(
+                        res['length'] * (r['baseline'] % 1)))
+                    res['area'] = area
+                    area = 0
+
+                    # Yield buffer to caller if needed
+                    offset += 1
+                    if offset == len(buffer):
+                        yield offset
+                        offset = 0
+
+                    # Clear stuff, just for easier debugging
+                    # hit_start = 0
+                    # hit_end = 0
+    yield offset
+
 
 @numba.njit
 def rough_sum(regions, records, to_pe, n, dt):
@@ -203,14 +365,15 @@ def channel_split(rr, first_other_ch):
     """Return """
     return _mask_and_not(rr, rr['channel'] < first_other_ch)
 
-@numba.jit(nopython=True,nogil=True, cache=True)
+
+@numba.jit(nopython=True, nogil=True, cache=True)
 def get_record_index(raw_records, channel, direction):
     if direction == -1:
         for i in range(-1, -len(raw_records), -1):
             if raw_records[i]['channel'] == channel:
                 return i
         else:
-            return  0
+            return 0
 
     if direction == +1:
         for i in range(1, len(raw_records), 1):
@@ -219,11 +382,11 @@ def get_record_index(raw_records, channel, direction):
         else:
             return len(raw_records)
 
+
 @export
 @strax.growing_result(strax.record_dtype(), chunk_size=int(1e6))
 @numba.jit(nopython=False, nogil=False, cache=True)
-def fill_records(raw_records, hits, trigger_window,_result_buffer = None):
-
+def fill_records(raw_records, hits, trigger_window, _result_buffer=None):
     samples_per_record = strax.DEFAULT_RECORD_LENGTH
     tw = trigger_window
     buffer = _result_buffer
@@ -232,7 +395,7 @@ def fill_records(raw_records, hits, trigger_window,_result_buffer = None):
     skipper = 0
     for ch in np.unique(hits['channel']):
         hit_ch = hits[(hits['channel'] == ch)
-                     &(hits['length'] > 1)]
+                      & (hits['length'] > 1)]
         for h in hit_ch:
             if skipper != 0:
                 skipper -= 1
@@ -263,7 +426,6 @@ def fill_records(raw_records, hits, trigger_window,_result_buffer = None):
             p_offset = hit[0]['left'] - tw
             p_end = hit[-1]['right'] + tw
 
-
             input_record_index = [np.unique(hit_buffer['record_i']).tolist()][0]
 
             assert input_record_index != [0]
@@ -272,27 +434,27 @@ def fill_records(raw_records, hits, trigger_window,_result_buffer = None):
             #     continue
             if p_offset < 0:
                 previous = hit_buffer[0]['record_i'] + get_record_index(raw_records[:hit_buffer[0]['record_i']],
-                                                             hit_buffer[0]['channel'],
-                                                             -1)
+                                                                        hit_buffer[0]['channel'],
+                                                                        -1)
                 # print(previous)
-                if previous  <  0 or previous == hit_buffer[0]['record_i']:
-                    p_length +=  p_offset
+                if previous < 0 or previous == hit_buffer[0]['record_i']:
+                    p_length += p_offset
                     p_offset = 0
 
-                if previous >  0:
+                if previous > 0:
                     p_offset += samples_per_record
                     input_record_index.append(previous)
 
             if p_end > samples_per_record:
                 next = hit_buffer[-1]['record_i'] + get_record_index(raw_records[hit_buffer[-1]['record_i']:],
-                                                                                      hit_buffer[-1]['channel'],
-                                                                                      +1)
+                                                                     hit_buffer[-1]['channel'],
+                                                                     +1)
                 # print(next)
                 if next < len(raw_records):
                     input_record_index.append(next)
 
                 if next > len(raw_records):
-                    p_length -= (p_end  % samples_per_record)
+                    p_length -= (p_end % samples_per_record)
                     # print('hmm')
 
             # if len(np.unique(raw_records['channel'][input_record_index])) !=1:
@@ -302,7 +464,7 @@ def fill_records(raw_records, hits, trigger_window,_result_buffer = None):
             record_buffer = []
             # print(input_record_index)
             for i in input_record_index:
-                if i > len(raw_records) -1 :
+                if i > len(raw_records) - 1:
                     p_length -= tw * dt
                     # print('here')
                     continue
