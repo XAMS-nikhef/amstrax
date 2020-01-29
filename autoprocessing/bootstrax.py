@@ -101,7 +101,8 @@ run_collname = 'run'
 
 # Folder to place new processed data in
 # TODO: Perhaps check that ssh mount exists?
-output_folder = '/data/xenon/xams/strax_processed_gas/'
+output_folder = '/data/xenon/xams/strax_processed_temp/'
+storage_folder = '/data/xenon/xams/strax_processed_gas/'
 
 # Timeouts in seconds
 timeouts = {
@@ -493,9 +494,15 @@ def run_strax(run_id, input_dir, target, n_readout_threads, compressor,
                             compressor=compressor,
                             n_readout_threads=n_readout_threads),
                 max_workers=args.cores)
+        files = os.listdir(output_folder)
+        files = [file for file in files if run_id in file]
+        [shutil.move(file, storage_folder) for file in files]
     except Exception as e:
         # Write exception to file, so bootstrax can read it
         exc_info = strax.formatted_exception()
+        files = os.listdir(output_folder)
+        files = [file for file in files if run_id in file]
+        [shutil.rmtree(file) for file in files]
         with open(exception_tempfile, mode='w') as f:
             f.write(exc_info)
         raise

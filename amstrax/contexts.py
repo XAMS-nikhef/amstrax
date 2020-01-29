@@ -17,11 +17,11 @@ def amstrax_gas_test_analysis():
     """Return strax test for analysis of Xams gas test data"""
     return strax.Context(
         storage = [
-            # ax.RunDB(
-            #     mongo_url='mongodb://user:password@127.0.0.1:27017/admin',
-            #     mongo_collname='runs_gas',
-            #     runid_field='number',
-            #     mongo_dbname='run'),
+            ax.RunDB(
+                mongo_url='mongodb://user:password@127.0.0.1:27017/admin',
+                mongo_collname='runs_gas',
+                runid_field='number',
+                mongo_dbname='run'),
         strax.DataDirectory('/data/xenon/xams/strax_processed_gas/',
                             provide_run_metadata=False,
                             deep_scan=False,
@@ -29,11 +29,8 @@ def amstrax_gas_test_analysis():
         strax.DataDirectory('/data/xenon/xams/strax_processed_peaks/',
                             provide_run_metadata=False,
                             deep_scan=False,
-                            readonly=True),
-        strax.DataDirectory('./strax_data',
-                            provide_run_metadata=False,
-                            deep_scan=False,
-                            readonly=False)],
+                            readonly=False,
+                    )],
         forbid_creation_of='raw_records',
         **common_opts,
     )
