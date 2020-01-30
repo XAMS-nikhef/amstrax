@@ -147,10 +147,10 @@ class PeaksAltBl(strax.Plugin):
             result_dtype=self.dtype['peaks_bottom_alt_bl'])
         strax.sum_waveform(peaks_bottom, r_bottom, self.to_pe)
 
-        peaks_bottom = strax.split_peaks(
-            peaks_bottom, r_bottom, self.to_pe,
-            min_height=self.config['peak_split_min_height'],
-            min_ratio=self.config['peak_split_min_ratio'])
+        # peaks_bottom = strax.split_peaks(
+        #     peaks_bottom, r_bottom, self.to_pe,
+        #     min_height=self.config['peak_split_min_height'],
+        #     min_ratio=self.config['peak_split_min_ratio'])
 
         strax.compute_widths(peaks_bottom)
 
@@ -164,10 +164,10 @@ class PeaksAltBl(strax.Plugin):
             result_dtype=self.dtype['peaks_top_alt_bl'])
         strax.sum_waveform(peaks_top, r_top, self.to_pe)
 
-        peaks_top = strax.split_peaks(
-            peaks_top, r_top, self.to_pe,
-            min_height=self.config['peak_split_min_height'],
-            min_ratio=self.config['peak_split_min_ratio'])
+        # peaks_top = strax.split_peaks(
+        #     peaks_top, r_top, self.to_pe,
+        #     min_height=self.config['peak_split_min_height'],
+        #     min_ratio=self.config['peak_split_min_ratio'])
 
         strax.compute_widths(peaks_top)
 
