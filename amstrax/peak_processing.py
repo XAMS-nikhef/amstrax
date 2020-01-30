@@ -347,12 +347,55 @@ class PeakClassificationBottom(strax.Plugin):
     strax.Option('min_area_fraction', default=0.5,
                  help='The area of competing peaks must be at least '
                       'this fraction of that of the considered peak'),
-    strax.Option('nearby_window', default=int(1e7),
+    strax.Option('nearby_window', default=int(1e6),
                  help='Peaks starting within this time window (on either side)'
                       'in ns count as nearby.'),
 )
-class NCompeting(strax.OverlapWindowPlugin):
-    depends_on = ('peak_basics',)
+class NCompetingTop(strax.OverlapWindowPlugin):
+    depends_on = ('peak_basics_top',)
+    dtype = [
+        ('n_competing', np.int32,
+            'Number of nearby larger or slightly smaller peaks')]
+
+    def get_window_size(self):
+        return 2 * self.config['nearby_window']
+
+    def compute(self, peaks):
+        return dict(n_competing=self.find_n_competing(
+            peaks,
+            window=self.config['nearby_window'],
+            fraction=self.config['min_area_fraction']))
+
+    @staticmethod
+    @numba.jit(nopython=True, nogil=True, cache=True)
+    def find_n_competing(peaks, window, fraction):
+        n = len(peaks)
+        t = peaks['time']
+        a = peaks['area']
+        results = np.zeros(n, dtype=np.int32)
+
+        left_i = 0
+        right_i = 0
+        for i, peak in enumerate(peaks):
+            while t[left_i] + window < t[i] and left_i < n - 1:
+                left_i += 1
+            while t[right_i] - window < t[i] and right_i < n - 1:
+                right_i += 1
+            results[i] = np.sum(a[left_i:right_i + 1] > a[i] * fraction)
+
+        return results - 1
+
+@export
+@strax.takes_config(
+    strax.Option('min_area_fraction', default=0.5,
+                 help='The area of competing peaks must be at least '
+                      'this fraction of that of the considered peak'),
+    strax.Option('nearby_window', default=int(1e6),
+                 help='Peaks starting within this time window (on either side)'
+                      'in ns count as nearby.'),
+)
+class NCompetingBottom(strax.OverlapWindowPlugin):
+    depends_on = ('peak_basics_bottom',)
     dtype = [
         ('n_competing', np.int32,
             'Number of nearby larger or slightly smaller peaks')]

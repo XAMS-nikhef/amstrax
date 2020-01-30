@@ -13,8 +13,8 @@ export, __all__ = strax.exporter()
     strax.Option('trigger_min_area', default=100,
                  help='Peaks must have more area (PE) than this to '
                       'cause events'),
-    strax.Option('trigger_max_competing', default=7,
-                 help='Peaks must have FEWER nearby larger or slightly smaller'
+    strax.Option('trigger_min_competing', default=3,
+                 help='Peaks must have More nearby larger or slightly smaller'
                       ' peaks to cause events'),
     strax.Option('left_event_extension', default=int(1e6),
                  help='Extend events this many ns to the left from each '
@@ -24,8 +24,7 @@ export, __all__ = strax.exporter()
                       'triggering peak'),
 )
 class Events(strax.OverlapWindowPlugin):
-    depends_on = ['peaks_top']
-        # , 'n_competing']
+    depends_on = ['peaks_top', 'n_competing_top']
     data_kind = 'events'
     parallel= False
     dtype = [
@@ -44,8 +43,7 @@ class Events(strax.OverlapWindowPlugin):
 
         triggers = peaks[
             (peaks['area'] > self.config['trigger_min_area'])
-            & (peaks['n_competing'] <= self.config['trigger_max_competing'])]
-
+            & (peaks['n_competing'] >= self.config['trigger_min_competing'])]
         # Join nearby triggers
         t0, t1 = strax.find_peak_groups(
             triggers,

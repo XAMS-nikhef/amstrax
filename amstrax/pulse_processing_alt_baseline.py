@@ -90,11 +90,11 @@ class PulseProcessing(strax.Plugin):
 @strax.takes_config(
     strax.Option('peak_gap_threshold', default=3000,
                  help="No hits for this many ns triggers a new peak"),
-    strax.Option('peak_left_extension', default=1000,
+    strax.Option('peak_left_extension', default=80,
                  help="Include this many ns left of hits in peaks"),
-    strax.Option('peak_right_extension', default=1000,
+    strax.Option('peak_right_extension', default=80,
                  help="Include this many ns right of hits in peaks"),
-    strax.Option('peak_min_area', default=0,
+    strax.Option('peak_min_area', default=1,
                  help="Minimum contributing PMTs needed to define a peak"),
     strax.Option('peak_min_pmts', default=1,
                  help="Minimum contributing PMTs needed to define a peak"),
@@ -118,9 +118,12 @@ class PeaksAltBl(strax.Plugin):
     provides = ('peaks_top_alt_bl', 'peaks_bottom_alt_bl')
     rechunk_on_save = True
 
-    __version__ = '0.1.11'
-    dtype = dict(peaks_top_alt_bl=strax.peak_dtype(n_channels=8),
-                 peaks_bottom_alt_bl=strax.peak_dtype(n_channels=8))
+    __version__ = '0.1.12'
+    dtype = dict(peaks_top_alt_bl=strax.peak_dtype(n_channels=8)
+                                  + [('Maximum height of the peak', 'peak_max'),np.int16],
+                 peaks_bottom_alt_bl=strax.peak_dtype(n_channels=8)
+                                     + [('Maximum height of the peak', 'peak_max'),np.int16]
+                 )
 
     def compute(self, records_alt_bl):
         r = records_alt_bl
@@ -164,6 +167,8 @@ class PeaksAltBl(strax.Plugin):
             min_ratio=self.config['peak_split_min_ratio'])
 
         strax.compute_widths(peaks_top)
+
+        peaks_top['peak_max'] = np.max(peaks['data'],axis=1)
 
         return dict(peaks_top_alt_bl=peaks_top,
                     peaks_bottom_alt_bl=peaks_bottom,
