@@ -15,6 +15,7 @@ n_tpc = 8
         'save_outside_hits',
         default=(3, 3),
         help='Save (left, right) samples besides hits; cut the rest'),
+    strax.Option('trigger_threshold', default=50),
 )
 class PulseProcessing(strax.Plugin):
     """
@@ -71,7 +72,7 @@ class PulseProcessing(strax.Plugin):
 
         # Find hits
         # -- before filtering,since this messes with the with the S/N
-        hits = find_hits(r)
+        hits = find_hits(r, threshold=self.config['trigger_threshold'])
 
         le, re = self.config['save_outside_hits']
         r = strax.cut_outside_hits(r, hits,
@@ -108,8 +109,10 @@ class PulseProcessing(strax.Plugin):
                       "minimum and maxima on either side, to trigger a split"),
     strax.Option('diagnose_sorting', track=False, default=False,
                  help="Enable runtime checks for sorting and disjointness"),
-    strax.Option('pmt_channel', default =0,
-                 help="PMT channel for splitting pmt and sipms"),)
+    strax.Option('pmt_channel', default=0,
+                 help="PMT channel for splitting pmt and sipms"),
+    strax.Option('trigger_threshold',default=50),
+)
 class PeaksAltBl(strax.Plugin):
     depends_on = 'records_alt_bl'
     data_kind = dict(peaks_top_alt_bl='peaks',
@@ -129,7 +132,7 @@ class PeaksAltBl(strax.Plugin):
         r = records_alt_bl
         self.to_pe = np.ones(16)
 
-        hits = find_hits(r)
+        hits = find_hits(r, threshold=self.config['trigger_threshold'])
 
         hits = strax.sort_by_time(hits)
         hits_bottom, hits_top = hits[hits['channel'] == self.config['pmt_channel']], hits[hits['channel'] !=self.config['pmt_channel']]
@@ -351,7 +354,7 @@ def baseline_std(records, baseline_samples=40):
 
 @strax.growing_result(strax.hit_dtype, chunk_size=int(1e4))
 @numba.jit(nopython=True, nogil=True, cache=True)
-def find_hits(records, _result_buffer=None):
+def find_hits(records, threshold = 70, _result_buffer=None):
     """Return hits (intervals above threshold) found in records.
     Hits that straddle record boundaries are split (TODO: fix this?)
 
@@ -374,7 +377,7 @@ def find_hits(records, _result_buffer=None):
             # numba gives errors if we do.
             # TODO: file issue?
             x = r['data'][i]
-            above_threshold = x > 3*r['baseline_std']
+            above_threshold = x > threshold
             # print(r['data'][i], above_threshold, in_interval, hit_start)
 
             if not in_interval and above_threshold:
