@@ -123,9 +123,9 @@ class PeaksAltBl(strax.Plugin):
 
     __version__ = '0.1.12'
     dtype = dict(peaks_top_alt_bl=strax.peak_dtype(n_channels=8)
-                                  + [('Maximum height of the peak', 'peak_max'),np.int16],
+                                  + [(('Maximum height of the peak', 'peak_max'),np.int16)],
                  peaks_bottom_alt_bl=strax.peak_dtype(n_channels=8)
-                                     + [('Maximum height of the peak', 'peak_max'),np.int16]
+                                     + [(('Maximum height of the peak', 'peak_max'),np.int16)]
                  )
 
     def compute(self, records_alt_bl):
