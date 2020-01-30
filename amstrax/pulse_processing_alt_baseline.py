@@ -171,7 +171,8 @@ class PeaksAltBl(strax.Plugin):
 
         strax.compute_widths(peaks_top)
 
-        peaks_top['peak_max'] = np.max(peaks['data'],axis=1)
+        peaks_top['peak_max'] = np.max(peaks_top['data'],axis=1)
+        peaks_bottom['peak_max'] = np.max(peaks_bottom['data'],axis=1)
 
         return dict(peaks_top_alt_bl=peaks_top,
                     peaks_bottom_alt_bl=peaks_bottom,
