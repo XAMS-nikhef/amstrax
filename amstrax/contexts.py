@@ -1,9 +1,8 @@
 import strax
 import amstrax as ax
-
+from immutabledict import immutabledict
 
 common_opts = dict(
-    register= [ax.daqreader.DAQReader],
     register_all=[ax.pulse_processing,
                   ax.peak_processing,
                   ax.event_processing],
@@ -13,7 +12,14 @@ common_opts = dict(
         'tags'),
     check_available=('raw_records', 'records',
                      ))
+common_config = dict(
+    n_tpc_pmts=16,
+    channel_map=immutabledict(
+        pmt=(8,16),
+        sipm=(0,8),
 
+    )
+)
 def amstrax_gas_test_analysis():
     """Return strax test for analysis of Xams gas test data"""
     return strax.Context(
@@ -60,4 +66,18 @@ def amstrax_gas_test_analysis_alt_baseline():
             'name', 'number',
             'start', 'end', 'livetime',
             'tags'),
+    )
+
+def amstrax_run10_analysis():
+    """Return strax test for analysis of Xams gas test data"""
+    return strax.Context(
+        storage = [
+        strax.DataDirectory('/Volumes/Extreme SSD/strax_data/',
+                            provide_run_metadata=False,
+                            deep_scan=False,
+                            readonly=False),
+                    ],
+        config=dict(**common_config),
+        register=ax.RecordsFromPax,
+        **common_opts
     )
