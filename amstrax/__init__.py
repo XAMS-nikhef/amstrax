@@ -7,6 +7,9 @@ __version__ = '0.0.1'
 from . import daqreader
 from .daqreader import *
 
+from . import pax_interface
+from .pax_interface import *
+
 from . import peak_processing
 from .peak_processing import *
 
