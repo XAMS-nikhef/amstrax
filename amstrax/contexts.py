@@ -3,7 +3,8 @@ import amstrax as ax
 
 
 common_opts = dict(
-    register_all=[ax.daqreader, ax.pulse_processing,
+    register= [ax.daqreader.DAQReader],
+    register_all=[ax.pulse_processing,
                   ax.peak_processing,
                   ax.event_processing],
     store_run_fields=(
