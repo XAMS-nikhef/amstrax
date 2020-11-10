@@ -68,11 +68,11 @@ def amstrax_gas_test_analysis_alt_baseline():
             'tags'),
     )
 
-def amstrax_run10_analysis():
+def amstrax_run10_analysis(output_folder = './strax_data'):
     """Return strax test for analysis of Xams gas test data"""
     return strax.Context(
         storage = [
-        strax.DataDirectory('/Volumes/Extreme SSD/strax_data/',
+        strax.DataDirectory(f'{output_folder}',
                             provide_run_metadata=False,
                             deep_scan=False,
                             readonly=False),
