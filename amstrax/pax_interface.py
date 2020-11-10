@@ -17,7 +17,8 @@ def records_needed(pulse_length, samples_per_record):
 @export
 def pax_to_records(input_filename,
                    samples_per_record=strax.DEFAULT_RECORD_LENGTH,
-                   events_per_chunk=10):
+                   events_per_chunk=10,
+                   dt=10):
     """Return pulse records array from pax zip input_filename
     This only works if you have pax installed in your strax environment,
     which is somewhat tricky.
@@ -86,7 +87,7 @@ def pax_to_records(input_filename,
                 r['channel'] = p.channel
                 r['pulse_length'] = p.length
                 r['record_i'] = rec_i
-                r['dt'] = 10
+                r['dt'] = dt
 
                 # How much are we storing in this record?
                 if rec_i != n_records - 1:
@@ -149,7 +150,10 @@ class RecordsFromPax(strax.Plugin):
                               for x in pax_files])
         print(f"Found {len(pax_files)} files, {pax_sizes.sum() / 1e9:.2f} GB")
         last_endtime = 0
-
+        if self.run_id[:4]=='1730':
+            dt=2
+        else:
+            dt=10
         for file_i, in_fn in enumerate(pax_files):
             if (self.config['stop_after_zips']
                     and file_i >= self.config['stop_after_zips']):
@@ -157,7 +161,8 @@ class RecordsFromPax(strax.Plugin):
             for records in pax_to_records(
                     in_fn,
                     samples_per_record=self.config['samples_per_record'],
-                    events_per_chunk=self.config['events_per_chunk']):
+                    events_per_chunk=self.config['events_per_chunk'],
+                    dt=10):
 
                 if not len(records):
                     continue
