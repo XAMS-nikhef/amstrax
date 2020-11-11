@@ -3,7 +3,7 @@ import numba
 import numpy as np
 
 import strax
-import straxen
+import amstrax
 
 export, __all__ = strax.exporter()
 __all__ += ['NO_PULSE_COUNTS']
@@ -142,7 +142,7 @@ class PulseProcessing(strax.Plugin):
             # -- before filtering,since this messes with the with the S/N
             hits = strax.find_hits(
                 r,
-                min_amplitude=straxen.hit_min_amplitude(
+                min_amplitude=amstrax.hit_min_amplitude(
                     self.config['hit_min_amplitude']))
 
             le, re = self.config['save_outside_hits']
