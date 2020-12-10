@@ -16,7 +16,6 @@ HITFINDER_OPTIONS = tuple([
         help='Minimum hit amplitude in ADC counts above baseline. '
              'See straxen.hit_min_amplitude for options.'
     )])
-
 @export
 @strax.takes_config(
     strax.Option(
@@ -24,28 +23,6 @@ HITFINDER_OPTIONS = tuple([
         default=40,
         help='Number of samples to use at the start of the pulse to determine '
              'the baseline'),
-    # Tail veto options
-    strax.Option(
-        'tail_veto_threshold',
-        default=0,
-        help=("Minimum peakarea in PE to trigger tail veto."
-              "Set to None, 0 or False to disable veto.")),
-    strax.Option(
-        'tail_veto_duration',
-        default=int(3e6),
-        help="Time in ns to veto after large peaks"),
-    strax.Option(
-        'tail_veto_resolution',
-        default=int(1e3),
-        help="Time resolution in ns for pass-veto waveform summation"),
-    strax.Option(
-        'tail_veto_pass_fraction',
-        default=0.05,
-        help="Pass veto if maximum amplitude above max * fraction"),
-    strax.Option(
-        'tail_veto_pass_extend',
-        default=3,
-        help="Extend pass veto by this many samples (tail_veto_resolution!)"),
     # PMT pulse processing options
     strax.Option(
         'save_outside_hits',
@@ -69,12 +46,10 @@ class PulseProcessing(strax.Plugin):
     """
     1. Split raw_records into:
      - (tpc) records
-     - aqmon_records
      - pulse_counts
     For TPC records, apply basic processing:
         1. Flip, baseline, and integrate the waveform
-        2. Apply software HE veto after high-energy peaks.
-        3. Find hits, apply linear filter, and zero outside hits.
+        3. Find hits, and zero outside hits.
 
     pulse_counts holds some average information for the individual PMT
     channels for each chunk of raw_records. This includes e.g.
@@ -139,7 +114,6 @@ class PulseProcessing(strax.Plugin):
 
         if len(r):
             # Find hits
-            # -- before filtering,since this messes with the with the S/N
             hits = strax.find_hits(
                 r,
                 min_amplitude=amstrax.hit_min_amplitude(
@@ -152,6 +126,7 @@ class PulseProcessing(strax.Plugin):
 
             # Probably overkill, but just to be sure...
             strax.zero_out_of_bounds(r)
+
 
         return dict(records=r,
                     pulse_counts=pulse_counts)

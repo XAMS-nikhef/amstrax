@@ -17,6 +17,7 @@ straxen_dir = os.path.dirname(os.path.abspath(
 # Current 
 to_pe = np.array([4.252e1,4.252e1,1.3e-4,4.252e1,4.252e1,4.252e1,4.252e1,4.252e1,4,4])
 # to_pe = np.array([1.3e-4,1.3e-4])
+n_tpc_pmts = 16
 
 first_sr1_run ='1'
 @export
