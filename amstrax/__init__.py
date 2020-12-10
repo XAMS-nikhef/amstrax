@@ -30,3 +30,4 @@ from .common import *
 from .itp_map import *
 from .rundb import *
 from .contexts import *
+from .hitfinder_thresholds import *
