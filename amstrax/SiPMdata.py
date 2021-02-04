@@ -71,7 +71,7 @@ class SiPM:
         return self.rhat
 
     def set_hit_probability(self, p):
-        """Set probability for a SiPM to detect a UV photon
+        """Set probability for a SiPM to detect an UV photon
 
         p: probability"""
 
@@ -113,6 +113,7 @@ class SiPM:
 
 # -----------------------------------------------------------------------------------#
 class Reconstruction:
+    __version__ = '0.0.2'
     def __init__(self, geo):
         self.geo = geo
 
@@ -146,14 +147,14 @@ class Reconstruction:
 
             self.lnlike = PosFit(self.geo.get_sipms(), method)
             n0 = 1000
-            c = 0.5
+            c = 0
             m = Minuit(self.lnlike,
                        rate0=n0,
                        alpha=c,
                        xpos=25.,
                        ypos=25.,
                        limit_rate0=(0, 1e7),
-                       limit_alpha=(0,1),
+                       limit_alpha=(0,1e-3),
                        limit_xpos=(-150, 150),
                        limit_ypos=(-150, 150),
                        error_xpos=1.,
@@ -161,6 +162,7 @@ class Reconstruction:
                        error_rate0=np.sqrt(n0),
                        error_alpha = np.sqrt(c),
                        errordef=errordef,
+                       fix_alpha=True,
                        print_level=0)
             m_status = m.migrad()
             # print(m_status)
@@ -431,7 +433,7 @@ class PosFit:
             #
             nexpected = self.nexp(rate0, alpha, xpos, ypos, i)
             #
-            # number of oserved events
+            # number of observed events
             #
             N = self.n[i]
 
@@ -473,7 +475,7 @@ class PosFit:
         dist = np.linalg.norm(delta)
         dist2 = dist**2
 
-        # correct for the slid angle of the sensor
+        # correct for the solid angle of the sensor
         cost = abs(np.dot(delta, self.sipms[i].get_normal_vector())/dist)
 
         # quantum efficiency
