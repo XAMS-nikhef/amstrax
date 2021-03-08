@@ -48,18 +48,8 @@ class Peaks(strax.Plugin):
     dtype = strax.peak_dtype(n_channels=8)
 
     def compute(self, records):
-
-        # Deleted threshold argument: hits = strax.find_hits(records, threshold=self.config['hit_threshold'])
-        # To change min_amplitude (threshold) -> find_hits, default = 15
-
-
         # Remove hits in zero-gain channels
         # they should not affect the clustering!
-
-        #All data is from 'top' 1730, get rid of splitting in bottom/top
-
-        # hits[hits['channel'] == or != self.config['pmt_channel']] ??
-        # Same with r channel and pmt channel
 
         r = records
         gain = np.array([0.324e6,0.323e6,1,0.309e6,0.312e6,0.306e6,0.319e6,0.326e6])
@@ -91,7 +81,7 @@ class Peaks(strax.Plugin):
         strax.compute_widths(peaks)
 
         return peaks
-        # return peaks
+
 
 @export
 @strax.takes_config(
@@ -104,21 +94,32 @@ class Hits(strax.Plugin):
     depends_on = 'records'
     data_kind = 'peaks'
     parallel = 'False'
-    __version__ = '0.0.1'
+    __version__ = '0.0.2'
+    rechunk_on_save = False
     dtype= strax.hit_dtype
 
     def compute(self, records):
         hits = strax.find_hits(records)
         return hits
 
+
+# For n_competing, which is temporarily added to PeakBasics
 @export
+@strax.takes_config(
+    strax.Option('min_area_fraction', default=0.5,
+                 help='The area of competing peaks must be at least '
+                      'this fraction of that of the considered peak'),
+    strax.Option('nearby_window', default=int(1e6),
+                 help='Peaks starting within this time window (on either side)'
+                      'in ns count as nearby.'),
+)
 class PeakBasics(strax.Plugin):
-    # provides = ('peakbasics')
+    provides = ('peak_basics')
     depends_on = ('peaks')
     data_kind = ('peaks')
     parallel = 'False'
-    rechunk_on_save = True
-    __version__ = '0.1.0'
+    rechunk_on_save = False
+    __version__ = '0.1.7'
     dtype = [
         (('Start time of the peak (ns since unix epoch)',
           'time'), np.int64),
@@ -141,6 +142,8 @@ class PeakBasics(strax.Plugin):
           'length'), np.int32),
         (('Time resolution of the peak waveform in ns',
           'dt'), np.int16),
+        ('n_competing', np.int32, # temporarily due to chunking issues
+         'Number of nearby larger or slightly smaller peaks')
         ]
 
     def compute(self, peaks):
@@ -159,12 +162,41 @@ class PeakBasics(strax.Plugin):
         # Negative-area peaks get 0 AFT - TODO why not NaN?
         m = p['area'] > 0
         r['area_fraction_top'][m] = area[m]/p['area'][m]
+        # n_competing temporarily due to chunking issues
+        r['n_competing'] = self.find_n_competing(
+            peaks,
+            window=self.config['nearby_window'],
+            fraction=self.config['min_area_fraction'])
         return r
+
+    #n_competing
+    def get_window_size(self):
+        return 2 * self.config['nearby_window']
+
+    @staticmethod
+    @numba.jit(nopython=True, nogil=True, cache=False)
+    def find_n_competing(peaks, window, fraction):
+        n = len(peaks)
+        t = peaks['time']
+        a = peaks['area']
+        results = np.zeros(n, dtype=np.int16)
+        left_i = 0
+        right_i = 0
+        for i, peak in enumerate(peaks):
+            while t[left_i] + window < t[i] and left_i < n - 1:
+                left_i += 1
+            while t[right_i] - window < t[i] and right_i < n - 1:
+                right_i += 1
+            results[i] = np.sum(a[left_i:right_i + 1] > a[i] * fraction)
+
+        return results
+
 
 @export
 class PeakPositions(strax.Plugin):
     depends_on = ('peaks', 'peak_classification')
-    __version__ = '0.0.31'
+    rechunk_on_save = False
+    __version__ = '0.0.34' #.33 for LNLIKE
     dtype = [
         ('xr', np.float32,
          'Interaction x-position'),
@@ -217,7 +249,7 @@ class PeakPositions(strax.Plugin):
             if p['type'] != 2:
                 continue
 
-            # if one channel is not working
+            # if [X] channel is not working
             k = np.delete(p['area_per_channel'],[2])
             for i, area in enumerate(k):
                 self.geo.sipms[i].set_number_of_hits(area)
@@ -226,15 +258,16 @@ class PeakPositions(strax.Plugin):
             # for i, area in enumerate(p['area_per_channel']):
             #     self.geo.sipms[i].set_number_of_hits(area)
 
-
             posrec = Reconstruction(self.geo)
-            pos = posrec.reconstruct_position('LNLIKE')
+            pos = posrec.reconstruct_position('CHI2')
             for key in ['xr', 'yr']:
                 result[key][ix] = pos[key]
 
+            for q in ['time', 'endtime']:
+                result[q] = p[q]
+
         result['r'] = (result['xr']**2+result['yr']**2)**(1/2)
         return result
-
 
 
 @export
@@ -248,9 +281,9 @@ class PeakPositions(strax.Plugin):
     strax.Option('s2_min_width', default=100,
                  help="Minimum width for S2s"))
 
-
 class PeakClassification(strax.Plugin):
-    __version__ = '0.0.2'
+    rechunk_on_save = False
+    __version__ = '0.0.4'
     depends_on = ('peak_basics')
     dtype = [
         ('type', np.int8, 'Classification of the peak.'),
@@ -271,65 +304,60 @@ class PeakClassification(strax.Plugin):
         is_s2 &= p['range_50p_area'] > self.config['s2_min_width']
         r['type'][is_s2] = 2
 
+        for q in ['time', 'endtime']:
+            r[q] = p[q]
+
         return r
 
-@export
-@strax.takes_config(
-    strax.Option('s1_max_width', default=60,
-                 help="Maximum (IQR) width of S1s"),
-    strax.Option('s1_min_area', default=4,
-                 help="Minimum number of PMTs that must contribute to a S1"),
-    strax.Option('s2_min_area', default=4,
-                 help="Minimum area (PE) for S2s"),
-    strax.Option('s2_min_width', default=100,
-                 help="Minimum width for S2s"))
 
-@export
-@strax.takes_config(
-    strax.Option('min_area_fraction', default=0.5,
-                 help='The area of competing peaks must be at least '
-                      'this fraction of that of the considered peak'),
-    strax.Option('nearby_window', default=int(1e6),
-                 help='Peaks starting within this time window (on either side)'
-                      'in ns count as nearby.'),
-)
-class NCompeting(strax.OverlapWindowPlugin):   #from NCompetingTop
-    depends_on = ('peak_basics',)           #from peak_basics_top
-    dtype = [
-        ('n_competing', np.int32,
-            'Number of nearby larger or slightly smaller peaks'),
-        ('time', np.int64, 'Start time of the peak (ns since unix epoch)'),
-        ('endtime', np.int64, 'End time of the peak (ns since unix epoch)')
-        ]
-    __version__ = '0.0.25'
-
-    def get_window_size(self):
-        return 2 * self.config['nearby_window']
-
-    def compute(self, peaks):
-        results=np.zeros(len(peaks),dtype=self.dtype)
-        results['time']=peaks['time']
-        results['endtime']=peaks['endtime']
-        results['n_competing']=self.find_n_competing(
-            peaks,
-            window=self.config['nearby_window'],
-            fraction=self.config['min_area_fraction'])
-        return results
-
-    @staticmethod
-    @numba.jit(nopython=True, nogil=True, cache=False)
-    def find_n_competing(peaks, window, fraction):
-        n = len(peaks)
-        t = peaks['time']
-        a = peaks['area']
-        results = np.zeros(n, dtype=np.int16)
-        left_i = 0
-        right_i = 0
-        for i, peak in enumerate(peaks):
-            while t[left_i] + window < t[i] and left_i < n - 1:
-                left_i += 1
-            while t[right_i] - window < t[i] and right_i < n - 1:
-                right_i += 1
-            results[i] = np.sum(a[left_i:right_i + 1] > a[i] * fraction)
-
-        return results
+# n_competing experiencing re-chunking issues, temporarily added to PeakBasics
+# @export
+# @strax.takes_config(
+#     strax.Option('min_area_fraction', default=0.5,
+#                  help='The area of competing peaks must be at least '
+#                       'this fraction of that of the considered peak'),
+#     strax.Option('nearby_window', default=int(1e6),
+#                  help='Peaks starting within this time window (on either side)'
+#                       'in ns count as nearby.'),
+# )
+# class NCompeting(strax.OverlapWindowPlugin):   #from NCompetingTop
+#     depends_on = ('peak_basics',)           #from peak_basics_top
+#     rechunk_on_save = False
+#     dtype = [
+#         ('n_competing', np.int32,
+#             'Number of nearby larger or slightly smaller peaks'),
+#         ('time', np.int64, 'Start time of the peak (ns since unix epoch)'),
+#         ('endtime', np.int64, 'End time of the peak (ns since unix epoch)')
+#         ]
+#     __version__ = '0.0.27'
+#
+#     def get_window_size(self):
+#         return 2 * self.config['nearby_window']
+#
+#     def compute(self, peaks):
+#         results=np.zeros(len(peaks),dtype=self.dtype)
+#         results['time']=peaks['time']
+#         results['endtime']=peaks['endtime']
+#         results['n_competing']=self.find_n_competing(
+#             peaks,
+#             window=self.config['nearby_window'],
+#             fraction=self.config['min_area_fraction'])
+#         return results
+#
+#     @staticmethod
+#     @numba.jit(nopython=True, nogil=True, cache=False)
+#     def find_n_competing(peaks, window, fraction):
+#         n = len(peaks)
+#         t = peaks['time']
+#         a = peaks['area']
+#         results = np.zeros(n, dtype=np.int16)
+#         left_i = 0
+#         right_i = 0
+#         for i, peak in enumerate(peaks):
+#             while t[left_i] + window < t[i] and left_i < n - 1:
+#                 left_i += 1
+#             while t[right_i] - window < t[i] and right_i < n - 1:
+#                 right_i += 1
+#             results[i] = np.sum(a[left_i:right_i + 1] > a[i] * fraction)
+#
+#         return results

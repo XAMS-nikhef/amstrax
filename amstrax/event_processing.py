@@ -24,7 +24,8 @@ export, __all__ = strax.exporter()
                       'triggering peak'),
 )
 class Events(strax.OverlapWindowPlugin):
-    depends_on = ['peaks', 'n_competing']
+    depends_on = ['peaks', 'peak_basics'] # peak_basics instead of n_competing
+    rechunk_on_save = False
     data_kind = 'events'
     parallel= False
     dtype = [
@@ -32,6 +33,7 @@ class Events(strax.OverlapWindowPlugin):
         ('time', np.int64, 'Event start time in ns since the unix epoch'),
         ('endtime', np.int64, 'Event end time in ns since the unix epoch')]
     events_seen = 0
+    __version__ = '0.0.6'
 
     def get_window_size(self):
         return (2 * self.config['left_event_extension'] +
@@ -69,10 +71,13 @@ class Events(strax.OverlapWindowPlugin):
 
 @export
 class EventBasics(strax.LoopPlugin):
-    __version__ = '0.0.18'
+    rechunk_on_save = False
+    __version__ = '0.0.21'
+    # Peak Positions temporarily taken out
+    # n_competing within peak_basics
     depends_on = ('events',
-                  'peak_basics', 'peak_classification',
-                  'peak_positions', 'n_competing')
+                  'peak_basics', 'peak_classification',)
+                  #'peak_positions') #n_competing
 
     def infer_dtype(self):
         dtype = [(('Number of peaks in the event',
@@ -93,10 +98,10 @@ class EventBasics(strax.LoopPlugin):
                         f's{i}_range_50p_area'), np.float32),
                       ((f'Main S{i} number of competing peaks',
                         f's{i}_n_competing'), np.int32)]
-        dtype += [(f'x_s2', np.float32,
-                   f'Main S2 reconstructed X position (cm), uncorrected',),
-                  (f'y_s2', np.float32,
-                   f'Main S2 reconstructed Y position (cm), uncorrected',)]
+        # dtype += [(f'x_s2', np.float32,
+        #            f'Main S2 reconstructed X position (cm), uncorrected',),
+        #           (f'y_s2', np.float32,
+        #            f'Main S2 reconstructed Y position (cm), uncorrected',)]
         dtype += [(f's2_largest_other',np.float32,
                    f'Largest other S2 area (PE) in event, uncorrected',),
                    (f's1_largest_other',np.float32,
@@ -145,11 +150,9 @@ class EventBasics(strax.LoopPlugin):
             for prop in ['area', 'area_fraction_top',
                          'range_50p_area', 'n_competing']:
                 result[f's{s_i}_{prop}'] = s[prop]
-            if s_i == 2:
-                result['x_s2'] = s['xr']
-                result['y_s2'] = s['yr']
-                # for q in 'xy':
-                #     result[f'{q}_s2'] = s[q]
+            # if s_i == 2:
+            #     result['x_s2'] = s['xr']
+            #     result['y_s2'] = s['yr']
 
         # Compute a drift time only if we have a valid S1-S2 pairs
         if len(main_s) == 2:
@@ -163,6 +166,7 @@ class EventBasics(strax.LoopPlugin):
 @export
 class EventPositions(strax.LoopPlugin):
     depends_on = ('events', 'event_basics', 'peaks', 'peak_classification')
+    rechunk_on_save = False
     dtype = [
         ('xr', np.float32,
          'Interaction x-position'),
@@ -171,7 +175,7 @@ class EventPositions(strax.LoopPlugin):
         ('time', np.int64, 'Event start time in ns since the unix epoch'),
         ('endtime', np.int64, 'Event end time in ns since the unix epoch')
     ]
-    __version__ = '0.0.3'
+    __version__ = '0.0.4'
 
     def setup(self):
         # z position of the in-plane SiPMs
@@ -300,5 +304,7 @@ class EventInfo(strax.MergeOnlyPlugin):
                   'event_positions',
                   # 'energy_estimates',
                   ]
+    rechunk_on_save = True
     provides = 'event_info'
     save_when = strax.SaveWhen.ALWAYS
+    __version__ = '0.0.2'

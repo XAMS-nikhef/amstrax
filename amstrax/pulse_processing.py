@@ -65,6 +65,7 @@ HITFINDER_OPTIONS = tuple([
         help=('Use a default baseline for incorrectly chunked fragments. '
               'This is a kludge for improperly converted XENON1T data.')),
     *HITFINDER_OPTIONS)
+
 class PulseProcessing(strax.Plugin):
     """
     1. Split raw_records into:
