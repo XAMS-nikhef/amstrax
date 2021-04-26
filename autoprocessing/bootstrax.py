@@ -96,7 +96,7 @@ args = parser.parse_args()
 ##
 
 # TODO change this to the production database when DAQ commissioning is finished
-mongo_url = f'mongodb://user:{os.envrion["MONGO_PASSWORD"]}@127.0.0.1:27017/admin'
+mongo_url = f'mongodb://{os.envrion["MONGO_USER"]}:{os.envrion["MONGO_PASSWORD"]}@127.0.0.1:27017/admin'
 run_collname = 'run'
 
 # Folder to place new processed data in
