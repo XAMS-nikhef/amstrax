@@ -78,11 +78,6 @@ class DAQReader(strax.Plugin):
     provides = (
         'raw_records',
         'raw_records_sipm',
-        # 'raw_records_he',  # high energy,
-        # 'raw_records_aqmon',
-        # 'raw_records_nv',  # nveto raw_records (will not be stored long term)
-        # 'raw_records_aqmon_nv',
-        # 'raw_records_mv',    # mveto has to be last due to lineage
     )
 
     data_kind = immutabledict(zip(provides, provides))
