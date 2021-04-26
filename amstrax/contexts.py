@@ -15,8 +15,9 @@ common_opts = dict(
 common_config = dict(
     n_tpc_pmts=16,
     channel_map=immutabledict(
-        pmt=(8,16),
         sipm=(0,8),
+        pmt=(8,16),
+
 
     )
 )
