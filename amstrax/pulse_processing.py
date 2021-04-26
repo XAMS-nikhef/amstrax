@@ -42,6 +42,7 @@ HITFINDER_OPTIONS = tuple([
         help=('Use a default baseline for incorrectly chunked fragments. '
               'This is a kludge for improperly converted XENON1T data.')),
     *HITFINDER_OPTIONS)
+
 class PulseProcessing(strax.Plugin):
     """
     1. Split raw_records into:
@@ -57,8 +58,8 @@ class PulseProcessing(strax.Plugin):
     overlap with any other pulse), or mean values of baseline and
     baseline rms channel.
     """
-    __version__ = '0.2.2'
-
+    __version__ = '0.2.12'
+    #save_when = strax.SaveWhen.NEVER
     parallel = 'process'
     rechunk_on_save = immutabledict(
         records=False,
@@ -106,8 +107,6 @@ class PulseProcessing(strax.Plugin):
                        allow_sloppy_chunking=self.config['allow_sloppy_chunking'],
                        flip=True)
 
-        strax.integrate(r)
-
         pulse_counts = count_pulses(r, self.config['n_tpc_pmts'])
         pulse_counts['time'] = start
         pulse_counts['endtime'] = end
@@ -126,6 +125,17 @@ class PulseProcessing(strax.Plugin):
 
             # Probably overkill, but just to be sure...
             strax.zero_out_of_bounds(r)
+
+        strax.integrate(r)
+
+        # First 7 entries give a positive area even though sum('data') = 0
+        # Changing their area to 0 before filtering
+        for i in range(0,7):
+            r[i]['area'] = 0
+
+        r = r[r['area'] > 0]
+        #r = r[np.average(r['data']) > 0]
+
 
 
         return dict(records=r,
@@ -216,7 +226,7 @@ def _count_pulses(records, n_channels, result):
             # This is a subsequent fragment of a lone pulse
             lone_area[ch] += r['area']
 
-    res = result[0]
+    res = result[0]  # Supposed to be [0] ??
     res['pulse_count'][:] = count[:]
     res['lone_pulse_count'][:] = lone_count[:]
     res['pulse_area'][:] = area[:]
