@@ -175,6 +175,7 @@ def new_context():
             new_data_path=output_folder),
         config=amstrax.contexts.common_config,
         **amstrax.contexts.common_opts)
+    st.register_all(amstrax.daqreader)
     return st
 
 st = new_context()
