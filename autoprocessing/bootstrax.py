@@ -49,8 +49,9 @@ Finally, bootstrax outputs the load on the eventbuilder machine(s) whereon it is
 
 import argparse
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import logging
+import logging.handlers
 import multiprocessing
 import os
 import os.path as osp
@@ -95,14 +96,10 @@ args = parser.parse_args()
 # Configuration
 ##
 
-# TODO change this to the production database when DAQ commissioning is finished
 mongo_url = f'mongodb://{os.environ["MONGO_USER"]}:{os.environ["MONGO_PASSWORD"]}@127.0.0.1:27017/admin'
 run_collname = 'run'
+output_folder = '/data/xenon/xams/run11/processed/'
 
-# Folder to place new processed data in
-# TODO: Perhaps check that ssh mount exists?
-output_folder = '/data/xenon/xams/strax_processed_temp/'
-storage_folder = '/data/xenon/xams/strax_processed_gas/'
 
 # Timeouts in seconds
 timeouts = {
@@ -139,7 +136,7 @@ timeouts = {
 # Fields in the run docs that bootstrax uses
 bootstrax_projection = f"name start end number bootstrax " \
                        f"data.host data.type data.location " \
-                       f"ini.processing_threads ini.compressor".split()
+                       f"daq_config.processing_threads daq_config.compressor".split()
 
 # Filename for temporary storage of the exception
 # This is used to communicate the exception from the strax child process
@@ -150,11 +147,17 @@ exception_tempfile = 'last_bootstrax_exception.txt'
 # Initialize globals (e.g. rundb connection)
 ##
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s %(name)s %(levelname)-8s %(message)s',
-    datefmt='%m-%d %H:%M')
-log = logging.getLogger()
+log = logging.getLogger('main')
+f = logging.Formatter(fmt='%(asctime)s | %(levelname)s | %(message)s')
+h = logging.StreamHandler()
+h.setFormatter(f)
+log.addHandler(h)
+h = logging.handlers.TimedRotatingFileHandler(
+    'logs/log_'+date.today().isoformat(),when='midnight', utc=True,backupCount=7)
+h.setFormatter(f)
+log.addHandler(h)
+log.setLevel("DEBUG")
+
 hostname = socket.getfqdn()
 state_doc_id = None   # Set in main loop
 
@@ -167,24 +170,22 @@ def new_context():
         storage=amstrax.RunDB(
             mongo_url=mongo_url,
             mongo_dbname='run',
-            mongo_collname='runs_gas',
+            mongo_collname='runs_new',
             runid_field='number',
             new_data_path=output_folder),
+        config=amstrax.contexts.common_config,
         **amstrax.contexts.common_opts)
     return st
-
 
 st = new_context()
 
 run_db = st.storage[0].client
-run_coll = run_db[run_collname]['runs_gas']
+run_coll = run_db[run_collname]['runs_new']
 bs_coll = run_db['bootstrax']['bootstrax']
 log_coll = run_db['log']['log']
-usage_coll = run_db['usage']['usage']
 
 # Ping the databases to ensure the mongo connections are working
-# run_coll.command('ping')
-
+run_db[run_collname].command('ping')
 
 def main():
     if args.fail:
@@ -192,7 +193,10 @@ def main():
         manual_fail(number=int(args.fail[0]), reason=args.fail[1])
 
     elif args.abandon:
+        print(args.abandon)
         number = int(args.abandon[0])
+        print(number)
+        print('haloooo')
         if len(args.abandon) > 1:
             manual_fail(number=number, reason=args.abandon[1])
         abandon(number=number)
@@ -291,23 +295,6 @@ def kill_process(pid, wait_time=None):
         os.kill(pid, sig)
 
 
-def update_usage(pid_process, run_number):
-    """Save information on the usage of resources in the 'usage' collection. The
-    information contains percentages of CPU and Memory usage both for the
-    sub-process (due to the multiprocessing) itself and on the host as a whole.
-    """
-    frac_to_percent = 100
-    mem_tot = virtual_memory()
-    usage = {'run':run_number,
-             'host':hostname,
-             'time':now(),
-             'pid':pid_process.ppid(),
-             'cpu_pid': pid_process.cpu_percent(),
-             'cpu_tot': cpu_percent(),
-             'mem_pid': pid_process.memory_percent(),
-             'mem_tot': frac_to_percent * mem_tot.used / mem_tot.available}
-    usage_coll.insert_one(usage)
-
 
 def set_state(state):
     """Inform the bootstrax collection we're in a different state
@@ -380,6 +367,7 @@ def set_run_state(rd, state, return_new_doc=True, **kwargs):
 
     Any additional kwargs will be added to the bootstrax field.
     """
+    print(state)
     bd = rd['bootstrax']
     bd.update({
         'state': state,
@@ -471,7 +459,7 @@ def get_compressor(rd, default_compressor="blosc"):
     """Read the compressor method from the run_doc. Return 'blosc' if no
     information is specified in the run_doc"""
     try:
-        return rd["ini"]["compressor"]
+        return rd["daq_config"]["compressor"]
     except KeyError:
         log_warning(f"Bootstrax couldn't read the compressor form the run_doc. "
                     f"Assuming 'blosc' for now")
@@ -490,19 +478,19 @@ def run_strax(run_id, input_dir, target, n_readout_threads, compressor,
         log.info(f"Starting strax to make {run_id} with input dir {input_dir}")
         st = new_context()
         st.make(run_id, target,
-                config=dict(input_dir=input_dir,
-                            compressor=compressor,
+                config=dict(daq_input_dir=input_dir,
+                            daq_compressor=compressor,
                             n_readout_threads=n_readout_threads),
                 max_workers=args.cores)
-        files = os.listdir(output_folder)
-        files = [file for file in files if run_id in file]
-        [shutil.move(file, storage_folder) for file in files]
+#         files = os.listdir(output_folder)
+#         files = [file for file in files if run_id in file]
+#         [shutil.move(file, storage_folder) for file in files]
     except Exception as e:
         # Write exception to file, so bootstrax can read it
         exc_info = strax.formatted_exception()
-        files = os.listdir(output_folder)
-        files = [file for file in files if run_id in file]
-        [shutil.rmtree(file) for file in files]
+#         files = os.listdir(output_folder)
+#         files = [file for file in files if run_id in file]
+#         [shutil.rmtree(file) for file in files]
         with open(exception_tempfile, mode='w') as f:
             f.write(exc_info)
         raise
@@ -540,7 +528,7 @@ def process_run(rd, send_heartbeats=True):
         if not osp.exists(dd['location']):
             fail(f"No access to live data folder {dd['location']}")
 
-        thread_info = rd.get('ini', dict()).get('processing_threads', dict())
+        thread_info = rd.get('daq_config', dict()).get('processing_threads', dict())
         n_readout_threads = sum([v for v in thread_info.values()])
         if not n_readout_threads:
             fail(f"Run doc for {run_id} has no readout thread count info")
@@ -585,7 +573,6 @@ def process_run(rd, send_heartbeats=True):
 
         while True:
             if send_heartbeats:
-                update_usage(pid_process = pid_process, run_number = run_id)
                 send_heartbeat()
 
             ec = strax_proc.exitcode
@@ -643,12 +630,12 @@ def process_run(rd, send_heartbeats=True):
                 # exception retrieval. The actual error comes later.
                 log.info(f"Failure while procesing run {run_id}")
                 if osp.exists(exception_tempfile):
-                   with open(exception_tempfile, mode='r') as f:
-                       exc_info = f.read()
-                   if not exc_info:
-                       exc_info = '[No exception info known, exception file was empty?!]'
+                    with open(exception_tempfile, mode='r') as f:
+                        exc_info = f.read()
+                    if not exc_info:
+                        exc_info = '[No exception info known, exception file was empty?!]'
                 else:
-                   exc_info = "[No exception info known, exception file not found?!]"
+                    exc_info = "[No exception info known, exception file not found?!]"
                 fail(f"Strax exited with exit code {ec}. Exception info: {exc_info}")
 
             # TODO: Strax should update run db with metadata
@@ -779,7 +766,7 @@ def cleanup_db():
                 'name': 'bad'}}},
          "Run has a 'bad' tag"),
 
-        ({'ini.processing_threads': {
+        ({'daq_config.processing_threads': {
             '$exists': False}},
          "Old run doc format without processing thread info"),
 
