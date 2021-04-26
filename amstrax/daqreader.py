@@ -77,6 +77,7 @@ class DAQReader(strax.Plugin):
     """
     provides = (
         'raw_records',
+        'raw_records_sipm',
         # 'raw_records_he',  # high energy,
         # 'raw_records_aqmon',
         # 'raw_records_nv',  # nveto raw_records (will not be stored long term)
@@ -84,20 +85,19 @@ class DAQReader(strax.Plugin):
         # 'raw_records_mv',    # mveto has to be last due to lineage
     )
 
-    # data_kind = immutabledict(zip(provides, provides))
-    data_kind='raw_records'
+    data_kind = immutabledict(zip(provides, provides))
     depends_on = tuple()
     parallel = 'process'
     rechunk_on_save = False
     compressor = 'lz4'
 
     def infer_dtype(self):
-        return strax.raw_record_dtype(
+#         return strax.raw_record_dtype(
+#                 samples_per_record=self.config["record_length"])
+        return {
+            d: strax.raw_record_dtype(
                 samples_per_record=self.config["record_length"])
-        # return {
-        #     d: strax.raw_record_dtype(
-        #         samples_per_record=self.config["record_length"])
-        #     for d in self.provides}
+            for d in self.provides}
 
     def setup(self):
         self.t0 = int(self.config['run_start_time']) * int(1e9)
@@ -318,7 +318,7 @@ class DAQReader(strax.Plugin):
             result_name = 'raw_records'
             if subd.startswith('nveto'):
                 result_name += '_nv'
-            elif subd != 'tpc':
+            elif subd != 'pmt':
                 result_name += '_' + subd
             result[result_name] = self.chunk(
                 start=self.t0 + break_pre,
@@ -329,8 +329,8 @@ class DAQReader(strax.Plugin):
         print(f"Read chunk {chunk_i:06d} from DAQ")
         for r in result.values():
             print(f"\t{r}")
-        print(result['raw_records'])
-        return result['raw_records']
+#         print(result['raw_records'])
+        return result
 
 
 @export
