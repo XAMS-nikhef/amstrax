@@ -49,8 +49,9 @@ Finally, bootstrax outputs the load on the eventbuilder machine(s) whereon it is
 
 import argparse
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import logging
+import logging.handlers
 import multiprocessing
 import os
 import os.path as osp
@@ -150,13 +151,21 @@ exception_tempfile = 'last_bootstrax_exception.txt'
 # Initialize globals (e.g. rundb connection)
 ##
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s %(name)s %(levelname)-8s %(message)s',
-    datefmt='%m-%d %H:%M')
-log = logging.getLogger()
+log = logging.getLogger('main')
+f = logging.Formatter(fmt='%(asctime)s | %(levelname)s | %(message)s')
+h = logging.StreamHandler()
+h.setFormatter(f)
+log.addHandler(h)
+h = logging.handlers.TimedRotatingFileHandler(
+    'logs/log_'+date.today().isoformat(),when='midnight', utc=True,backupCount=7)
+h.setFormatter(f)
+log.addHandler(h)
+log.setLevel("DEBUG")
+
 hostname = socket.getfqdn()
 state_doc_id = None   # Set in main loop
+
+
 
 
 def new_context():

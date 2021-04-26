@@ -25,6 +25,8 @@ from .peak_processing import *
 from . import event_processing
 from .event_processing import *
 
+from . import hitfinder_thresholds
+from .hitfinder_thresholds import *
 
 from .common import *
 from .itp_map import *

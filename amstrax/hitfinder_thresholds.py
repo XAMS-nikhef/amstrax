@@ -13,9 +13,10 @@ def hit_min_amplitude(model):
     :param model: Model name (str), or int to use a uniform threshold,
     or array/tuple or thresholds to use.
     """
+    n_tpc_pmts = 8
 
     if isinstance(model, (int, float)):
-        return np.ones(amstrax.n_tpc_pmts, dtype=np.int16) * model
+        return np.ones(n_tpc_pmts, dtype=np.int16) * model
 
     if isinstance(model, (tuple, np.ndarray)):
         return model
@@ -32,7 +33,7 @@ def hit_min_amplitude(model):
              15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 18, 15, 20, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
              16, 15, 15, 19, 15, 15, 15, 15, 15, 15, 17, 15, 15, 18, 15, 15, 15, 15, 15, 17, 15, 18, 15, 15, 15, 17, 15,
              18, 15, 35, 15, 15], dtype=np.int16)
-
+    n_tpc_pmts=16
     if model == 'pmt_commissioning_initial':
         # ADC thresholds used for the initial PMT commissioning data
         # (at least since April 28 2020, run 007305)

@@ -82,13 +82,14 @@ def pax_to_records(input_filename,
 
             for rec_i in range(n_records):
                 r = records[output_record_index]
+                r['dt'] = dt
                 r['time'] = (event.start_time
-                             + p.left * 10
-                             + rec_i * samples_per_record * 10)
+                             + p.left * dt
+                             + rec_i * samples_per_record * dt)
                 r['channel'] = p.channel
                 r['pulse_length'] = p.length
                 r['record_i'] = rec_i
-                r['dt'] = dt
+
 
                 # How much are we storing in this record?
                 if rec_i != n_records - 1:
