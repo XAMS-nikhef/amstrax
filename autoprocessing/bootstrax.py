@@ -554,7 +554,10 @@ def process_run(rd, send_heartbeats=True):
         if not n_readout_threads:
             fail(f"Run doc for {run_id} has no readout thread count info")
 
-        loc = osp.join(dd['location'], run_id)
+        if socket.getfqdn() == 'xams-daq':
+            loc = osp.join(dd['location'], run_id)
+        else:
+            loc = osp.join('/data/xenon/xams/run11', run_id)
         if not osp.exists(loc):
             fail(f"No live data at claimed location {loc}")
 
