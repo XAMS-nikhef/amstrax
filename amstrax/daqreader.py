@@ -58,41 +58,32 @@ class ArtificialDeadtimeInserted(UserWarning):
     strax.Option('channel_map', track=False, type=immutabledict,
                  help="immutabledict mapping subdetector to (min, max) "
                       "channel number."))
+
+
 class DAQReader(strax.Plugin):
     """
-    Read the XENONnT DAQ-live_data from redax and split it to the
+    Read the XAMS DAQ-live_data from redax and split it to the
     appropriate raw_record data-types based on the channel-map.
 
     Does nothing whatsoever to the live_data; not even baselining.
 
-    Provides:
-        - raw_records: (tpc)raw_records.
-        - raw_records_he: raw_records for the high energy boards
-        digitizing the top PMT-array at lower amplification.
-        - raw_records_nv: neutron veto raw_records; only stored temporary
-        as the software coincidence trigger not applied yet.
-        - raw_records_mv: muon veto raw_records.
-        - raw_records_aqmon: raw_records for the acquisition monitor (_nv
-        for neutron veto).
+    Provides: raw_records: (xams)raw_records.
     """
-    provides = (
-        'raw_records',
-        'raw_records_sipm',
-    )
+    provides = ('raw_records',)
 
-    data_kind = immutabledict(zip(provides, provides))
     depends_on = tuple()
+    data_kind = 'raw_records'
     parallel = 'process'
     rechunk_on_save = False
     compressor = 'lz4'
 
     def infer_dtype(self):
-#         return strax.raw_record_dtype(
-#                 samples_per_record=self.config["record_length"])
-        return {
-            d: strax.raw_record_dtype(
+        return strax.raw_record_dtype(
                 samples_per_record=self.config["record_length"])
-            for d in self.provides}
+        # return { when you have multiple data kinds
+        #     d: strax.raw_record_dtype(
+        #         samples_per_record=self.config["record_length"])
+        #     for d in self.provides}
 
     def setup(self):
         self.t0 = int(self.config['run_start_time']) * int(1e9)
@@ -310,21 +301,23 @@ class DAQReader(strax.Plugin):
             if subd.endswith('blank'):
                 continue
 
-            result_name = 'raw_records'
+            #result_name = 'raw_records'
             if subd.startswith('nveto'):
                 result_name += '_nv'
             elif subd != 'pmt':
                 result_name += '_' + subd
-            result[result_name] = self.chunk(
+            #result[result_name] = self.chunk(
+            result = self.chunk(
                 start=self.t0 + break_pre,
                 end=self.t0 + break_post,
-                data=result_arrays[i],
-                data_type=result_name)
+                data=result_arrays[i])#,
+                #data_type=result_name)
 
-        print(f"Read chunk {chunk_i:06d} from DAQ")
-        for r in result.values():
-            print(f"\t{r}")
-#         print(result['raw_records'])
+        #print(f"Read chunk {chunk_i:06d} from DAQ")
+        #for r in result.values():
+        #    print(f"\t{r}")
+        #print(result['raw_records'])
+        # return result # if you want to digitizers
         return result
 
 
