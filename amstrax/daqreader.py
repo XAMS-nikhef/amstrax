@@ -57,8 +57,7 @@ class ArtificialDeadtimeInserted(UserWarning):
                  help="Delete reader data after processing"),
     strax.Option('channel_map', track=False, type=immutabledict,
                  help="immutabledict mapping subdetector to (min, max) "
-                      "channel number."))
-
+                      "channel number."),)
 
 class DAQReader(strax.Plugin):
     """
@@ -67,23 +66,30 @@ class DAQReader(strax.Plugin):
 
     Does nothing whatsoever to the live_data; not even baselining.
 
-    Provides: raw_records: (xams)raw_records.
+    Provides: 
+        - raw_records_v1724, sampled from the V1724 digitizer with sampling resolution = 10ns
+        - raw_records_v1730, sampled from the V1730 digitizer with sampling resolution = 2ns
     """
-    provides = ('raw_records',)
+    provides = (
+        'raw_records_v1724',
+        'raw_records_v1730'
+    )
 
     depends_on = tuple()
-    data_kind = 'raw_records'
+    data_kind = immutabledict(zip(provides, provides))
     parallel = 'process'
     rechunk_on_save = False
+    __version__ = '0.0.0' # DO NOT EVER CHANGE THE VERSION NUMBER, unless you know what you are doing
     compressor = 'lz4'
 
     def infer_dtype(self):
-        return strax.raw_record_dtype(
+        
+        # return strax.raw_record_dtype(
+        #        samples_per_record=self.config["record_length"])
+        return { 
+            d: strax.raw_record_dtype(
                 samples_per_record=self.config["record_length"])
-        # return { when you have multiple data kinds
-        #     d: strax.raw_record_dtype(
-        #         samples_per_record=self.config["record_length"])
-        #     for d in self.provides}
+            for d in self.provides}
 
     def setup(self):
         self.t0 = int(self.config['run_start_time']) * int(1e9)
@@ -320,7 +326,24 @@ class DAQReader(strax.Plugin):
         # return result # if you want to digitizers
         return result
 
+@export
+class DAQReaderXamsl(DAQReader):
+    
+    """
+    Read the XAMSL DAQ-live_data from redax and split it to the
+    appropriate raw_record data-types based on the channel-map.
 
+    Does nothing whatsoever to the live_data; not even baselining.
+
+    Provides: 
+        - raw_records_xamsl, sampled from the V1730 digitizer with sampling resolution = 2ns
+    """
+    
+    provides = ('raw_records_xamsl',)
+    data_kind = 'raw_records_xamsl'
+
+    
+    
 @export
 class Fake1TDAQReader(DAQReader):
     provides = (
