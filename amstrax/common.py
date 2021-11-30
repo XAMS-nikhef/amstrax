@@ -15,9 +15,13 @@ straxen_dir = os.path.dirname(os.path.abspath(
     inspect.getfile(inspect.currentframe())))
 
 # Current 
-to_pe = np.array([4.252e1,4.252e1,1.3e-4,4.252e1,4.252e1,4.252e1,4.252e1,4.252e1,4,4])
-# to_pe = np.array([1.3e-4,1.3e-4])
-n_tpc_pmts = 16
+#to_pe = np.array([4.252e1,4.252e1,1.3e-4,4.252e1,4.252e1,4.252e1,4.252e1,4.252e1,4,4])
+#to_pe = np.array([1.3e-4,1.3e-4]) # changed on 15/6/2021
+to_pe_xamsl = 1
+
+#n_tpc_pmts = 16
+n_tpc_pmts_xamsl = 8 
+
 
 first_sr1_run ='1'
 @export
