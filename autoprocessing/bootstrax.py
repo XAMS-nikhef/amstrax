@@ -98,8 +98,7 @@ args = parser.parse_args()
 
 mongo_url = f'mongodb://{os.environ["MONGO_USER"]}:{os.environ["MONGO_PASSWORD"]}@127.0.0.1:27017/admin'
 run_collname = 'run'
-output_folder = '/data/xenon/xams/run11/processed/'
-
+output_folder = '/home/xams/new_redax_data/processed/'
 
 # Timeouts in seconds
 timeouts = {
@@ -161,7 +160,6 @@ log.setLevel("DEBUG")
 hostname = socket.getfqdn()
 state_doc_id = None   # Set in main loop
 
-
 def new_context():
     """Create strax context that can access the runs db"""
     # We use exactly the logic of straxen to access the runs DB;
@@ -173,8 +171,8 @@ def new_context():
             mongo_collname='runs_new',
             runid_field='number',
             new_data_path=output_folder),
-        config=amstrax.contexts.common_config,
-        **amstrax.contexts.common_opts)
+        config=amstrax.contexts.common_config_xamsl,
+        **amstrax.contexts.common_opts_xamsl)
     return st
 
 st = new_context()
@@ -196,7 +194,6 @@ def main():
         print(args.abandon)
         number = int(args.abandon[0])
         print(number)
-        print('haloooo')
         if len(args.abandon) > 1:
             manual_fail(number=number, reason=args.abandon[1])
         abandon(number=number)
@@ -218,6 +215,7 @@ def main():
 ##
 
 def main_loop():
+    print(f'processing starts')
     """Infinite loop looking for runs to process"""
     global state_doc_id
 
@@ -531,9 +529,12 @@ def process_run(rd, send_heartbeats=True):
         thread_info = rd.get('daq_config', dict()).get('processing_threads', dict())
         n_readout_threads = sum([v for v in thread_info.values()])
         if not n_readout_threads:
-            fail(f"Run doc for {run_id} has no readout thread count info")
-
+            fail(f"Run doc for {run_id} has no readout thread count info")     
+        # The location will depend on where we are running bootstrax: let's first check if we are on the xams daq-machine 
+#         if socket.getfqdn() == 'xams-daq':
         loc = osp.join(dd['location'], run_id)
+#         else:
+#             loc = osp.join(alternative_input_path, run_id)            
         if not osp.exists(loc):
             fail(f"No live data at claimed location {loc}")
 
