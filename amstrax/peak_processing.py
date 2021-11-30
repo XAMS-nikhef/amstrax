@@ -5,8 +5,18 @@ import numba
 from .SiPMdata import *
 
 import strax
+import amstrax
 from amstrax.common import to_pe, pax_file, get_resource, first_sr1_run,get_elife, select_channels
 export, __all__ = strax.exporter()
+
+# These are also needed in peaklets, since hitfinding is repeated
+HITFINDER_OPTIONS = tuple([
+    strax.Option(
+        'hit_min_amplitude',
+        default='pmt_commissioning_initial',
+        help='Minimum hit amplitude in ADC counts above baseline. '
+             'See straxen.hit_min_amplitude for options.'
+    )])
 
 
 @strax.takes_config(
@@ -32,20 +42,18 @@ export, __all__ = strax.exporter()
                  help="Enable runtime checks for sorting and disjointness"),
     strax.Option('pmt_channel', default =0,
                  help="PMT channel for splitting pmt and sipms"),)
-class Peaks(strax.Plugin):
-    depends_on = ('records',)
-    data_kind = dict(peaks_top='peaks',
-                     peaks_bottom='peaks')
-    parallel = 'process'
-    provides = ('peaks_top', 'peaks_bottom')
-    rechunk_on_save = True
-    # data_kind = 'peaks'
-    # provides = 'peaks'
 
-    __version__ = '0.1.11'
-    dtype = dict(peaks_top = strax.peak_dtype(n_channels=8),
-                 peaks_bottom = strax.peak_dtype(n_channels=8))
-    # dtype = strax.peak_dtype(n_channels=8)
+class Peaks(strax.Plugin):
+    
+    depends_on = ('records',)
+
+    parallel = 'process'
+    rechunk_on_save = True
+    data_kind = 'peaks'
+    provides = ('peaks',)
+
+    __version__ = '0.1.12'
+    dtype = strax.peak_dtype(n_channels=8)
 
     def compute(self, records):
         r = records
@@ -57,54 +65,40 @@ class Peaks(strax.Plugin):
         # they should not affect the clustering!
 
         hits = strax.sort_by_time(hits)
-        hits_bottom, hits_top = hits[hits['channel'] == self.config['pmt_channel']], hits[hits['channel'] !=self.config['pmt_channel']]
-        r_bottom, r_top = r[r['channel'] == self.config['pmt_channel']], r[r['channel'] != self.config['pmt_channel']]
 
-        peaks_bottom = strax.find_peaks(
-            hits_bottom, self.to_pe,
-            gap_threshold=self.config['peak_gap_threshold'],
+        peaks = strax.find_peaks(
+            hits, self.to_pe, 
+            gap_threshold=self.config['peak_gap_threshold'], 
             left_extension=self.config['peak_left_extension'],
             right_extension=self.config['peak_right_extension'],
             min_channels=1,
-            result_dtype=self.dtype['peaks_bottom'])
-        strax.sum_waveform(peaks_bottom, r_bottom, self.to_pe)
-
-        peaks_bottom = strax.split_peaks(
-            peaks_bottom, r_bottom, self.to_pe,
+            result_dtype=self.dtype)
+        
+        strax.sum_waveform(peaks, r, self.to_pe)
+        
+        strax.split_peaks(
+            peaks, r, self.to_pe,
             min_height=self.config['peak_split_min_height'],
             min_ratio=self.config['peak_split_min_ratio'])
+        
+        strax.compute_widths(peaks)
 
-        strax.compute_widths(peaks_bottom)
-
-        peaks_top = strax.find_peaks(
-            hits_top, self.to_pe,
-            gap_threshold=self.config['peak_gap_threshold'],
-            left_extension=self.config['peak_left_extension'],
-            right_extension=self.config['peak_right_extension'],
-            min_area=self.config['peak_min_area'],
-            min_channels=self.config['peak_min_pmts'],
-            result_dtype=self.dtype['peaks_top'])
-        strax.sum_waveform(peaks_top, r_top, self.to_pe)
-
-        peaks_top = strax.split_peaks(
-            peaks_top, r_top, self.to_pe,
-            min_height=self.config['peak_split_min_height'],
-            min_ratio=self.config['peak_split_min_ratio'])
-
-        strax.compute_widths(peaks_top)
-
-        return dict(peaks_top=peaks_top,
-                    peaks_bottom=peaks_bottom,
-                    )
-        # return peaks
+        return peaks
 
 @export
 @strax.takes_config(
     strax.Option(
         'hit_threshold',
         default=10,
-        help='Hitfinder threshold in ADC counts above baseline')
-)
+        help='Hitfinder threshold in ADC counts above baseline'),
+        # PMT pulse processing options
+    strax.Option(
+        'save_outside_hits',
+        default=(3, 20),
+        help='Save (left, right) samples besides hits; cut the rest'),
+ )
+
+
 class Hits(strax.Plugin):
     depends_on = 'records'
     data_kind = 'peaks'
@@ -117,10 +111,12 @@ class Hits(strax.Plugin):
         return hits
 
 @export
-class PeakBasicsTop(strax.Plugin):
-    # provides = ('peakbasics_top')
-    depends_on = ('peaks_top')
+class PeakBasics(strax.Plugin):
+
+    provides = ('peak_basics',)
+    depends_on = ('peaks')
     data_kind = ('peaks')
+    
     parallel = 'False'
     rechunk_on_save = True
     __version__ = '0.1.0'
@@ -141,7 +137,6 @@ class PeakBasicsTop(strax.Plugin):
             'range_50p_area'), np.float32),
         (('Fraction of area seen by the top array',
             'area_fraction_top'), np.float32),
-
         (('Length of the peak waveform in samples',
           'length'), np.int32),
         (('Time resolution of the peak waveform in ns',
@@ -160,64 +155,13 @@ class PeakBasicsTop(strax.Plugin):
         r['max_pmt'] = np.argmax(p['area_per_channel'], axis=1)
         r['max_pmt_area'] = np.max(p['area_per_channel'], axis=1)
 
-        area_top = p['area_per_channel'][:, :8].sum(axis=1)
+        #area_top = p['area_per_channel'][:, :8].sum(axis=1)
+        area_top = p['area_per_channel'][:, 1:2].sum(axis=1) # top pmt in ch 1
         # Negative-area peaks get 0 AFT - TODO why not NaN?
         m = p['area'] > 0
         r['area_fraction_top'][m] = area_top[m]/p['area'][m]
         return r
-
-
-@export
-class PeakBasicsBottom(strax.Plugin):
-    # provides = ('peakbasics_top')
-    depends_on = ('peaks_bottom')
-    data_kind = ('peaks')
-    parallel = 'False'
-    rechunk_on_save = True
-    __version__ = '0.1.0'
-    dtype = [
-        (('Start time of the peak (ns since unix epoch)',
-          'time'), np.int64),
-        (('End time of the peak (ns since unix epoch)',
-          'endtime'), np.int64),
-        (('Peak integral in PE',
-            'area'), np.float32),
-        (('Number of PMTs contributing to the peak',
-            'n_channels'), np.int16),
-        (('PMT number which contributes the most PE',
-            'max_pmt'), np.int16),
-        (('Area of signal in the largest-contributing PMT (PE)',
-            'max_pmt_area'), np.int32),
-        (('Width (in ns) of the central 50% area of the peak',
-            'range_50p_area'), np.float32),
-        (('Fraction of area seen by the top array',
-            'area_fraction_top'), np.float32),
-
-        (('Length of the peak waveform in samples',
-          'length'), np.int32),
-        (('Time resolution of the peak waveform in ns',
-          'dt'), np.int16),
-        ]
-
-    def compute(self, peaks):
-        p = peaks
-        p = strax.sort_by_time(p)
-        r = np.zeros(len(p), self.dtype)
-        for q in 'time length dt area'.split():
-            r[q] = p[q]
-        r['endtime'] = p['time'] + p['dt'] * p['length']
-        r['n_channels'] = (p['area_per_channel'] > 0).sum(axis=1)
-        r['range_50p_area'] = p['width'][:, 5]
-        r['max_pmt'] = np.argmax(p['area_per_channel'], axis=1)
-        r['max_pmt_area'] = np.max(p['area_per_channel'], axis=1)
-
-        area_top = p['area_per_channel'][:, :8].sum(axis=1)
-        # Negative-area peaks get 0 AFT - TODO why not NaN?
-        m = p['area'] > 0
-        r['area_fraction_top'][m] = area_top[m]/p['area'][m]
-        return r
-
-
+    
 @export
 class PeakPositions(strax.Plugin):
     depends_on = ('peaks_top', 'peak_classification_top')
