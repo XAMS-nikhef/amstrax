@@ -23,9 +23,9 @@ to_pe = 1
 
 def open_test_data(file_name
                    ):
+    """Downloads amstrax test data to strax_test_data in the current directory"""
     with open(file_name, mode='rb') as f:
         result = f.read()
-    """Downloads amstrax test data to strax_test_data in the current directory"""
     f = io.BytesIO(result)
     tf = tarfile.open(fileobj=f)
     tf.extractall()
@@ -183,4 +183,3 @@ def select_channels(arr, channel_list):
     """
     sel = np.sum([arr['channel'] == channel for channel in channel_list], axis=0) > 0
     return arr[sel]
-
