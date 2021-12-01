@@ -36,6 +36,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
           cache-dependency-path: 'extra_requirements/requirements-tests.txt'
+      - name: install files
+        run:
+          |
+          git clone https://github.com/XAMS-nikhef/amstrax_files ../amstrax_files
+          pip install -e ../amstrax_files
       - name: Install requirements
         run:
           |
