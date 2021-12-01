@@ -5,13 +5,7 @@
 start="$(pwd)"
 echo $start
 
-cd straxen
-sed -e '/__all__ +=/ s/^#*/#/' -i ./*.py
-
-cd plugins
-sed -e '/__all__ +=/ s/^#*/#/' -i ./*.py
-
-cd ../analyses
+cd amstrax
 sed -e '/__all__ +=/ s/^#*/#/' -i ./*.py
 
 cd $start
