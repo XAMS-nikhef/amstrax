@@ -1,4 +1,7 @@
-# File for the requirements of straxen with the automated tests
+# File for the requirements of amstrax with the automated tests
+git+git://https://github.com/XAMS-nikhef/amstrax_files
+
+# others
 blosc==1.10.6                                   # Strax dependency
 bokeh==2.3.3
 boltons==21.0.0
