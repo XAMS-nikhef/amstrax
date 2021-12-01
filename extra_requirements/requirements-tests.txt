@@ -1,5 +1,5 @@
 # File for the requirements of amstrax with the automated tests
-git+git://https://github.com/XAMS-nikhef/amstrax_files
+git+git://github.com/XAMS-nikhef/amstrax_files
 
 # others
 blosc==1.10.6                                   # Strax dependency
