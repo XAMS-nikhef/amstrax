@@ -15,6 +15,7 @@ flake8==4.0.1
 gitpython==3.1.18
 holoviews==1.14.5
 ipywidgets==7.6.4
+iminuit==2.8.4
 # keras==2.6.0                                    # Tensorflow depencency
 hypothesis==6.29.0
 jupyter-client==7.1.0                           # for ipywidgets

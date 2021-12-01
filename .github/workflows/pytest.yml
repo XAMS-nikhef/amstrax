@@ -37,7 +37,10 @@ jobs:
           cache: 'pip'
           cache-dependency-path: 'extra_requirements/requirements-tests.txt'
       - name: Install requirements
-        run: pip install -r extra_requirements/requirements-tests.txt
+        run:
+          |
+          pip install -r extra_requirements/requirements-tests.txt
+          pip install -e amstrax
       - name: Test package
         # This is running a normal test
         if: matrix.test == 'pytest'
