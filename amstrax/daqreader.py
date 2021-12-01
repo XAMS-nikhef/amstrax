@@ -24,9 +24,7 @@ class ArtificialDeadtimeInserted(UserWarning):
 
 @export
 @strax.takes_config(
-
     # All these must have track=False, so the raw_records hash never changes!
-
     # DAQ settings -- should match settings given to redax
     strax.Option('record_length', default=110, track=False, type=int,
                  help="Number of samples per raw_record"),
@@ -47,7 +45,6 @@ class ArtificialDeadtimeInserted(UserWarning):
                  help="Number of readout threads producing strax data files"),
     strax.Option('daq_input_dir', type=str, track=False,
                  help="Directory where readers put data"),
-
     # DAQReader settings
     strax.Option('safe_break_in_pulses', default=1000, track=False,
                  help="Time (ns) between pulses indicating a safe break "
@@ -58,46 +55,39 @@ class ArtificialDeadtimeInserted(UserWarning):
     strax.Option('channel_map', track=False, type=immutabledict,
                  help="immutabledict mapping subdetector to (min, max) "
                       "channel number."))
+
 class DAQReader(strax.Plugin):
     """
-    Read the XENONnT DAQ-live_data from redax and split it to the
+    Read the XAMS DAQ-live_data from redax and split it to the
     appropriate raw_record data-types based on the channel-map.
-
     Does nothing whatsoever to the live_data; not even baselining.
-
-    Provides:
-        - raw_records: (tpc)raw_records.
-        - raw_records_he: raw_records for the high energy boards
-        digitizing the top PMT-array at lower amplification.
-        - raw_records_nv: neutron veto raw_records; only stored temporary
-        as the software coincidence trigger not applied yet.
-        - raw_records_mv: muon veto raw_records.
-        - raw_records_aqmon: raw_records for the acquisition monitor (_nv
-        for neutron veto).
+    Provides: 
+        - raw_records_v1724, sampled from the V1724 digitizer with sampling resolution = 10ns
+        - raw_records_v1730, sampled from the V1730 digitizer with sampling resolution = 2ns
     """
     provides = (
-        'raw_records',
-        # 'raw_records_he',  # high energy,
-        # 'raw_records_aqmon',
-        # 'raw_records_nv',  # nveto raw_records (will not be stored long term)
-        # 'raw_records_aqmon_nv',
-        # 'raw_records_mv',    # mveto has to be last due to lineage
+        'raw_records_v1724',
+        'raw_records_v1730'
     )
 
-    # data_kind = immutabledict(zip(provides, provides))
-    data_kind='raw_records'
     depends_on = tuple()
+    data_kind = immutabledict(zip(provides, provides))
     parallel = 'process'
     rechunk_on_save = False
+    __version__ = '0.0.0' # DO NOT EVER CHANGE THE VERSION NUMBER, unless you know what you are doing
     compressor = 'lz4'
 
     def infer_dtype(self):
-        return strax.raw_record_dtype(
+        
+        # This is when you have just one dtype
+        # return strax.raw_record_dtype(
+        #        samples_per_record=self.config["record_length"])
+        
+        # This is when you have two data types
+        return { 
+            d: strax.raw_record_dtype(
                 samples_per_record=self.config["record_length"])
-        # return {
-        #     d: strax.raw_record_dtype(
-        #         samples_per_record=self.config["record_length"])
-        #     for d in self.provides}
+            for d in self.provides}
 
     def setup(self):
         self.t0 = int(self.config['run_start_time']) * int(1e9)
@@ -315,24 +305,44 @@ class DAQReader(strax.Plugin):
             if subd.endswith('blank'):
                 continue
 
-            result_name = 'raw_records'
+            #result_name = 'raw_records'
             if subd.startswith('nveto'):
                 result_name += '_nv'
-            elif subd != 'tpc':
+            elif subd != 'pmt':
                 result_name += '_' + subd
-            result[result_name] = self.chunk(
+            
+            #result[result_name] = self.chunk(
+            result = self.chunk(
                 start=self.t0 + break_pre,
                 end=self.t0 + break_post,
-                data=result_arrays[i],
-                data_type=result_name)
+                data=result_arrays[i])#,
+                #data_type=result_name)
 
-        print(f"Read chunk {chunk_i:06d} from DAQ")
-        for r in result.values():
-            print(f"\t{r}")
-        print(result['raw_records'])
-        return result['raw_records']
+        # If you want to returns the two data kind of raw_records from the two digitizers
+        # print(f"Read chunk {chunk_i:06d} from DAQ")
+        # for r in result.values():
+        #    print(f"\t{r}")
+        # print(result['raw_records'])
+        # return result['raw_records']
+        # Otherwise, just return
+        return result
 
+@export
+class DAQReaderXamsl(DAQReader):
+    
+    """
+    Read the XAMSL DAQ-live_data from redax and split it to the
+    appropriate raw_record data-types based on the channel-map.
+    Does nothing whatsoever to the live_data; not even baselining.
+    Provides: 
+        - raw_records_xamsl, sampled from the V1730 digitizer with sampling resolution = 2ns
+    """
+    
+    provides = ('raw_records_xamsl',)
+    data_kind = 'raw_records_xamsl'
 
+    
+    
 @export
 class Fake1TDAQReader(DAQReader):
     provides = (
@@ -347,7 +357,6 @@ class Fake1TDAQReader(DAQReader):
 @numba.njit(nogil=True, cache=True)
 def split_channel_ranges(records, channel_ranges):
     """Return numba.List of record arrays in channel_ranges.
-
     ~2.5x as fast as a naive implementation with np.in1d
     """
     n_subdetectors = len(channel_ranges)
