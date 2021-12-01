@@ -6,20 +6,36 @@ common_opts = dict(
     register_all=[ax.pulse_processing,
                   ax.peak_processing,
                   ax.event_processing],
+    register=[ax.daqreader.DAQReader],
     store_run_fields=(
         'name', 'number',
         'start', 'end', 'livetime',
         'tags'),
     check_available=('raw_records', 'records',
                      ))
+
+common_opts_xamsl = dict(
+    register_all=[ax.pulse_processing,
+                  ax.peak_processing,],
+    register=[ax.daqreader.DAQReaderXamsl],
+    store_run_fields=(
+        'name', 'number',
+        'start', 'end', 'livetime',
+        'tags'),
+    check_available=('raw_records_xamsl', 'records',))
+
 common_config = dict(
     n_tpc_pmts=16,
     channel_map=immutabledict(
-        pmt=(8,16),
-        sipm=(0,8),
+        sipm=(0,8), # related to raw_records_v1730
+        pmt=(8,16), # related to raw_records_v1724
+    ))
 
-    )
-)
+common_config_xamsl = dict(
+    n_tpc_pmts = 8, # total number of available channels
+    channel_map=immutabledict(pmt=(0,8)),)
+
+
 def amstrax_gas_test_analysis():
     """Return strax test for analysis of Xams gas test data"""
     return strax.Context(
