@@ -78,13 +78,11 @@ class DAQReader(strax.Plugin):
     compressor = 'lz4'
 
     def infer_dtype(self):
-        
-        # This is when you have just one dtype
-        # return strax.raw_record_dtype(
-        #        samples_per_record=self.config["record_length"])
-        
-        # This is when you have two data types
-        return { 
+        if not self.multi_output:
+            return strax.raw_record_dtype(
+               samples_per_record=self.config["record_length"])
+
+        return {
             d: strax.raw_record_dtype(
                 samples_per_record=self.config["record_length"])
             for d in self.provides}
@@ -101,7 +99,9 @@ class DAQReader(strax.Plugin):
                 " duration (preferably a lot larger!)")
 
     def _path(self, chunk_i):
-        return self.config["daq_input_dir"] + f'/{chunk_i:06d}'
+        p = self.config["daq_input_dir"] + f'/{chunk_i:06d}'
+        print(p, os.path.exists(p))
+        return p
 
     def _chunk_paths(self, chunk_i):
         """Return paths to previous, current and next chunk
@@ -251,6 +251,7 @@ class DAQReader(strax.Plugin):
         t_end = t_start + dt_central
 
         pre, current, post = self._chunk_paths(chunk_i)
+        print(pre, current, post)
         r_pre, r_post = None, None
         break_pre, break_post = t_start, t_end
 

@@ -4,10 +4,12 @@ import os.path as osp
 import os
 import inspect
 import urllib.request
-
+import tarfile
+import io
 import numpy as np
 
 import strax
+
 export, __all__ = strax.exporter()
 __all__ += ['straxen_dir', 'to_pe']
 
@@ -17,6 +19,18 @@ straxen_dir = os.path.dirname(os.path.abspath(
 # Current values 
 n_tpc_pmts = 8
 to_pe = 1
+
+
+def open_test_data(file_name
+                   ):
+    with open(file_name, mode='rb') as f:
+        result = f.read()
+    """Downloads amstrax test data to strax_test_data in the current directory"""
+    f = io.BytesIO(result)
+    tf = tarfile.open(fileobj=f)
+    tf.extractall()
+
+
 
 # Previous values
 # to_pe = np.array([4.252e1,4.252e1,1.3e-4,4.252e1,4.252e1,4.252e1,4.252e1,4.252e1,4,4])
@@ -28,13 +42,18 @@ to_pe = 1
 # total_amplification = gain * factor
 # to_pe = 2e-9 * 2 / (2**13 * 50 * gain * 10 * 1.602e-19)
 
-first_sr1_run ='1'
+
+first_sr1_run = '1'
+
+
 @export
 def pax_file(x):
     """Return URL to file hosted in the pax repository master branch"""
     return 'https://raw.githubusercontent.com/XENON1T/pax/master/pax/data/' + x
 
+
 cache_dict = dict()
+
 
 # Placeholder for resource management system in the future?
 @export
@@ -106,6 +125,8 @@ def get_resource(x, fmt='text'):
     cache_dict[x] = result
 
     return result
+
+
 @export
 def get_elife(run_id):
     """Return electron lifetime for run_id in ns"""
@@ -155,9 +176,11 @@ def get_secret(x):
         return getattr(xenon_secrets, x)
     raise ValueError(message + " and the secret is not in xenon_secrets.py")
 
+
 @export
 def select_channels(arr, channel_list):
     """Select only the values in arr that have arr['channel'] in channel_list
     """
     sel = np.sum([arr['channel'] == channel for channel in channel_list], axis=0) > 0
     return arr[sel]
+
