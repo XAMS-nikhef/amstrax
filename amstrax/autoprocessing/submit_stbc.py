@@ -3,7 +3,7 @@ import os
 script_template = """#!/bin/bash
 export PATH=/data/xenon/joranang/anaconda/bin:$PATH
 source activate amstrax
-python /data/xenon/xamsl/software/amstrax/autoprocessing/process_run.py {run_name} {target} > {log_file} 2>&1  # noqa
+python /data/xenon/xamsl/software/amstrax/autoprocessing/process_run.py {arguments} > {log_file} 2>&1  # noqa
 echo "Script complete, bye!"
 """
 
@@ -17,10 +17,12 @@ def submit_job(run_name, target, job_folder='./jobs', log_folder = './logs'):
     script_name = os.path.join(job_folder,
                                f'p_{run_name}_{target}.sh')
     log_file = os.path.join(log_folder, f'p_{run_name}_{target}.log')
+
+    arguments = f'{run_name} --target {target}'
+
     script_file = open(script_name, 'w')
     script_file_content = script_template.format(
-        run_name=run_name,
-        target=target,
+        arguments=arguments,
         log_file=log_file,
     )
     script_file.write(script_file_content)

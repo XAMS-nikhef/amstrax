@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-"""Process a single run with amstrax
+"""
+Process a single run with amstrax
 """
 import argparse
 import datetime
