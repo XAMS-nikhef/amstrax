@@ -23,7 +23,7 @@ def parse_args():
 
 if __name__ == '__main__':
     args = parse_args()
-    version = '1.0.0'
+    version = '2.0.0'
     print('Starting autoprocess version %s...' % version)
 
     # settings
