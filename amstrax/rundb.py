@@ -36,7 +36,7 @@ def link_to_daq(
     )
     server.start()
 
-
+@export
 def get_mongo_client(**link_kwargs):
     """Get a mongo client, any kwargs are passed on to link_to_daq"""
     _check_environment_var('MONGO_USER')
@@ -47,6 +47,7 @@ def get_mongo_client(**link_kwargs):
     return pymongo.MongoClient(f'mongodb://{user}:{password}@127.0.0.1:27017/admin')
 
 
+@export
 def get_mongo_collection(database_name='run',
                          database_col='runs_new',
                          **link_kwargs,
