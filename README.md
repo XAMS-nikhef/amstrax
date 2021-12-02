@@ -3,6 +3,7 @@
 [![CodeFactor](https://www.codefactor.io/repository/github/xams-nikhef/amstrax/badge)](https://www.codefactor.io/repository/github/xams-nikhef/amstrax)
 [![PyPI version shields.io](https://img.shields.io/pypi/v/amstrax.svg)](https://pypi.python.org/pypi/amstrax/)
 [![PyPI downloads](https://img.shields.io/pypi/dm/amstrax.svg)](https://pypistats.org/packages/amstrax)
+[![DOI](https://zenodo.org/badge/263576054.svg)](https://zenodo.org/badge/latestdoi/263576054)
 
 Amsterdam Strax
 
