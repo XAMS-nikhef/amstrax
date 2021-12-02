@@ -39,7 +39,7 @@ jobs:
       - name: install files
         run:
           |
-          git clone https://github.com/XAMS-nikhef/amstrax_files ../amstrax_files
+          git clone https://github.com/XAMS-nikhef/amstrax_files --single-branch ../amstrax_files
           pip install -e ../amstrax_files
       - name: Install requirements
         run:
