@@ -160,7 +160,7 @@ def amstrax_run10_analysis(output_folder='./strax_data'):
                                 deep_scan=False,
                                 readonly=False),
         ],
-        config=dict(**common_config),
+        config=dict(**xams_common_config),
         register=ax.RecordsFromPax,
         **common_opts
     )
