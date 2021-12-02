@@ -3,7 +3,7 @@ import json
 import numpy as np
 import numpy.ma as ma
 import numba
-from .SiPMdata import *
+from amstrax.SiPMdata import *
 
 import strax
 import amstrax

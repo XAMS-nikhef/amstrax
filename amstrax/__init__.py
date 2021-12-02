@@ -7,8 +7,9 @@ from .hitfinder_thresholds import *
 from .common import *
 from .itp_map import *
 from .rundb import *
-from .contexts import *
 from .hitfinder_thresholds import *
 
 from . import plugins
 from .plugins import *
+
+from .contexts import *

@@ -1,22 +1,17 @@
 import glob
 import os
-import shutil
 import warnings
-
 from immutabledict import immutabledict
 import numpy as np
 import numba
-
 import strax
+from collections import Counter
 
 export, __all__ = strax.exporter()
 __all__ += ['ARTIFICIAL_DEADTIME_CHANNEL']
 
-# Just below the TPC acquisition monitor, see
-# https://xe1t-wiki.lngs.infn.it/doku.php?id=xenon:xenonnt:dsg:daq:channel_groups
-ARTIFICIAL_DEADTIME_CHANNEL = 799
 
-
+ARTIFICIAL_DEADTIME_CHANNEL = 40
 class ArtificialDeadtimeInserted(UserWarning):
     pass
 
@@ -27,9 +22,9 @@ class ArtificialDeadtimeInserted(UserWarning):
     # DAQ settings -- should match settings given to redax
     strax.Option('record_length', default=110, track=False, type=int,
                  help="Number of samples per raw_record"),
-    strax.Option('digitizer_sampling_resolution',
+    strax.Option('max_digitizer_sampling_time',
                  default=10, track=False, type=int,
-                 help="Digitizer sampling resolution"),
+                 help="Highest interval time of the digitizer sampling times(s) used."),
     strax.Option('run_start_time', type=float, track=False, default=0,
                  help="time of start run (s since unix epoch)"),
     strax.Option('daq_chunk_duration', track=False,
@@ -40,17 +35,17 @@ class ArtificialDeadtimeInserted(UserWarning):
                  help="Duration of intermediate/overlap chunks in ns"),
     strax.Option('daq_compressor', default="lz4", track=False,
                  help="Algorithm used for (de)compressing the live data"),
-    strax.Option('n_readout_threads', type=int, track=False,
-                 help="Number of readout threads producing strax data files"),
+    strax.Option('readout_threads', type=dict, track=False,
+                 help="Dictionary of the readout threads where the keys "
+                      "specify the reader and value the number of threads"),
     strax.Option('daq_input_dir', type=str, track=False,
                  help="Directory where readers put data"),
+
     # DAQReader settings
     strax.Option('safe_break_in_pulses', default=1000, track=False,
                  help="Time (ns) between pulses indicating a safe break "
                       "in the datastream -- gaps of this size cannot be "
                       "interior to peaklets."),
-    strax.Option('erase', default=False, track=False,
-                 help="Delete reader data after processing"),
     strax.Option('channel_map', track=False, type=immutabledict,
                  help="immutabledict mapping subdetector to (min, max) "
                       "channel number."))
@@ -65,15 +60,17 @@ class DAQReader(strax.Plugin):
     """
     provides = (
         'raw_records_v1724',
-        'raw_records_v1730'
+        'raw_records_v1730',
+        'raw_records_aqmon',
     )
 
     depends_on = tuple()
     data_kind = immutabledict(zip(provides, provides))
     parallel = 'process'
     rechunk_on_save = False
-    __version__ = '0.0.0'  # DO NOT EVER CHANGE THE VERSION NUMBER, unless you know what you are doing
-    compressor = 'lz4'
+    # never change the version!
+    __version__ = '0.0.0'
+    compressor = 'zstd'
 
     def infer_dtype(self):
         if not self.multi_output:
@@ -87,8 +84,8 @@ class DAQReader(strax.Plugin):
 
     def setup(self):
         self.t0 = int(self.config['run_start_time']) * int(1e9)
-        self.dt = self.config['digitizer_sampling_resolution']
-
+        self.dt_max = self.config['max_digitizer_sampling_time']
+        self.n_readout_threads = sum(self.config['readout_threads'].values())
         if (self.config['safe_break_in_pulses']
                 > min(self.config['daq_chunk_duration'],
                       self.config['daq_overlap_chunk_duration'])):
@@ -100,7 +97,8 @@ class DAQReader(strax.Plugin):
         return self.config["daq_input_dir"] + f'/{chunk_i:06d}'
 
     def _chunk_paths(self, chunk_i):
-        """Return paths to previous, current and next chunk
+        """
+        Return paths to previous, current and next chunk
         If any of them does not exist, or they are not yet populated
         with data from all readers, their path is replaced by False.
         """
@@ -108,13 +106,13 @@ class DAQReader(strax.Plugin):
         result = []
         for q in [p + '_pre', p, p + '_post']:
             if os.path.exists(q):
-                n_files = len(os.listdir(q))
-                if n_files >= self.config['n_readout_threads']:
+                n_files = self._count_files_per_chunk(q)
+                if n_files >= self.n_readout_threads:
                     result.append(q)
                 else:
                     print(f"Found incomplete folder {q}: "
                           f"contains {n_files} files but expected "
-                          f"{self.config['n_readout_threads']}. "
+                          f"{self.n_readout_threads}. "
                           f"Waiting for more data.")
                     if self.source_finished():
                         # For low rates, different threads might end in a
@@ -129,12 +127,32 @@ class DAQReader(strax.Plugin):
                 result.append(False)
         return tuple(result)
 
+    @staticmethod
+    def _partial_chunk_to_thread_name(partial_chunk):
+        """Convert name of part of the chunk to the thread_name that wrote it"""
+        return '_'.join(partial_chunk.split('_')[:-1])
+
+    def _count_files_per_chunk(self, path_chunk_i):
+        """
+        Check that the files in the chunks have names consistent with
+        the readout threads
+        """
+        counted_files = Counter(
+            [self._partial_chunk_to_thread_name(p) for p in os.listdir(path_chunk_i)])
+        for thread, n_counts in counted_files.items():
+            if thread not in self.config['readout_threads']:
+                raise ValueError(f'Bad data for {path_chunk_i}. Got {thread}')
+            if n_counts > self.config['readout_threads'][thread]:
+                raise ValueError(f'{thread} wrote {n_counts}, expected'
+                                 f'{self.config["readout_threads"][thread]}')
+        return sum(counted_files.values())
+
     def source_finished(self):
         end_dir = self.config["daq_input_dir"] + '/THE_END'
         if not os.path.exists(end_dir):
             return False
         else:
-            return len(os.listdir(end_dir)) >= self.config['n_readout_threads']
+            return self._count_files_per_chunk(end_dir) >= self.n_readout_threads
 
     def is_ready(self, chunk_i):
         ended = self.source_finished()
@@ -148,11 +166,12 @@ class DAQReader(strax.Plugin):
         return False
 
     def _load_chunk(self, path, start, end, kind='central'):
+        first_provides = self.provides[0]
         records = [
             strax.load_file(
                 fn,
                 compressor=self.config["daq_compressor"],
-                dtype=self.dtype_for('raw_records'))
+                dtype=self.dtype_for(first_provides))
             for fn in sorted(glob.glob(f'{path}/*'))]
         records = np.concatenate(records)
         records = strax.sort_by_time(records)
@@ -163,15 +182,15 @@ class DAQReader(strax.Plugin):
             # Records are sorted by (start)time and are of variable length.
             # Their end-times can differ. In the most pessimistic case we have
             # to look back one record length for each channel.
-            tot_channels = np.sum([np.diff(x) + 1 for x in
+            tot_channels = np.sum([np.diff(x)+1 for x in
                                    self.config['channel_map'].values()])
             look_n_samples = self.config["record_length"] * tot_channels
             last_end = strax.endtime(records[-look_n_samples:]).max()
-            # if first_start < start or last_start >= end:
-            #     raise ValueError(
-            #         f"Bad data from DAQ: chunk {path} should contain data "
-            #         f"that starts in [{start}, {end}), but we see start times "
-            #         f"ranging from {first_start} to {last_start}.")
+            if first_start < start or last_start >= end:
+                raise ValueError(
+                    f"Bad data from DAQ: chunk {path} should contain data "
+                    f"that starts in [{start}, {end}), but we see start times "
+                    f"ranging from {first_start} to {last_start}.")
 
         if kind == 'central':
             result = records
@@ -191,7 +210,7 @@ class DAQReader(strax.Plugin):
                         safe_break=min_gap,
                         # Records from the last chunk can extend as far as:
                         not_before=(start
-                                    + self.config['record_length'] * self.dt),
+                                    + self.config['record_length'] * self.dt_max),
                         left=kind == 'post',
                         tolerant=False)
                 except strax.NoBreakFound:
@@ -205,7 +224,7 @@ class DAQReader(strax.Plugin):
                     # Mark the region where data /might/ be removed with
                     # artificial deadtime.
                     dead_time_start = (
-                            break_time - self.config['record_length'] * self.dt)
+                            break_time - self.config['record_length'] * self.dt_max)
                     warnings.warn(
                         f"Data in {path} is so dense that no {min_gap} "
                         f"ns break exists: data loss inevitable. "
@@ -216,7 +235,7 @@ class DAQReader(strax.Plugin):
                     if kind == 'pre':
                         # Give the artificial deadtime past the break
                         result = self._artificial_dead_time(
-                            start=break_time, end=end)
+                            start=break_time, end=end, dt=self.dt_max)
                     else:
                         # Remove data that would stick out
                         result = records[strax.endtime(records) <= break_time]
@@ -225,17 +244,14 @@ class DAQReader(strax.Plugin):
                             np.concatenate([result,
                                             self._artificial_dead_time(
                                                 start=dead_time_start,
-                                                end=break_time)]))
-
-        if self.config['erase']:
-            shutil.rmtree(path)
+                                                end=break_time, dt=self.dt_max)]))
         return result, break_time
 
-    def _artificial_dead_time(self, start, end):
+    def _artificial_dead_time(self, start, end, dt):
         return strax.dict_to_rec(
             dict(time=[start],
-                 length=[(end - start) // self.dt],
-                 dt=[self.dt],
+                 length=[(end - start) // dt],
+                 dt=[dt],
                  channel=[ARTIFICIAL_DEADTIME_CHANNEL]),
             self.dtype_for('raw_records'))
 
@@ -247,7 +263,6 @@ class DAQReader(strax.Plugin):
         t_end = t_start + dt_central
 
         pre, current, post = self._chunk_paths(chunk_i)
-        print(pre, current, post)
         r_pre, r_post = None, None
         break_pre, break_post = t_start, t_end
 
@@ -282,11 +297,6 @@ class DAQReader(strax.Plugin):
             x for x in (r_pre, r_main, r_post)
             if x is not None])
 
-        if len(records):
-            # Convert time to time in ns since unix epoch.
-            # Ensure the offset is a whole digitizer sample
-            records["time"] += self.dt * (self.t0 // self.dt)
-
         # Split records by channel
         result_arrays = split_channel_ranges(
             records,
@@ -296,47 +306,32 @@ class DAQReader(strax.Plugin):
         # Convert to strax chunks
         result = dict()
         for i, subd in enumerate(self.config['channel_map']):
+            if len(result_arrays[i]):
+                # dt may differ per subdetector
+                dt = result_arrays[i]['dt'][0]
+                # Convert time to time in ns since unix epoch.
+                # Ensure the offset is a whole digitizer sample
+                result_arrays[i]["time"] += dt * (self.t0 // dt)
 
             # Ignore data from the 'blank' channels, corresponding to
             # channels that have nothing connected
             if subd.endswith('blank'):
                 continue
 
-            # result_name = 'raw_records'
-            if subd.startswith('nveto'):
-                result_name += '_nv'
-            elif subd != 'pmt':
-                result_name += '_' + subd
-
-            # result[result_name] = self.chunk(
-            result = self.chunk(
+            result_name = 'raw_records'
+            result_name += '_' + subd
+            result[result_name] = self.chunk(
                 start=self.t0 + break_pre,
                 end=self.t0 + break_post,
-                data=result_arrays[i])  # ,
-            # data_type=result_name)
+                data=result_arrays[i],
+                data_type=result_name)
 
-        # If you want to returns the two data kind of raw_records from the two digitizers
-        # print(f"Read chunk {chunk_i:06d} from DAQ")
-        # for r in result.values():
-        #    print(f"\t{r}")
-        # print(result['raw_records'])
-        # return result['raw_records']
-        # Otherwise, just return
+        print(f"Read chunk {chunk_i:06d} from DAQ")
+        for r in result.values():
+            # Print data rate / data type if any
+            if r._mbs() > 0:
+                print(f"\t{r}")
         return result
-
-
-@export
-class DAQReaderXamsl(DAQReader):
-    """
-    Read the XAMSL DAQ-live_data from redax and split it to the
-    appropriate raw_record data-types based on the channel-map.
-    Does nothing whatsoever to the live_data; not even baselining.
-    Provides: 
-        - raw_records_xamsl, sampled from the V1730 digitizer with sampling resolution = 2ns
-    """
-
-    provides = ('raw_records_xamsl',)
-    data_kind = 'raw_records_xamsl'
 
 
 @export
