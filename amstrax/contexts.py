@@ -56,7 +56,7 @@ def _xams_xamsl_context(
         mongo_kwargs: dict = None
         ):
     st = strax.Context(**common_opts,
-                       **common_config,
+                       config=common_config,
                        forbid_creation_of=ax.DAQReader.provides,
                        )
     raw_data_folder=raw_data_folder.format(detector=_detector)
@@ -165,17 +165,17 @@ def context_for_daq_reader(st,
         UserWarning(f'context_for_daq_reader:: Hardcoded {live_dir}')
     run_col = ax.get_mongo_collection(**runs_col_kargs)
 
-    rd = run_col.find({'number': int(run_id)})
+    rd = run_col.find_one({'number': int(run_id)})
     daq_config = rd['daq_config']
-
+    st.set_context_config(dict(forbid_creation_of=tuple()))
     st.set_config(
         {'readout_threads': daq_config['processing_threads'],
-         'daq_input_dir': os.path.join(live_dir, run_id),
-         'record_length' : daq_config['strax_fragment_payload_bytes'],
+         'daq_input_dir': os.path.join(live_dir, run_id, run_id),
+         'record_length' : daq_config['strax_fragment_payload_bytes']//2,
          'max_digitizer_sampling_time': 10,
          'run_start_time' : rd['start'].replace(tzinfo=timezone.utc).timestamp(),
-         'daq_chunk_duration': daq_config['strax_chunk_length'],
-         'daq_overlap_chunk_duration': daq_config['strax_chunk_overlap'],
+         'daq_chunk_duration': int(daq_config['strax_chunk_length']*1e9),
+         'daq_overlap_chunk_duration': int(daq_config['strax_chunk_overlap']*1e9),
          'compressor': daq_config.get('compressor', 'lz4')
          })
     return st

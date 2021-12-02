@@ -99,7 +99,7 @@ def main(args):
         st.context_config['forbid_creation_of'] = tuple()
     
     if 'raw_records' in args.target:
-        st = amstrax.contexts.context_for_daq_reader(st)
+        st = amstrax.contexts.context_for_daq_reader(st, args.run_id)
 
     if args.from_scratch:
         for q in st.storage:
@@ -131,7 +131,7 @@ def main(args):
             max_workers=int(args.workers))
         yield from st.get_iter(**kwargs)
 
-    clock_start = None
+    clock_start = 0
     for i, d in enumerate(get_results()):
         mem_mb = process.memory_info().rss / 1e6
         peak_ram = max(mem_mb, peak_ram)

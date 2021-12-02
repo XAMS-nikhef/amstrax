@@ -5,7 +5,6 @@ import numpy as np
 import strax
 import straxen
 from straxen.plugins.daqreader import split_channel_ranges
-import amstrax.amstrax
 
 export, __all__ = strax.exporter()
 __all__ += ['ARTIFICIAL_DEADTIME_CHANNEL']
@@ -144,6 +143,9 @@ class DAQReader(straxen.DAQReader):
                  dt=[dt],
                  channel=[ARTIFICIAL_DEADTIME_CHANNEL]),
             self.dtype_for('raw_records'))
+
+    def _path(self, chunk_i):
+        return self.config["daq_input_dir"] + f'/{chunk_i:06d}'
 
     def compute(self, chunk_i):
         dt_central = self.config['daq_chunk_duration']
