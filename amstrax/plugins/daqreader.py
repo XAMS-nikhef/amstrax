@@ -5,6 +5,7 @@ import numpy as np
 import strax
 import straxen
 from straxen.plugins.daqreader import split_channel_ranges
+import amstrax.amstrax
 
 export, __all__ = strax.exporter()
 __all__ += ['ARTIFICIAL_DEADTIME_CHANNEL']
@@ -15,6 +16,8 @@ ARTIFICIAL_DEADTIME_CHANNEL = 40
 
 class ArtificialDeadtimeInserted(UserWarning):
     pass
+
+
 
 
 @export

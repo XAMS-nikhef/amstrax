@@ -1,5 +1,5 @@
 import os
-
+from datetime import timezone
 import strax
 import amstrax as ax
 from immutabledict import immutabledict
@@ -151,3 +151,31 @@ def amstrax_run10_analysis(output_folder='./strax_data'):
         register=ax.RecordsFromPax,
         **common_opts
     )
+
+
+def context_for_daq_reader(st,
+                           run_id,
+                           runs_col_kargs=None,
+                           # TODO get from rundoc
+                           live_dir = '/data/xenon/xamsl/live_data',
+                           ):
+    if runs_col_kargs is None:
+        runs_col_kargs = {}
+    if live_dir is not None:
+        UserWarning(f'context_for_daq_reader:: Hardcoded {live_dir}')
+    run_col = ax.get_mongo_collection(**runs_col_kargs)
+
+    rd = run_col.find({'number': int(run_id)})
+    daq_config = rd['daq_config']
+
+    st.set_config(
+        {'readout_threads': daq_config['processing_threads'],
+         'daq_input_dir': os.path.join(live_dir, run_id),
+         'record_length' : daq_config['strax_fragment_payload_bytes'],
+         'max_digitizer_sampling_time': 10,
+         'run_start_time' : rd['start'].replace(tzinfo=timezone.utc).timestamp(),
+         'daq_chunk_duration': daq_config['strax_chunk_length'],
+         'daq_overlap_chunk_duration': daq_config['strax_chunk_overlap'],
+         'compressor': daq_config.get('compressor', 'lz4')
+         })
+    return st
