@@ -5,3 +5,4 @@ straxen
 pymongo<4.0
 IPython
 sshtunnel
+matplotlib~=3.4
