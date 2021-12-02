@@ -7,7 +7,7 @@ flake8==4.0.1
 iminuit==2.8.4
 hypothesis==6.29.0
 ipython==7.30.0
-matplotlib==3.4.3
+matplotlib==3.5.0
 multihist==0.6.4
 npshmex==0.2.1                                  # Strax dependency
 numba==0.54.1                                   # Strax dependency
