@@ -17,9 +17,12 @@ def submit_job(run_id, target, job_folder='./jobs', log_folder ='./logs'):
             os.makedirs(folder)
 
     # Build a script to submit to stoomboot cluster
-    script_name = os.path.join(job_folder,
+    script_name = os.path.join(os.path.abspath('.'),
+                               job_folder,
                                f'p_{run_id}_{target}.sh')
-    log_file = os.path.join(log_folder, f'p_{run_id}_{target}.log')
+    log_file = os.path.join(os.path.abspath('.'),
+                            log_folder,
+                            f'p_{run_id}_{target}.log')
 
     arguments = f'{run_id} --target {target}'
 
