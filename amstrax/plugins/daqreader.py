@@ -11,43 +11,13 @@ __all__ += ['ARTIFICIAL_DEADTIME_CHANNEL']
 
 
 ARTIFICIAL_DEADTIME_CHANNEL = 40
+
+
 class ArtificialDeadtimeInserted(UserWarning):
     pass
 
 
 @export
-@strax.takes_config(
-    # All these must have track=False, so the raw_records hash never changes!
-    # DAQ settings -- should match settings given to redax
-    strax.Option('record_length', default=110, track=False, type=int,
-                 help="Number of samples per raw_record"),
-    strax.Option('max_digitizer_sampling_time',
-                 default=10, track=False, type=int,
-                 help="Highest interval time of the digitizer sampling times(s) used."),
-    strax.Option('run_start_time', type=float, track=False, default=0,
-                 help="time of start run (s since unix epoch)"),
-    strax.Option('daq_chunk_duration', track=False,
-                 default=int(5e9), type=int,
-                 help="Duration of regular chunks in ns"),
-    strax.Option('daq_overlap_chunk_duration', track=False,
-                 default=int(5e8), type=int,
-                 help="Duration of intermediate/overlap chunks in ns"),
-    strax.Option('daq_compressor', default="lz4", track=False,
-                 help="Algorithm used for (de)compressing the live data"),
-    strax.Option('readout_threads', type=dict, track=False,
-                 help="Dictionary of the readout threads where the keys "
-                      "specify the reader and value the number of threads"),
-    strax.Option('daq_input_dir', type=str, track=False,
-                 help="Directory where readers put data"),
-
-    # DAQReader settings
-    strax.Option('safe_break_in_pulses', default=1000, track=False,
-                 help="Time (ns) between pulses indicating a safe break "
-                      "in the datastream -- gaps of this size cannot be "
-                      "interior to peaklets."),
-    strax.Option('channel_map', track=False, type=immutabledict,
-                 help="immutabledict mapping subdetector to (min, max) "
-                      "channel number."))
 class DAQReader(straxen.DAQReader):
     """
     Read the XAMS DAQ-live_data from redax and split it to the

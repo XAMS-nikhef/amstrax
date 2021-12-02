@@ -18,7 +18,7 @@ common_opts = dict(
                      'records',
                      ))
 
-xams_common_config = dict(
+common_config = dict(
     n_tpc_pmts=16,
     channel_map=immutabledict(
         v1730=(0, 8),  # related to raw_records_v1730
@@ -56,7 +56,7 @@ def _xams_xamsl_context(
         mongo_kwargs: dict = None
         ):
     st = strax.Context(**common_opts,
-                       **xams_common_config,
+                       **common_config,
                        forbid_creation_of=ax.DAQReader.provides,
                        )
     raw_data_folder=raw_data_folder.format(detector=_detector)
