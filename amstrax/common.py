@@ -11,7 +11,7 @@ import numpy as np
 import strax
 
 export, __all__ = strax.exporter()
-__all__ += ['straxen_dir', 'to_pe']
+__all__ += ['amstrax_dir', 'to_pe']
 
 amstrax_dir = os.path.dirname(os.path.abspath(
     inspect.getfile(inspect.currentframe())))
