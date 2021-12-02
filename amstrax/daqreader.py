@@ -97,9 +97,7 @@ class DAQReader(strax.Plugin):
                 " duration (preferably a lot larger!)")
 
     def _path(self, chunk_i):
-        p = self.config["daq_input_dir"] + f'/{chunk_i:06d}'
-        print(p, os.path.exists(p))
-        return p
+        return self.config["daq_input_dir"] + f'/{chunk_i:06d}'
 
     def _chunk_paths(self, chunk_i):
         """Return paths to previous, current and next chunk
