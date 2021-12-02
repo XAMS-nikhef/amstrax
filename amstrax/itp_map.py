@@ -7,6 +7,7 @@ import numpy as np
 from scipy.spatial import cKDTree
 
 import strax
+
 export, __all__ = strax.exporter()
 
 
@@ -38,7 +39,7 @@ class InterpolateAndExtrapolate(object):
         valid = (distances < float('inf')).max(axis=-1)
         result[valid] = np.average(
             self.values[indices[valid]],
-            weights=1/np.clip(distances[valid], 1e-6, float('inf')),
+            weights=1 / np.clip(distances[valid], 1e-6, float('inf')),
             axis=-1)
         return result
 

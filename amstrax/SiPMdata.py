@@ -41,6 +41,7 @@ class GeoParameters:
             G.add_sipm(sipm)
         return G
 
+
 # -----------------------------------------------------------------------------------#
 class SiPM:
     """ Class for a single silicon PM """
@@ -55,10 +56,10 @@ class SiPM:
         # normal vector to the SiPM
         if type == "plane":
             # pointing down
-            self.rhat = [0,0,-1]
+            self.rhat = [0, 0, -1]
         elif type == "cylinder":
             # pointing inward
-            self.rhat = [-position[0],-position[1],0]
+            self.rhat = [-position[0], -position[1], 0]
             self.rhat = self.rhat / np.linalg.norm(self.rhat)
         self.nhit = 0
         self.hit_probability = 1
@@ -97,7 +98,6 @@ class SiPM:
         self.x = x
         self.rhat = [0, 0, -1]
 
-
     def get_location(self):
         return self.x
 
@@ -114,6 +114,7 @@ class SiPM:
 # -----------------------------------------------------------------------------------#
 class Reconstruction:
     __version__ = '0.0.2'
+
     def __init__(self, geo):
         self.geo = geo
 
@@ -143,7 +144,8 @@ class Reconstruction:
             elif method == "LNLIKE":
                 errordef = 0.5
             else:
-                print("Reconstruction::reconstruct_position() ERROR bad value of errordef:", errordef)
+                print("Reconstruction::reconstruct_position() ERROR bad value of errordef:",
+                      errordef)
 
             self.lnlike = PosFit(self.geo.get_sipms(), method)
             n0 = 1000
@@ -154,13 +156,13 @@ class Reconstruction:
                        xpos=25.,
                        ypos=25.,
                        limit_rate0=(0, 1e7),
-                       limit_alpha=(0,1e-3),
+                       limit_alpha=(0, 1e-3),
                        limit_xpos=(-150, 150),
                        limit_ypos=(-150, 150),
                        error_xpos=1.,
                        error_ypos=1.,
                        error_rate0=np.sqrt(n0),
-                       error_alpha = np.sqrt(c),
+                       error_alpha=np.sqrt(c),
                        errordef=errordef,
                        fix_alpha=True,
                        print_level=0)
@@ -182,21 +184,20 @@ class Reconstruction:
 
                 # print('m_status =', m_status[0].has_accurate_covar)
                 self.rate0 = 0
-                self.xrec = [np.nan,np.nan, np.nan]
+                self.xrec = [np.nan, np.nan, np.nan]
                 self.status = 0
 
-        #if method != "COG":
+        # if method != "COG":
         #    self.method = "CHI2"
         #    chi2 = self.lnlike.__call__(rate0=self.rate0,xpos=self.xrec[0],ypos=self.xrec[1])
         #    self.method = method
 
-        self.fdata = {'xr': self.xrec[0], 'yr': self.xrec[1], 'I': self.rate0, 'status': self.status,
+        self.fdata = {'xr': self.xrec[0], 'yr': self.xrec[1], 'I': self.rate0,
+                      'status': self.status,
                       'fval': fval, 'chi2': chi2}
 
         return self.fdata
 
- 
-    
     def emulate_events(self, n_uv, n_event, **kwargs):
         """emulate_events:: Generate events and then reconstruct them
         * All UV photons are assumed to originate from the location at which they where simulated
@@ -207,22 +208,22 @@ class Reconstruction:
         self.n_uv = n_uv
 
         # event display argument
-        plot = kwargs.pop('plot',False)
-        method = kwargs.pop('method','LNLIKE')
-        nbins = kwargs.pop('nbins',15)
-        plot_range = kwargs.pop('range',None)
+        plot = kwargs.pop('plot', False)
+        method = kwargs.pop('method', 'LNLIKE')
+        nbins = kwargs.pop('nbins', 15)
+        plot_range = kwargs.pop('range', None)
 
         self.df_rec = pd.DataFrame()
 
         for self.i_event in range(n_event):
 
-            #if self.i_event % 100 == 0:
+            # if self.i_event % 100 == 0:
             #    print("generated ", self.i_event, " events")
             #
             # emuate one event
             #
-            #self.generate_hit(nuv=n_uv)
-            nuv=n_uv
+            # self.generate_hit(nuv=n_uv)
+            nuv = n_uv
             #
             # fit the position of the emulated event
             #
@@ -233,9 +234,9 @@ class Reconstruction:
             # plot the likelihood function
             #
             if (plot):
-                self.event_display(nbins=nbins,range=plot_range)
+                self.event_display(nbins=nbins, range=plot_range)
                 istat = int(input("Type: 0 to quit, 1 to continue, 2 to make pdf...."))
-                if  istat == 0:
+                if istat == 0:
                     return self.df_rec
                 elif istat == 2:
                     self.generate_pdf()
@@ -256,15 +257,14 @@ class Reconstruction:
         """event_display. Display of fit and log(L) or chi2 for singe events.
         Use this (long) function) to understand details of the fit procedure"""
 
-        plot_range = kwargs.pop('range',None)
-        nbins = kwargs.pop('nbins',15)
+        plot_range = kwargs.pop('range', None)
+        nbins = kwargs.pop('nbins', 15)
         if plot_range == 'None':
-            plot_range = ((0,100),(0,100))
+            plot_range = ((0, 100), (0, 100))
 
         print("Reconstruction::event_display() ")
         self.fig, self.ax0 = plt.subplots(nrows=1)
         self.fig.set_size_inches(10, 8)
-
 
         # draw the logL
 
@@ -286,13 +286,13 @@ class Reconstruction:
         self.ax0 = self.fig.gca()
 
         cf = self.ax0.contourf(x[:-1, :-1] + dx / 2.,
-                          y[:-1, :-1] + dy / 2., z, levels=levels,
-                          cmap=cmap)
+                               y[:-1, :-1] + dy / 2., z, levels=levels,
+                               cmap=cmap)
         self.fig.colorbar(cf, ax=self.ax0)
-        #title_string = 'Event: {0:05d}  Fit: {1:s} I0: {2:d} I0_rec: {3:d}'\
+        # title_string = 'Event: {0:05d}  Fit: {1:s} I0: {2:d} I0_rec: {3:d}'\
         #    .format(self.i_event,self.method,self.n_uv,int(self.fdata['I']))
-    
-        #self.ax0.set_title(title_string)
+
+        # self.ax0.set_title(title_string)
 
         # add the SiPMs
         mx_eff = -1
@@ -305,9 +305,8 @@ class Reconstruction:
             xs = sipm.get_location()
 
             # plot SiPM only if in range
-            if (xs[0]>plot_range[0][0]) & (xs[0]<plot_range[0][1]) & \
-                    (xs[1]>plot_range[1][0]) & (xs[1]<plot_range[1][1]):
-
+            if (xs[0] > plot_range[0][0]) & (xs[0] < plot_range[0][1]) & \
+                    (xs[1] > plot_range[1][0]) & (xs[1] < plot_range[1][1]):
                 dx = sipm.get_number_of_hits() / mx_eff * 5
                 sq = plt.Rectangle(xy=(xs[0] - dx / 2, xs[1] - dx / 2),
                                    height=dx,
@@ -316,16 +315,15 @@ class Reconstruction:
                 self.ax0.add_artist(sq)
                 # write number of detected photons
                 txs = str(sipm.get_number_of_hits())
-                plt.text(xs[0]+dx/2+2.5,xs[1],txs,color='red')
-
+                plt.text(xs[0] + dx / 2 + 2.5, xs[1], txs, color='red')
 
         plt.xlabel('x (mm)', fontsize=18)
         plt.ylabel('y (mm)', fontsize=18)
 
         # true position
-        #plt.plot(self.sim.get_x0()[0],self.sim.get_x0()[1],'bx',markersize=14)
+        # plt.plot(self.sim.get_x0()[0],self.sim.get_x0()[1],'bx',markersize=14)
         # reconstructed position
-        plt.plot(self.fdata['xr'],self.fdata['yr'],'wo',markersize=14)
+        plt.plot(self.fdata['xr'], self.fdata['yr'], 'wo', markersize=14)
 
         plt.show()
 
@@ -340,9 +338,9 @@ class Reconstruction:
         df = self.df_rec[((self.df_rec.status == 1) & (self.df_rec.fval < fcut))]
 
         if type == "alpha":
-            plt.hist(df.alpha,bins=bins,range=range)
+            plt.hist(df.alpha, bins=bins, range=range)
             plt.xlable('alpha value')
-            
+
         if type == "res":
             #
             # distributions of reconstructed position
@@ -381,12 +379,12 @@ class Reconstruction:
                                    width=dx,
                                    fill=False, color='red')
                 ax.add_artist(sq)
-        
+
             plt.xlabel('x (mm)', fontsize=18)
             plt.ylabel('y (mm)', fontsize=18)
 
             plt.savefig('sipm_vs_pmt.pdf')
-            
+
         elif type == "intensity":
             # reconstructed intensity
             plt.hist(df.I, bins=bins, range=range)
@@ -401,6 +399,7 @@ class Reconstruction:
             print("Reconstruction::plot BAD plot type selected. type=", type)
 
         return plt.gca()
+
 
 # -----------------------------------------------------------------------------------#
 class PosFit:
@@ -437,18 +436,16 @@ class PosFit:
             #
             N = self.n[i]
 
-
             if self.method == "CHI2":
                 res = self.n[i] - nexpected
                 # lnlike = lnlike+res*res / (self.err[i]*self.err[i])
-                #if nexpected > 1e-6:
+                # if nexpected > 1e-6:
                 lnlike = lnlike + res * res / nexpected
-                #lnlike = lnlike + res * res / self.n[i]
+                # lnlike = lnlike + res * res / self.n[i]
 
-
-                #if self.n[i] > 0:
+                # if self.n[i] > 0:
                 #   lnlike = lnlike + res * res / self.nexp
-                #else:
+                # else:
                 #    lnlike = lnlike + res * res / self.nexp
 
             elif self.method == "LNLIKE":
@@ -469,20 +466,18 @@ class PosFit:
     def nexp(self, rate0, alpha, xpos, ypos, i):
         """Calculate the expected number of photons hitting a SiPM"""
 
-        xfit = np.array([xpos,ypos,0])
+        xfit = np.array([xpos, ypos, 0])
         delta = np.array(self.xs[i]) - xfit
 
         dist = np.linalg.norm(delta)
-        dist2 = dist**2
+        dist2 = dist ** 2
 
         # correct for the solid angle of the sensor
-        cost = abs(np.dot(delta, self.sipms[i].get_normal_vector())/dist)
+        cost = abs(np.dot(delta, self.sipms[i].get_normal_vector()) / dist)
 
         # quantum efficiency
         qe = self.sipms[i].qe
 
         # expected number of events
-        yy = (rate0 / dist2 * cost * qe) + rate0*alpha
+        yy = (rate0 / dist2 * cost * qe) + rate0 * alpha
         return yy
-
-    

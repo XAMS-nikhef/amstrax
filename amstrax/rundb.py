@@ -8,8 +8,8 @@ import pymongo
 
 import strax
 import amstrax
-export, __all__ = strax.exporter()
 
+export, __all__ = strax.exporter()
 
 default_mongo_url = (
     'mongodb://{username}:{password}@rundbcluster-shard-00-00-cfaei.'
@@ -134,7 +134,8 @@ class RunDB(strax.StorageFrontend):
             if self.new_data_path is not None:
                 doc = self.collection.find_one(run_query, projection={'_id'})
                 if not doc:
-                    raise ValueError(f"Attempt to register new data for non-existing run {key.run_id}")   # noqa
+                    raise ValueError(
+                        f"Attempt to register new data for non-existing run {key.run_id}")  # noqa
                 self.collection.find_one_and_update(
                     {'_id': doc['_id']},
                     {'$push': {'data': {
@@ -155,6 +156,7 @@ class RunDB(strax.StorageFrontend):
             raise strax.DataExistsError(at=datum['location'])
 
         return datum['protocol'], datum['location']
+
     def find_several(self, keys: typing.List[strax.DataKey], **kwargs):
         if kwargs['fuzzy_for'] or kwargs['fuzzy_for_options']:
             raise NotImplementedError("Can't do fuzzy with RunDB yet.")
@@ -164,7 +166,7 @@ class RunDB(strax.StorageFrontend):
             raise ValueError("find_several keys must have same lineage")
         if not len(set([k.data_type for k in keys])) == 1:
             raise ValueError("find_several keys must have same data type")
-        keys = list(keys)   # Context used to pass a set
+        keys = list(keys)  # Context used to pass a set
 
         if self.runid_field == 'name':
             run_query = {'name': {'$in': [key.run_id for key in keys]}}
@@ -193,7 +195,7 @@ class RunDB(strax.StorageFrontend):
             for k in keys]
 
     def _list_available(self, key: strax.DataKey,
-              allow_incomplete, fuzzy_for, fuzzy_for_options):
+                        allow_incomplete, fuzzy_for, fuzzy_for_options):
         if fuzzy_for or fuzzy_for_options:
             raise NotImplementedError("Can't do fuzzy with RunDB yet.")
 

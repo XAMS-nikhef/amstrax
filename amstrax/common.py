@@ -31,7 +31,6 @@ def open_test_data(file_name
     tf.extractall()
 
 
-
 # Previous values
 # to_pe = np.array([4.252e1,4.252e1,1.3e-4,4.252e1,4.252e1,4.252e1,4.252e1,4.252e1,4,4])
 # to_pe = np.array([1.3e-4,1.3e-4])

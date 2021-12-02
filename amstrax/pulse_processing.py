@@ -16,6 +16,8 @@ HITFINDER_OPTIONS = tuple([
         help='Minimum hit amplitude in ADC counts above baseline. '
              'See straxen.hit_min_amplitude for options.'
     )])
+
+
 @export
 @strax.takes_config(
     strax.Option(
@@ -42,7 +44,6 @@ HITFINDER_OPTIONS = tuple([
         help=('Use a default baseline for incorrectly chunked fragments. '
               'This is a kludge for improperly converted XENON1T data.')),
     *HITFINDER_OPTIONS)
-
 class PulseProcessing(strax.Plugin):
     """
     1. Split raw_records into:
@@ -59,7 +60,7 @@ class PulseProcessing(strax.Plugin):
     baseline rms channel.
     """
     __version__ = '0.2.12'
-    #save_when = strax.SaveWhen.NEVER
+    # save_when = strax.SaveWhen.NEVER
     parallel = 'process'
     rechunk_on_save = immutabledict(
         records=False,
@@ -130,13 +131,11 @@ class PulseProcessing(strax.Plugin):
 
         # First 7 entries give a positive area even though sum('data') = 0
         # Changing their area to 0 before filtering
-        for i in range(0,7):
+        for i in range(0, 7):
             r[i]['area'] = 0
 
         r = r[r['area'] > 0]
-        #r = r[np.average(r['data']) > 0]
-
-
+        # r = r[np.average(r['data']) > 0]
 
         return dict(records=r,
                     pulse_counts=pulse_counts)

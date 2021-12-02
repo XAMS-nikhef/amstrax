@@ -49,9 +49,6 @@ jobs:
       - name: Test package
         # This is running a normal test
         if: matrix.test == 'pytest'
-        env:
-          ALLOW_WFSIM_TEST: 1
-          TEST_MONGO_URI:  'mongodb://localhost:27017/'
         run: |
           pytest -rsxv --durations 0
       - name: Coveralls
