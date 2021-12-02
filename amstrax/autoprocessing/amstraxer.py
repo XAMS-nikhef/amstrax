@@ -23,11 +23,11 @@ def parse_args():
         help="ID of the run to process; usually the run name.")
     parser.add_argument(
         '--context',
-        default='xenon1t_dali',
+        default='xamsl',
         help="Name of context to use")
     parser.add_argument(
         '--target',
-        default='event_info',
+        default='raw_records',
         help='Target final data type to produce')
     parser.add_argument(
         '--from_scratch',
@@ -62,20 +62,6 @@ def parse_args():
         action='store_true',
         help="Allow passing data via /dev/shm when multiprocessing.")
     parser.add_argument(
-        '--profile_to',
-        default='',
-        help="Filename to output profile information to. If ommitted,"
-             "no profiling will occur.")
-    parser.add_argument(
-        '--profile_ram',
-        action='store_true',
-        help="Use memory_profiler for a more accurate measurement of the "
-             "peak RAM usage of the process.")
-    parser.add_argument(
-        '--diagnose_sorting',
-        action='store_true',
-        help="Diagnose sorting problems during processing")
-    parser.add_argument(
         '--debug',
         action='store_true',
         help="Enable debug logging to stdout")
@@ -83,10 +69,6 @@ def parse_args():
         '--build_lowlevel',
         action='store_true',
         help='Build low-level data even if the context forbids it.')
-    parser.add_argument(
-        '--only_strax_data',
-        action='store_true',
-        help='Only use ./strax_data (if not on dali).')
     return parser.parse_args()
 
 
@@ -106,8 +88,6 @@ def main(args):
     print(f"\tamstrax {amstrax.__version__} at {osp.dirname(amstrax.__file__)}")
 
     st = getattr(amstrax.contexts, args.context)()
-    if args.diagnose_sorting:
-        st.set_config(dict(diagnose_sorting=True))
     st.context_config['allow_multiprocess'] = args.multiprocess
     st.context_config['allow_shm'] = args.shm
     st.context_config['allow_lazy'] = not (args.notlazy is True)
@@ -191,10 +171,4 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_args()
-    if args.profile_ram:
-        from memory_profiler import memory_usage
-
-        mem = memory_usage(proc=(main, [args], dict()))
-        print(f"Memory profiler says peak RAM usage was: {max(mem):.1f} MB")
-    else:
-        sys.exit(main(args))
+    sys.exit(main(args))
