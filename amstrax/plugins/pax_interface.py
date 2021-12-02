@@ -4,15 +4,10 @@ import numpy as np
 import os
 import glob
 import numba
-
+from straxen.plugins.pax_interface import records_needed
 import strax
 
 export, __all__ = strax.exporter()
-
-
-def records_needed(pulse_length, samples_per_record):
-    """Return records needed to store pulse_length samples"""
-    return np.ceil(pulse_length / samples_per_record).astype(np.int)
 
 
 @export
@@ -20,7 +15,10 @@ def pax_to_records(input_filename,
                    samples_per_record=strax.DEFAULT_RECORD_LENGTH,
                    events_per_chunk=10,
                    dt=10):
-    """Return pulse records array from pax zip input_filename
+    """
+    Same as straxen.pax_interface apart from dt change
+
+    Return pulse records array from pax zip input_filename
     This only works if you have pax installed in your strax environment,
     which is somewhat tricky.
     """

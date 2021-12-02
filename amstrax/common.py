@@ -31,24 +31,7 @@ def open_test_data(file_name
     tf.extractall()
 
 
-# Previous values
-# to_pe = np.array([4.252e1,4.252e1,1.3e-4,4.252e1,4.252e1,4.252e1,4.252e1,4.252e1,4,4])
-# to_pe = np.array([1.3e-4,1.3e-4])
-# n_tpc_pmts = 16
-
-# gain = np.array([0.324e6, 0.323e6, 1, 0.309e6, 0.312e6, 0.306e6, 0.319e6, 0.326e6])
-# sample_duration*digitizer_voltage_range/(2**digitizer_bits*pmt_circuit_load_resistor*total_amplification*e)
-# total_amplification = gain * factor
-# to_pe = 2e-9 * 2 / (2**13 * 50 * gain * 10 * 1.602e-19)
-
-
 first_sr1_run = '1'
-
-
-@export
-def pax_file(x):
-    """Return URL to file hosted in the pax repository master branch"""
-    return 'https://raw.githubusercontent.com/XENON1T/pax/master/pax/data/' + x
 
 
 cache_dict = dict()

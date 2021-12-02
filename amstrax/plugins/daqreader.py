@@ -1,11 +1,10 @@
 import glob
-import os
 import warnings
 from immutabledict import immutabledict
 import numpy as np
-import numba
 import strax
-from collections import Counter
+import straxen
+from straxen.plugins.daqreader import split_channel_ranges
 
 export, __all__ = strax.exporter()
 __all__ += ['ARTIFICIAL_DEADTIME_CHANNEL']
@@ -49,7 +48,7 @@ class ArtificialDeadtimeInserted(UserWarning):
     strax.Option('channel_map', track=False, type=immutabledict,
                  help="immutabledict mapping subdetector to (min, max) "
                       "channel number."))
-class DAQReader(strax.Plugin):
+class DAQReader(straxen.DAQReader):
     """
     Read the XAMS DAQ-live_data from redax and split it to the
     appropriate raw_record data-types based on the channel-map.
@@ -57,6 +56,7 @@ class DAQReader(strax.Plugin):
     Provides: 
         - raw_records_v1724, sampled from the V1724 digitizer with sampling resolution = 10ns
         - raw_records_v1730, sampled from the V1730 digitizer with sampling resolution = 2ns
+        - raw_records_aqmon, actually empty unless we need some strax-deadtime
     """
     provides = (
         'raw_records_v1724',
@@ -81,89 +81,6 @@ class DAQReader(strax.Plugin):
             d: strax.raw_record_dtype(
                 samples_per_record=self.config["record_length"])
             for d in self.provides}
-
-    def setup(self):
-        self.t0 = int(self.config['run_start_time']) * int(1e9)
-        self.dt_max = self.config['max_digitizer_sampling_time']
-        self.n_readout_threads = sum(self.config['readout_threads'].values())
-        if (self.config['safe_break_in_pulses']
-                > min(self.config['daq_chunk_duration'],
-                      self.config['daq_overlap_chunk_duration'])):
-            raise ValueError(
-                "Chunk durations must be larger than the minimum safe break"
-                " duration (preferably a lot larger!)")
-
-    def _path(self, chunk_i):
-        return self.config["daq_input_dir"] + f'/{chunk_i:06d}'
-
-    def _chunk_paths(self, chunk_i):
-        """
-        Return paths to previous, current and next chunk
-        If any of them does not exist, or they are not yet populated
-        with data from all readers, their path is replaced by False.
-        """
-        p = self._path(chunk_i)
-        result = []
-        for q in [p + '_pre', p, p + '_post']:
-            if os.path.exists(q):
-                n_files = self._count_files_per_chunk(q)
-                if n_files >= self.n_readout_threads:
-                    result.append(q)
-                else:
-                    print(f"Found incomplete folder {q}: "
-                          f"contains {n_files} files but expected "
-                          f"{self.n_readout_threads}. "
-                          f"Waiting for more data.")
-                    if self.source_finished():
-                        # For low rates, different threads might end in a
-                        # different chunck at the end of a run,
-                        # still keep the results in this case.
-                        print(f"Run finished correctly nonetheless: "
-                              f"saving the results")
-                        result.append(q)
-                    else:
-                        result.append(False)
-            else:
-                result.append(False)
-        return tuple(result)
-
-    @staticmethod
-    def _partial_chunk_to_thread_name(partial_chunk):
-        """Convert name of part of the chunk to the thread_name that wrote it"""
-        return '_'.join(partial_chunk.split('_')[:-1])
-
-    def _count_files_per_chunk(self, path_chunk_i):
-        """
-        Check that the files in the chunks have names consistent with
-        the readout threads
-        """
-        counted_files = Counter(
-            [self._partial_chunk_to_thread_name(p) for p in os.listdir(path_chunk_i)])
-        for thread, n_counts in counted_files.items():
-            if thread not in self.config['readout_threads']:
-                raise ValueError(f'Bad data for {path_chunk_i}. Got {thread}')
-            if n_counts > self.config['readout_threads'][thread]:
-                raise ValueError(f'{thread} wrote {n_counts}, expected'
-                                 f'{self.config["readout_threads"][thread]}')
-        return sum(counted_files.values())
-
-    def source_finished(self):
-        end_dir = self.config["daq_input_dir"] + '/THE_END'
-        if not os.path.exists(end_dir):
-            return False
-        else:
-            return self._count_files_per_chunk(end_dir) >= self.n_readout_threads
-
-    def is_ready(self, chunk_i):
-        ended = self.source_finished()
-        pre, current, post = self._chunk_paths(chunk_i)
-        next_ahead = os.path.exists(self._path(chunk_i + 1))
-        if (current and (
-                (pre and post
-                 or chunk_i == 0 and post
-                 or ended and (pre and not next_ahead)))):
-            return True
-        return False
 
     def _load_chunk(self, path, start, end, kind='central'):
         first_provides = self.provides[0]
@@ -342,45 +259,3 @@ class Fake1TDAQReader(DAQReader):
         'raw_records_aqmon')
 
     data_kind = immutabledict(zip(provides, provides))
-
-
-@export
-@numba.njit(nogil=True, cache=True)
-def split_channel_ranges(records, channel_ranges):
-    """Return numba.List of record arrays in channel_ranges.
-    ~2.5x as fast as a naive implementation with np.in1d
-    """
-    n_subdetectors = len(channel_ranges)
-    which_detector = np.zeros(len(records), dtype=np.int8)
-    n_in_detector = np.zeros(n_subdetectors, dtype=np.int64)
-
-    # First loop to count number of records per detector
-    for r_i, r in enumerate(records):
-        for d_i in range(n_subdetectors):
-            left, right = channel_ranges[d_i]
-            if r['channel'] > right:
-                continue
-            elif r['channel'] >= left:
-                which_detector[r_i] = d_i
-                n_in_detector[d_i] += 1
-                break
-            else:
-                print(r['time'], r['channel'])
-                raise ValueError(
-                    "Bad data from DAQ: data in unknown channel!")
-
-    # Allocate memory
-    results = numba.typed.List()
-    for d_i in range(n_subdetectors):
-        results.append(np.empty(n_in_detector[d_i], dtype=records.dtype))
-
-    # Second loop to fill results
-    # This is slightly faster than using which_detector == d_i masks,
-    # since it only needs one loop over the data.
-    n_placed = np.zeros(n_subdetectors, dtype=np.int64)
-    for r_i, r in enumerate(records):
-        d_i = which_detector[r_i]
-        results[d_i][n_placed[d_i]] = r
-        n_placed[d_i] += 1
-
-    return results

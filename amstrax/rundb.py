@@ -2,7 +2,7 @@ import os
 import re
 import typing
 import socket
-
+from sshtunnel import SSHTunnelForwarder
 from tqdm import tqdm
 import pymongo
 
@@ -11,13 +11,48 @@ import amstrax
 
 export, __all__ = strax.exporter()
 
-default_mongo_url = (
-    'mongodb://{username}:{password}@rundbcluster-shard-00-00-cfaei.'
-    'gcp.mongodb.net:27017,rundbcluster-shard-00-01-cfaei.gcp.mongodb.net'
-    ':27017,rundbcluster-shard-00-02-cfaei.gcp.mongodb.net:27017/test?'
-    'ssl=true&replicaSet=RunDBCluster-shard-0&authSource=admin')
 default_mongo_dbname = 'run'
 default_mongo_collname = 'runs'
+
+
+def _check_environment_var(key):
+    if key not in os.environ:
+        raise RuntimeError(
+            f"{key} not set. Please define in .bashrc file. (i.e. "
+            f"'export {key} = <secret {key.lower()}>')")
+
+
+def link_to_daq(
+        daq_host="145.102.133.168",
+        daq_user="xams"
+):
+    """Create an SSH tunnel to the daq machine to get access to the runsdb"""
+    _check_environment_var("DAQ_PASSWORD")
+    daq_password = os.environ['DAQ_PASSWORD']
+    server = SSHTunnelForwarder(
+        daq_host,
+        ssh_username=daq_user,
+        ssh_password=daq_password,
+    )
+    server.start()
+
+
+def get_mongo_client(**link_kwargs):
+    """Get a mongo client, any kwargs are passed on to link_to_daq"""
+    _check_environment_var('MONGO_USER')
+    _check_environment_var('MONGO_PASSWORD')
+    link_to_daq(**link_kwargs)
+    user=os.environ['MONGO_USER']
+    password=os.environ['MONGO_PASSWORD']
+    return pymongo.MongoClient(f'mongodb://{user}:{password}@127.0.0.1:27017/admin')
+
+
+def get_mongo_collection(database_name='run',
+                         database_col='runs_new',
+                         **link_kwargs,
+                         ):
+    """Get the runs collection"""
+    return get_mongo_client(**link_kwargs)[database_name][database_col]
 
 
 @export
@@ -34,7 +69,6 @@ class RunDB(strax.StorageFrontend):
     provide_run_metadata = True
 
     def __init__(self,
-                 mongo_url=None,
                  mongo_dbname=None,
                  mongo_collname=None,
                  runid_field='name',
@@ -58,8 +92,6 @@ class RunDB(strax.StorageFrontend):
         field with 'reader.ini.name'.
 
         Other (kw)args are passed to StorageFrontend.__init__
-
-        TODO: disable S3 if secret keys not known
         """
         super().__init__(*args, **kwargs)
         self.local_only = local_only
@@ -72,13 +104,8 @@ class RunDB(strax.StorageFrontend):
 
         if self.runid_field not in ['name', 'number']:
             raise ValueError("Unrecognized runid_field option %s" % self.runid_field)
-        #
 
-        if mongo_url is None:
-            mongo_url = default_mongo_url
-        self.client = pymongo.MongoClient(mongo_url.format(
-            username="user",
-            password="password"))
+        self.client = get_mongo_client()
 
         if mongo_dbname is None:
             mongo_dbname = default_mongo_dbname
@@ -94,8 +121,6 @@ class RunDB(strax.StorageFrontend):
         # This depends on the machine you're running on.
         self.hostname = socket.getfqdn()
         self.available_query = [{'host': self.hostname}]
-        if not self.local_only:
-            self.available_query.append({'host': 'ceph-s3'})
 
         # Go through known host aliases
         for host_alias, regex in self.hosts.items():

@@ -1,9 +1,5 @@
 import strax
-
 import numpy as np
-
-from amstrax.common import pax_file, get_resource, get_elife, first_sr1_run
-from amstrax.itp_map import InterpolatingMap
 from amstrax.SiPMdata import *
 
 export, __all__ = strax.exporter()
