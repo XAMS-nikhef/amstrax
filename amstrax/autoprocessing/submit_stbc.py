@@ -6,10 +6,10 @@ script_template = """#!/bin/bash
 export PATH=/data/xenon/joranang/anaconda/bin:$PATH
 source activate amstrax_2021
 cd /data/xenon/xamsl/processing_stage
-echo "starting script!" > {log_file} 2>&1
-which python  > {log_file} 2>&1
+echo "starting script!"
+which python
 python /data/xenon/xamsl/software/amstrax/amstrax/autoprocessing/process_run.py {arguments} > {log_file} 2>&1  # noqa
-echo "Script complete, bye!" > {log_file} 2>&1
+echo "Script complete, bye!"
 """
 
 
@@ -37,7 +37,7 @@ def submit_job(run_id, target, job_folder='./jobs', log_folder ='./logs'):
     script_file.close()
 
     # Submit the job
-    os.system('qsub %s' % script_name)
+    os.system(f'qsub {script_name} -e {log_file} -o {log_file}')
     print(f'Submitted job for run {run_id}:{target}')
 
 
