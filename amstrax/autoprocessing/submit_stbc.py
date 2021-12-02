@@ -2,8 +2,9 @@ import os
 
 script_template = """#!/bin/bash
 export PATH=/data/xenon/joranang/anaconda/bin:$PATH
-source activate amstrax
-python /data/xenon/xamsl/software/amstrax/autoprocessing/process_run.py {arguments} > {log_file} 2>&1  # noqa
+source activate amstrax_2021
+cd /data/xenon/xamsl/processing_stage
+python /data/xenon/xamsl/software/amstrax/amstrax/autoprocessing/process_run.py {arguments} > {log_file} 2>&1  # noqa
 echo "Script complete, bye!"
 """
 
