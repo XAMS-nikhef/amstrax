@@ -5,17 +5,14 @@ import amstrax
 
 export, __all__ = strax.exporter()
 
-n_tpc_pmts = 16
-
 
 @export
-def hit_min_amplitude(model):
-    """Return hitfiner height threshold to use in processing
+def hit_min_amplitude(model, n_tpc_pmts=8):
+    """Return hitfinder height threshold to use in processing
 
     :param model: Model name (str), or int to use a uniform threshold,
     or array/tuple or thresholds to use.
     """
-    n_tpc_pmts = 8
 
     if isinstance(model, (int, float)):
         return np.ones(n_tpc_pmts, dtype=np.int16) * model
@@ -23,7 +20,6 @@ def hit_min_amplitude(model):
     if isinstance(model, (tuple, np.ndarray)):
         return model
 
-    n_tpc_pmts = 16
     if model == 'pmt_commissioning_initial':
         # ADC thresholds used for the initial PMT commissioning data
         # (at least since April 28 2020, run 007305)
