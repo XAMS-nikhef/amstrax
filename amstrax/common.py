@@ -13,7 +13,7 @@ import strax
 export, __all__ = strax.exporter()
 __all__ += ['straxen_dir', 'to_pe']
 
-straxen_dir = os.path.dirname(os.path.abspath(
+amstrax_dir = os.path.dirname(os.path.abspath(
     inspect.getfile(inspect.currentframe())))
 
 # Current values 
@@ -71,8 +71,8 @@ def get_resource(x, fmt='text'):
         # to prevent repeated downloads.
         cache_fn = strax.utils.deterministic_hash(x)
         cache_folders = ['./resource_cache',
-                         '/tmp/straxen_resource_cache',
-                         '/dali/lgrandi/strax/resource_cache']
+                         '/tmp/amstrax_resource_cache',
+                         ]
         for cache_folder in cache_folders:
             try:
                 os.makedirs(cache_folder, exist_ok=True)
@@ -138,7 +138,7 @@ def get_secret(x):
     """Return secret key x. In order of priority, we search:
 
       * Environment variable: uppercase version of x
-      * xenon_secrets.py (if included with your straxen installation)
+      * xenon_secrets.py (if included with your amstrax installation)
       * A standard xenon_secrets.py located on the midway analysis hub
         (if you are running on midway)
     """
@@ -152,7 +152,7 @@ def get_secret(x):
         from . import xenon_secrets
     except ImportError:
         message += ("nor was there a valid xenon_secrets.py "
-                    "included with your straxen installation, ")
+                    "included with your amstrax installation, ")
 
         # If on midway, try loading a standard secrets file instead
         if 'rcc' in socket.getfqdn():

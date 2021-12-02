@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Process a single run with straxen
+"""Process a single run with amstrax
 """
 import argparse
 import datetime
@@ -14,7 +14,7 @@ import sys
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description='Process a single run with straxen',
+        description='Process a single run with amstrax',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         'run_id',
@@ -24,7 +24,7 @@ def parse_args():
     parser.add_argument(
         '--context',
         default='xenon1t_dali',
-        help="Name of straxen context to use")
+        help="Name of context to use")
     parser.add_argument(
         '--target',
         default='event_info',
