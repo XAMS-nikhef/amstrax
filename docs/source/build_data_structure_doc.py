@@ -154,7 +154,7 @@ def get_context():
     """
     Need to init a context without initializing the runs_db as that requires the
         appropriate passwords.
-    :return: straxen context that mimics the xenonnt_online context without the rundb init
+    :return: amstrax context that mimics the xenonnt_online context without the rundb init
     """
     st = amstrax.contexts.xams(init_rundb=False)
     return st
