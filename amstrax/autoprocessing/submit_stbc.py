@@ -37,7 +37,7 @@ def submit_job(run_id, target, job_folder='./jobs', log_folder ='./logs'):
     script_file.close()
 
     # Submit the job
-    os.system(f'qsub {script_name} -e {log_file} -o {log_file}')
+    os.system(f'qsub {script_name} -e e{log_file} -o o{log_file}')
     print(f'Submitted job for run {run_id}:{target}')
 
 
