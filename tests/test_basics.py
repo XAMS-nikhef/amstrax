@@ -6,12 +6,12 @@ import shutil
 import os
 
 
-class TestStack(unittest.TestCase):
+class TestXamsStack(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        st = strax.Context()
-        st.register(amstrax.daqreader.DAQReaderXamsl)
+        st = amstrax.contexts.xams(init_rundb=False)
         st.storage = [strax.DataDirectory('./amstrax_data')]
+        st.set_context_config(dict(forbid_creation_of=tuple()))
         cls.run_id = '999999'
         cls.st = st
 
@@ -48,7 +48,18 @@ class TestStack(unittest.TestCase):
     def set_config(self):
         md = self.get_md()
         self.st.set_config(
-            {'n_readout_threads': len(md['daq_config']['processing_threads']),
+            {'readout_threads': md['daq_config']['processing_threads'],
              'daq_input_dir': './live_data/999999',
-             **amstrax.contexts.common_config_xamsl
+             **amstrax.contexts.xams_little_common_config
              })
+
+
+class TestXamsLittleStack(TestXamsStack):
+    """Repeat the same trick for the XAMSL context"""
+    @classmethod
+    def setUpClass(cls) -> None:
+        st = amstrax.contexts.xams_little(init_rundb=False)
+        st.storage = [strax.DataDirectory('./amstrax_data')]
+        st.set_context_config(dict(forbid_creation_of=tuple()))
+        cls.run_id = '999999'
+        cls.st = st
