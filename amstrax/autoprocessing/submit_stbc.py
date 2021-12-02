@@ -8,7 +8,7 @@ source activate amstrax_2021
 cd /data/xenon/xamsl/processing_stage
 echo "starting script!"
 which python
-python /data/xenon/xamsl/software/amstrax/amstrax/autoprocessing/process_run.py {arguments} > {log_file} 2>&1  # noqa
+python /data/xenon/xamsl/software/amstrax/amstrax/autoprocessing/process_run.py {arguments}
 echo "Script complete, bye!"
 """
 
@@ -31,7 +31,6 @@ def submit_job(run_id, target, job_folder='./jobs', log_folder ='./logs'):
     script_file = open(script_name, 'w')
     script_file_content = script_template.format(
         arguments=arguments,
-        log_file=log_file,
     )
     script_file.write(script_file_content)
     script_file.close()
