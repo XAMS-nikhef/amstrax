@@ -9,7 +9,6 @@ from straxen.plugins.daqreader import split_channel_ranges
 export, __all__ = strax.exporter()
 __all__ += ['ARTIFICIAL_DEADTIME_CHANNEL']
 
-
 ARTIFICIAL_DEADTIME_CHANNEL = 40
 
 
@@ -69,7 +68,7 @@ class DAQReader(straxen.DAQReader):
             # Records are sorted by (start)time and are of variable length.
             # Their end-times can differ. In the most pessimistic case we have
             # to look back one record length for each channel.
-            tot_channels = np.sum([np.diff(x)+1 for x in
+            tot_channels = np.sum([np.diff(x) + 1 for x in
                                    self.config['channel_map'].values()])
             look_n_samples = self.config["record_length"] * tot_channels
             last_end = strax.endtime(records[-look_n_samples:]).max()
@@ -141,6 +140,9 @@ class DAQReader(straxen.DAQReader):
                  dt=[dt],
                  channel=[ARTIFICIAL_DEADTIME_CHANNEL]),
             self.dtype_for('raw_records'))
+
+    def _path(self, chunk_i):
+        return self.config["daq_input_dir"] + f'/{chunk_i:06d}'
 
     def compute(self, chunk_i):
         dt_central = self.config['daq_chunk_duration']

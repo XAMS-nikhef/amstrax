@@ -50,5 +50,5 @@ class TestStack(unittest.TestCase):
         self.st.set_config(
             {'readout_threads': md['daq_config']['processing_threads'],
              'daq_input_dir': './live_data/999999',
-             **amstrax.contexts.common_config
+             **amstrax.contexts.xams_little_common_config
              })

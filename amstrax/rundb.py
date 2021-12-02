@@ -7,12 +7,13 @@ from tqdm import tqdm
 import pymongo
 
 import strax
-import amstrax
 
 export, __all__ = strax.exporter()
 
 default_mongo_dbname = 'run'
 default_mongo_collname = 'runs'
+
+_SECRET_SERVING_PORT = {}
 
 
 def _check_environment_var(key):
@@ -26,6 +27,9 @@ def link_to_daq(
         daq_host="145.102.133.168",
         daq_user="xams"
 ):
+    port_key = f'{daq_host}_{daq_user}'
+    if _SECRET_SERVING_PORT is not None and port_key in _SECRET_SERVING_PORT:
+        return _SECRET_SERVING_PORT[port_key]
     """Create an SSH tunnel to the daq machine to get access to the runsdb"""
     _check_environment_var("DAQ_PASSWORD")
     daq_password = os.environ['DAQ_PASSWORD']
@@ -33,20 +37,25 @@ def link_to_daq(
         daq_host,
         ssh_username=daq_user,
         ssh_password=daq_password,
+        remote_bind_address=('127.0.0.1', 27017)
     )
     server.start()
+    _SECRET_SERVING_PORT[port_key] = server.local_bind_port
+    return server.local_bind_port
 
 
+@export
 def get_mongo_client(**link_kwargs):
     """Get a mongo client, any kwargs are passed on to link_to_daq"""
     _check_environment_var('MONGO_USER')
     _check_environment_var('MONGO_PASSWORD')
-    link_to_daq(**link_kwargs)
-    user=os.environ['MONGO_USER']
-    password=os.environ['MONGO_PASSWORD']
-    return pymongo.MongoClient(f'mongodb://{user}:{password}@127.0.0.1:27017/admin')
+    local_port = link_to_daq(**link_kwargs)
+    user = os.environ['MONGO_USER']
+    password = os.environ['MONGO_PASSWORD']
+    return pymongo.MongoClient(f'mongodb://{user}:{password}@127.0.0.1:{local_port}/admin')
 
 
+@export
 def get_mongo_collection(database_name='run',
                          database_col='runs_new',
                          **link_kwargs,
@@ -244,7 +253,7 @@ class RunDB(strax.StorageFrontend):
             yield doc
 
     def run_metadata(self, run_id, projection=None):
-        doc = self.collection.find_one({'name': run_id}, projection=projection)
+        doc = self.collection.find_one({'number': int(run_id)}, projection=projection)
         if self.reader_ini_name_is_mode:
             doc['mode'] = doc.get('reader', {}).get('ini', {}).get('name', '')
         if doc is None:

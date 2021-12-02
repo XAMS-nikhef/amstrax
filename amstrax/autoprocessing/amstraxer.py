@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-"""Process a single run with amstrax
+"""
+Process a single run with amstrax
 """
 import argparse
 import datetime
@@ -23,11 +24,11 @@ def parse_args():
         help="ID of the run to process; usually the run name.")
     parser.add_argument(
         '--context',
-        default='xenon1t_dali',
+        default='xamsl',
         help="Name of context to use")
     parser.add_argument(
         '--target',
-        default='event_info',
+        default='raw_records',
         help='Target final data type to produce')
     parser.add_argument(
         '--from_scratch',
@@ -62,20 +63,6 @@ def parse_args():
         action='store_true',
         help="Allow passing data via /dev/shm when multiprocessing.")
     parser.add_argument(
-        '--profile_to',
-        default='',
-        help="Filename to output profile information to. If ommitted,"
-             "no profiling will occur.")
-    parser.add_argument(
-        '--profile_ram',
-        action='store_true',
-        help="Use memory_profiler for a more accurate measurement of the "
-             "peak RAM usage of the process.")
-    parser.add_argument(
-        '--diagnose_sorting',
-        action='store_true',
-        help="Diagnose sorting problems during processing")
-    parser.add_argument(
         '--debug',
         action='store_true',
         help="Enable debug logging to stdout")
@@ -83,10 +70,6 @@ def parse_args():
         '--build_lowlevel',
         action='store_true',
         help='Build low-level data even if the context forbids it.')
-    parser.add_argument(
-        '--only_strax_data',
-        action='store_true',
-        help='Only use ./strax_data (if not on dali).')
     return parser.parse_args()
 
 
@@ -106,8 +89,6 @@ def main(args):
     print(f"\tamstrax {amstrax.__version__} at {osp.dirname(amstrax.__file__)}")
 
     st = getattr(amstrax.contexts, args.context)()
-    if args.diagnose_sorting:
-        st.set_config(dict(diagnose_sorting=True))
     st.context_config['allow_multiprocess'] = args.multiprocess
     st.context_config['allow_shm'] = args.shm
     st.context_config['allow_lazy'] = not (args.notlazy is True)
@@ -117,6 +98,9 @@ def main(args):
     if args.build_lowlevel:
         st.context_config['forbid_creation_of'] = tuple()
 
+    if 'raw_records' in args.target:
+        st = amstrax.contexts.context_for_daq_reader(st, args.run_id)
+
     if args.from_scratch:
         for q in st.storage:
             q.take_only = ('raw_records',)
@@ -124,11 +108,6 @@ def main(args):
             strax.DataDirectory('./strax_data',
                                 overwrite='always',
                                 provide_run_metadata=False))
-    if args.only_strax_data:
-        st.storage = [
-            strax.DataDirectory('./strax_data',
-                                # overwrite='always',
-                                provide_run_metadata=True)]
     if st.is_stored(args.run_id, args.target):
         print("This data is already available.")
         return 1
@@ -150,14 +129,9 @@ def main(args):
             run_id=args.run_id,
             targets=args.target,
             max_workers=int(args.workers))
+        yield from st.get_iter(**kwargs)
 
-        if args.profile_to:
-            with strax.profile_threaded(args.profile_to):
-                yield from st.get_iter(**kwargs)
-        else:
-            yield from st.get_iter(**kwargs)
-
-    clock_start = None
+    clock_start = 0
     for i, d in enumerate(get_results()):
         mem_mb = process.memory_info().rss / 1e6
         peak_ram = max(mem_mb, peak_ram)
@@ -191,10 +165,4 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_args()
-    if args.profile_ram:
-        from memory_profiler import memory_usage
-
-        mem = memory_usage(proc=(main, [args], dict()))
-        print(f"Memory profiler says peak RAM usage was: {max(mem):.1f} MB")
-    else:
-        sys.exit(main(args))
+    sys.exit(main(args))
