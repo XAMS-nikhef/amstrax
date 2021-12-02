@@ -254,7 +254,7 @@ class RunDB(strax.StorageFrontend):
             yield doc
 
     def run_metadata(self, run_id, projection=None):
-        doc = self.collection.find_one({'name': run_id}, projection=projection)
+        doc = self.collection.find_one({'number': int(run_id)}, projection=projection)
         if self.reader_ini_name_is_mode:
             doc['mode'] = doc.get('reader', {}).get('ini', {}).get('name', '')
         if doc is None:

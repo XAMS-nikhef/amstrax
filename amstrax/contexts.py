@@ -40,7 +40,7 @@ def xams(*args, **kwargs):
 def xamsl(*args, **kwargs):
     if '_detector' in kwargs:
         raise ValueError('Don\'t specifify _detector!')
-    mongo_kwargs = dict(mongo_collname='runs_gas',
+    mongo_kwargs = dict(mongo_collname='runs_new',
                         runid_field='number',
                         mongo_dbname='run',
                         )
@@ -65,14 +65,16 @@ def _xams_xamsl_context(
     for p in [raw_data_folder, processed_data_folder]:
         if not os.path.exists(p):
             UserWarning(f'Context for {_detector}, folder {p} does not exist?!')
-
+    
+    st.storage = []
     if init_rundb:
         if mongo_kwargs is None:
             raise RuntimeError('You need to provide mongo-kwargs!')
-        ax.RunDB(
-            **mongo_kwargs
-        ),
-    st.storage = [
+        st.storage = [ax.RunDB(
+            **mongo_kwargs,
+            provide_run_metadata=True,
+        )]
+    st.storage += [
         strax.DataDirectory(raw_data_folder,
                             provide_run_metadata=False,
                             take_only=ax.DAQReader.provides,
@@ -84,6 +86,7 @@ def _xams_xamsl_context(
                             readonly=True),
         strax.DataDirectory(output_folder),
             ]
+    print(st.storage)
     return st
 
 

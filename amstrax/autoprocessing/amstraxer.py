@@ -105,11 +105,6 @@ def main(args):
             strax.DataDirectory('./strax_data',
                                 overwrite='always',
                                 provide_run_metadata=False))
-    if args.only_strax_data:
-        st.storage = [
-            strax.DataDirectory('./strax_data',
-                                # overwrite='always',
-                                provide_run_metadata=True)]
     if st.is_stored(args.run_id, args.target):
         print("This data is already available.")
         return 1
@@ -131,12 +126,7 @@ def main(args):
             run_id=args.run_id,
             targets=args.target,
             max_workers=int(args.workers))
-
-        if args.profile_to:
-            with strax.profile_threaded(args.profile_to):
-                yield from st.get_iter(**kwargs)
-        else:
-            yield from st.get_iter(**kwargs)
+        yield from st.get_iter(**kwargs)
 
     clock_start = None
     for i, d in enumerate(get_results()):
