@@ -90,7 +90,6 @@ def pax_to_records(input_filename,
                 r['pulse_length'] = p.length
                 r['record_i'] = rec_i
 
-
                 # How much are we storing in this record?
                 if rec_i != n_records - 1:
                     # There's more chunks coming, so we store a full chunk
@@ -189,7 +188,7 @@ def pax_to_records_zle(input_filename,
                 records['channel'] = p.channel
                 records['dt'] = dt
                 records['time'] = event.start_time + p.left * dt + dt * (
-                            left + samples_per_record * np.arange(records_needed))
+                        left + samples_per_record * np.arange(records_needed))
                 records['length'] = [min(pulse_length, samples_per_record * (i + 1))
                                      - samples_per_record * i for i in range(records_needed)]
                 records['pulse_length'] = pulse_length
@@ -263,13 +262,13 @@ def find_intervals(pulse):
     zle_intervals_buffer = -1 * np.ones((50000, 2), dtype=np.int64)
     # For simulated data taking reference baseline as baseline
     # Operating directly on digitized downward waveform
-    threshold = int(np.median(data)-2*np.std(data))
+    threshold = int(np.median(data) - 2 * np.std(data))
 
     n_itvs_found = find_intervals_below_threshold(
         data,
         threshold=threshold,
         holdoff=101,
-        result_buffer=zle_intervals_buffer,)
+        result_buffer=zle_intervals_buffer, )
 
     itvs_to_encode = zle_intervals_buffer[:n_itvs_found]
     itvs_to_encode[:, 0] -= 50
@@ -281,7 +280,7 @@ def find_intervals(pulse):
 
     for itv in itvs_to_encode:
         print(itv)
-        yield itv[0], itv[1], data[itv[0]:itv[1]+1]
+        yield itv[0], itv[1], data[itv[0]:itv[1] + 1]
 
 
 @export
@@ -302,7 +301,7 @@ class RecordsFromPax(strax.Plugin):
     depends_on = tuple()
     parallel = False
     rechunk_on_save = False
-    __version__= '0.0.2'
+    __version__ = '0.0.2'
 
     def infer_dtype(self):
         return strax.raw_record_dtype(self.config['samples_per_record'])
@@ -317,10 +316,10 @@ class RecordsFromPax(strax.Plugin):
                               for x in pax_files])
         print(f"Found {len(pax_files)} files, {pax_sizes.sum() / 1e9:.2f} GB")
         last_endtime = 0
-        if self.run_id[-4:]=='1730':
-            self.config['dt']=2
+        if self.run_id[-4:] == '1730':
+            self.config['dt'] = 2
         else:
-            self.config['dt']=10
+            self.config['dt'] = 10
 
         for file_i, in_fn in enumerate(pax_files):
             if (self.config['stop_after_zips']

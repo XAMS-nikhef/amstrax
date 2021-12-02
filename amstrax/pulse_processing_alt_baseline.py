@@ -57,7 +57,7 @@ class PulseProcessing(strax.Plugin):
     def compute(self, raw_records):
         # Do not trust in DAQ + strax.baseline to leave the
         # out-of-bounds samples to zero.
-        records = np.zeros(len(raw_records),dtype=self.dtype['records_alt_bl'])
+        records = np.zeros(len(raw_records), dtype=self.dtype['records_alt_bl'])
         for name in raw_records.dtype.names:
             records[name] = raw_records[name]
         baseline_std(records)
@@ -111,7 +111,7 @@ class PulseProcessing(strax.Plugin):
                  help="Enable runtime checks for sorting and disjointness"),
     strax.Option('pmt_channel', default=0,
                  help="PMT channel for splitting pmt and sipms"),
-    strax.Option('trigger_threshold',default=50),
+    strax.Option('trigger_threshold', default=50),
 )
 class PeaksAltBl(strax.Plugin):
     depends_on = 'records_alt_bl'
@@ -123,9 +123,9 @@ class PeaksAltBl(strax.Plugin):
 
     __version__ = '0.1.12'
     dtype = dict(peaks_top_alt_bl=strax.peak_dtype(n_channels=8)
-                                  + [(('Maximum height of the peak', 'peak_max'),np.int16)],
+                                  + [(('Maximum height of the peak', 'peak_max'), np.int16)],
                  peaks_bottom_alt_bl=strax.peak_dtype(n_channels=8)
-                                     + [(('Maximum height of the peak', 'peak_max'),np.int16)]
+                                     + [(('Maximum height of the peak', 'peak_max'), np.int16)]
                  )
 
     def compute(self, records_alt_bl):
@@ -135,8 +135,10 @@ class PeaksAltBl(strax.Plugin):
         hits = find_hits(r, threshold=self.config['trigger_threshold'])
 
         hits = strax.sort_by_time(hits)
-        hits_bottom, hits_top = hits[hits['channel'] == self.config['pmt_channel']], hits[hits['channel'] !=self.config['pmt_channel']]
-        r_bottom, r_top = r[r['channel'] == self.config['pmt_channel']], r[r['channel'] != self.config['pmt_channel']]
+        hits_bottom, hits_top = hits[hits['channel'] == self.config['pmt_channel']], hits[
+            hits['channel'] != self.config['pmt_channel']]
+        r_bottom, r_top = r[r['channel'] == self.config['pmt_channel']], r[
+            r['channel'] != self.config['pmt_channel']]
 
         peaks_bottom = strax.find_peaks(
             hits_bottom, self.to_pe,
@@ -171,8 +173,8 @@ class PeaksAltBl(strax.Plugin):
 
         strax.compute_widths(peaks_top)
 
-        peaks_top['peak_max'] = np.max(peaks_top['data'],axis=1)
-        peaks_bottom['peak_max'] = np.max(peaks_bottom['data'],axis=1)
+        peaks_top['peak_max'] = np.max(peaks_top['data'], axis=1)
+        peaks_bottom['peak_max'] = np.max(peaks_bottom['data'], axis=1)
 
         return dict(peaks_top_alt_bl=peaks_top,
                     peaks_bottom_alt_bl=peaks_bottom,
@@ -193,23 +195,23 @@ class PeakBasicsTopAltBl(strax.Plugin):
         (('End time of the peak (ns since unix epoch)',
           'endtime'), np.int64),
         (('Peak integral in PE',
-            'area'), np.float32),
+          'area'), np.float32),
         (('Number of PMTs contributing to the peak',
-            'n_channels'), np.int16),
+          'n_channels'), np.int16),
         (('PMT number which contributes the most PE',
-            'max_pmt'), np.int16),
+          'max_pmt'), np.int16),
         (('Area of signal in the largest-contributing PMT (PE)',
-            'max_pmt_area'), np.int32),
+          'max_pmt_area'), np.int32),
         (('Width (in ns) of the central 50% area of the peak',
-            'range_50p_area'), np.float32),
+          'range_50p_area'), np.float32),
         (('Fraction of area seen by the top array',
-            'area_fraction_top'), np.float32),
+          'area_fraction_top'), np.float32),
 
         (('Length of the peak waveform in samples',
           'length'), np.int32),
         (('Time resolution of the peak waveform in ns',
           'dt'), np.int16),
-        ]
+    ]
 
     def compute(self, peaks):
         p = peaks
@@ -226,7 +228,7 @@ class PeakBasicsTopAltBl(strax.Plugin):
         area_top = p['area_per_channel'][:, :8].sum(axis=1)
         # Negative-area peaks get 0 AFT - TODO why not NaN?
         m = p['area'] > 0
-        r['area_fraction_top'][m] = area_top[m]/p['area'][m]
+        r['area_fraction_top'][m] = area_top[m] / p['area'][m]
         return r
 
 
@@ -244,23 +246,23 @@ class PeakBasicsBottomAltBl(strax.Plugin):
         (('End time of the peak (ns since unix epoch)',
           'endtime'), np.int64),
         (('Peak integral in PE',
-            'area'), np.float32),
+          'area'), np.float32),
         (('Number of PMTs contributing to the peak',
-            'n_channels'), np.int16),
+          'n_channels'), np.int16),
         (('PMT number which contributes the most PE',
-            'max_pmt'), np.int16),
+          'max_pmt'), np.int16),
         (('Area of signal in the largest-contributing PMT (PE)',
-            'max_pmt_area'), np.int32),
+          'max_pmt_area'), np.int32),
         (('Width (in ns) of the central 50% area of the peak',
-            'range_50p_area'), np.float32),
+          'range_50p_area'), np.float32),
         (('Fraction of area seen by the top array',
-            'area_fraction_top'), np.float32),
+          'area_fraction_top'), np.float32),
 
         (('Length of the peak waveform in samples',
           'length'), np.int32),
         (('Time resolution of the peak waveform in ns',
           'dt'), np.int16),
-        ]
+    ]
 
     def compute(self, peaks):
         p = peaks
@@ -277,8 +279,9 @@ class PeakBasicsBottomAltBl(strax.Plugin):
         area_top = p['area_per_channel'][:, :8].sum(axis=1)
         # Negative-area peaks get 0 AFT - TODO why not NaN?
         m = p['area'] > 0
-        r['area_fraction_top'][m] = area_top[m]/p['area'][m]
+        r['area_fraction_top'][m] = area_top[m] / p['area'][m]
         return r
+
 
 # Base dtype for interval-like objects (pulse, peak, hit)
 interval_dtype = [
@@ -355,7 +358,7 @@ def baseline_std(records, baseline_samples=40):
 
 @strax.growing_result(strax.hit_dtype, chunk_size=int(1e4))
 @numba.jit(nopython=True, nogil=True, cache=True)
-def find_hits(records, threshold = 70, _result_buffer=None):
+def find_hits(records, threshold=70, _result_buffer=None):
     """Return hits (intervals above threshold) found in records.
     Hits that straddle record boundaries are split (TODO: fix this?)
 
@@ -622,9 +625,10 @@ def fill_records(raw_records, hits, trigger_window, _result_buffer=None):
             #     print(hit)
             #     continue
             if p_offset < 0:
-                previous = hit_buffer[0]['record_i'] + get_record_index(raw_records[:hit_buffer[0]['record_i']],
-                                                                        hit_buffer[0]['channel'],
-                                                                        -1)
+                previous = hit_buffer[0]['record_i'] + get_record_index(
+                    raw_records[:hit_buffer[0]['record_i']],
+                    hit_buffer[0]['channel'],
+                    -1)
                 # print(previous)
                 if previous < 0 or previous == hit_buffer[0]['record_i']:
                     p_length += p_offset
@@ -635,9 +639,10 @@ def fill_records(raw_records, hits, trigger_window, _result_buffer=None):
                     input_record_index.append(previous)
 
             if p_end > samples_per_record:
-                next = hit_buffer[-1]['record_i'] + get_record_index(raw_records[hit_buffer[-1]['record_i']:],
-                                                                     hit_buffer[-1]['channel'],
-                                                                     +1)
+                next = hit_buffer[-1]['record_i'] + get_record_index(
+                    raw_records[hit_buffer[-1]['record_i']:],
+                    hit_buffer[-1]['channel'],
+                    +1)
                 # print(next)
                 if next < len(raw_records):
                     input_record_index.append(next)

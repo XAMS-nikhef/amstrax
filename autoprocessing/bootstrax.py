@@ -91,7 +91,6 @@ actions.add_argument('--abandon', nargs='+',
                      help="Abandon run number, optionally with reason")
 args = parser.parse_args()
 
-
 ##
 # Configuration
 ##
@@ -157,15 +156,13 @@ h = logging.StreamHandler()
 h.setFormatter(f)
 log.addHandler(h)
 h = logging.handlers.TimedRotatingFileHandler(
-    'logs/log_'+date.today().isoformat(),when='midnight', utc=True,backupCount=7)
+    'logs/log_' + date.today().isoformat(), when='midnight', utc=True, backupCount=7)
 h.setFormatter(f)
 log.addHandler(h)
 log.setLevel("DEBUG")
 
 hostname = socket.getfqdn()
-state_doc_id = None   # Set in main loop
-
-
+state_doc_id = None  # Set in main loop
 
 
 def new_context():
@@ -191,13 +188,14 @@ bs_coll = run_db['bootstrax']['bootstrax']
 log_coll = run_db['log']['log']
 usage_coll = run_db['usage']['usage']
 
+
 # Ping the databases to ensure the mongo connections are working
 # run_coll.command('ping')
 
 
 def main():
     if args.fail:
-        args.fail += ['']   # Provide empty reason if none specified
+        args.fail += ['']  # Provide empty reason if none specified
         manual_fail(number=int(args.fail[0]), reason=args.fail[1])
 
     elif args.abandon:
@@ -307,10 +305,10 @@ def update_usage(pid_process, run_number):
     """
     frac_to_percent = 100
     mem_tot = virtual_memory()
-    usage = {'run':run_number,
-             'host':hostname,
-             'time':now(),
-             'pid':pid_process.ppid(),
+    usage = {'run': run_number,
+             'host': hostname,
+             'time': now(),
+             'pid': pid_process.ppid(),
              'cpu_pid': pid_process.cpu_percent(),
              'cpu_tot': cpu_percent(),
              'mem_pid': pid_process.memory_percent(),
@@ -462,7 +460,7 @@ def fail_run(rd, reason):
                       now(plus=(timeouts['retry_run']
                                 * np.random.uniform(0.5, 1.5)
                                 # Exponential backoff with jitter
-                                * 5**min(rd['bootstrax'].get('n_failures', 0), 3)
+                                * 5 ** min(rd['bootstrax'].get('n_failures', 0), 3)
                                 ))))
 
     # Report to DAQ log and screen
@@ -525,6 +523,7 @@ def process_run(rd, send_heartbeats=True):
     # Shortcuts for failing
     class RunFailed(Exception):
         pass
+
     def fail(reason):
         fail_run(rd, reason)
         raise RunFailed
@@ -582,7 +581,7 @@ def process_run(rd, send_heartbeats=True):
         strax_proc = multiprocessing.Process(
             target=run_strax,
             args=(run_id, loc, target, n_readout_threads, compressor,
-                  run_start_time,  args.debug))
+                  run_start_time, args.debug))
 
         t0 = now()
         info = dict(started_processing=t0)
@@ -594,7 +593,7 @@ def process_run(rd, send_heartbeats=True):
 
         while True:
             if send_heartbeats:
-                update_usage(pid_process = pid_process, run_number = run_id)
+                update_usage(pid_process=pid_process, run_number=run_id)
                 send_heartbeat()
 
             ec = strax_proc.exitcode
@@ -630,10 +629,10 @@ def process_run(rd, send_heartbeats=True):
                 # Since chunks can be empty, and we don't want to crash,
                 # this has to be done with some care...
                 t_covered = timedelta(seconds=(
-                    max([x.get('last_endtime', 0)
-                         for x in md['chunks']])
-                    - min([x.get('first_time', float('inf'))
-                           for x in md['chunks']]))/1e9)
+                                                      max([x.get('last_endtime', 0)
+                                                           for x in md['chunks']])
+                                                      - min([x.get('first_time', float('inf'))
+                                                             for x in md['chunks']])) / 1e9)
                 run_duration = rd['end'] - rd['start']
                 if not (0 < t_covered.seconds < float('inf')):
                     fail(f"Processed data covers {t_covered} sec")
@@ -652,12 +651,12 @@ def process_run(rd, send_heartbeats=True):
                 # exception retrieval. The actual error comes later.
                 log.info(f"Failure while procesing run {run_id}")
                 if osp.exists(exception_tempfile):
-                   with open(exception_tempfile, mode='r') as f:
-                       exc_info = f.read()
-                   if not exc_info:
-                       exc_info = '[No exception info known, exception file was empty?!]'
+                    with open(exception_tempfile, mode='r') as f:
+                        exc_info = f.read()
+                    if not exc_info:
+                        exc_info = '[No exception info known, exception file was empty?!]'
                 else:
-                   exc_info = "[No exception info known, exception file not found?!]"
+                    exc_info = "[No exception info known, exception file not found?!]"
                 fail(f"Strax exited with exit code {ec}. Exception info: {exc_info}")
 
             # TODO: Strax should update run db with metadata
@@ -665,6 +664,7 @@ def process_run(rd, send_heartbeats=True):
 
     except RunFailed:
         return
+
 
 ##
 # Cleanup
@@ -708,15 +708,15 @@ def cleanup_db():
         send_heartbeat()
         bd = bs_coll.find_one_and_delete(
             {'time':
-             {'$lt': now(-timeouts['bootstrax_presumed_dead'])}})
+                 {'$lt': now(-timeouts['bootstrax_presumed_dead'])}})
         if bd is None:
             break
         log_warning(f"Bootstrax on host {bd['host']} presumed dead. Rest in peace")
 
     # Runs that say they are 'considering' or 'busy' but nothing happened for a while
     for state, timeout in [
-            ('considering', timeouts['max_considering_time']),
-            ('busy', timeouts['max_busy_time'])]:
+        ('considering', timeouts['max_considering_time']),
+        ('busy', timeouts['max_busy_time'])]:
         while True:
             send_heartbeat()
             rd = consider_run(

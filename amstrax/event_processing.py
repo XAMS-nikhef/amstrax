@@ -5,6 +5,7 @@ import numpy as np
 from amstrax.common import pax_file, get_resource, get_elife, first_sr1_run
 from amstrax.itp_map import InterpolatingMap
 from .SiPMdata import *
+
 export, __all__ = strax.exporter()
 
 
@@ -24,10 +25,10 @@ export, __all__ = strax.exporter()
                       'triggering peak'),
 )
 class Events(strax.OverlapWindowPlugin):
-    depends_on = ['peaks', 'peak_basics'] # peak_basics instead of n_competing
+    depends_on = ['peaks', 'peak_basics']  # peak_basics instead of n_competing
     rechunk_on_save = False
     data_kind = 'events'
-    parallel= False
+    parallel = False
     dtype = [
         ('event_number', np.int64, 'Event number in this dataset'),
         ('time', np.int64, 'Event start time in ns since the unix epoch'),
@@ -77,7 +78,8 @@ class EventBasics(strax.LoopPlugin):
     # n_competing within peak_basics
     depends_on = ('events',
                   'peak_basics', 'peak_classification',)
-                  #'peak_positions') #n_competing
+
+    # 'peak_positions') #n_competing
 
     def infer_dtype(self):
         dtype = [(('Number of peaks in the event',
@@ -102,13 +104,13 @@ class EventBasics(strax.LoopPlugin):
         #            f'Main S2 reconstructed X position (cm), uncorrected',),
         #           (f'y_s2', np.float32,
         #            f'Main S2 reconstructed Y position (cm), uncorrected',)]
-        dtype += [(f's2_largest_other',np.float32,
+        dtype += [(f's2_largest_other', np.float32,
                    f'Largest other S2 area (PE) in event, uncorrected',),
-                   (f's1_largest_other',np.float32,
+                  (f's1_largest_other', np.float32,
                    f'Largest other S1 area (PE) in event, uncorrected',),
-                   (f'alt_s1_interaction_drift_time',np.float32,
+                  (f'alt_s1_interaction_drift_time', np.float32,
                    f'Drift time with alternative s1',)
-                    ]
+                  ]
 
         return dtype
 
@@ -135,12 +137,12 @@ class EventBasics(strax.LoopPlugin):
                 continue
 
             main_i = np.argmax(ss['area'])
-            #Find largest other signals
-            if s_i == 2 and ss['n_competing'][main_i]>0 and len(ss['area'])>1:
+            # Find largest other signals
+            if s_i == 2 and ss['n_competing'][main_i] > 0 and len(ss['area']) > 1:
                 s2_second_i = np.argsort(ss['area'])[-2]
                 result[f's2_largest_other'] = ss['area'][s2_second_i]
 
-            if s_i == 1 and ss['n_competing'][main_i]>0 and len(ss['area'])>1:
+            if s_i == 1 and ss['n_competing'][main_i] > 0 and len(ss['area']) > 1:
                 s1_second_i = np.argsort(ss['area'])[-2]
                 result[f's1_largest_other'] = ss['area'][s1_second_i]
 
@@ -157,11 +159,13 @@ class EventBasics(strax.LoopPlugin):
         # Compute a drift time only if we have a valid S1-S2 pairs
         if len(main_s) == 2:
             result['drift_time'] = main_s[2]['time'] - main_s[1]['time']
-        #Compute alternative drift time
+            # Compute alternative drift time
             if 's1_second_i' in locals():
-                result['alt_s1_interaction_drift_time'] = main_s[2]['time'] - ss['time'][s1_second_i]
+                result['alt_s1_interaction_drift_time'] = main_s[2]['time'] - ss['time'][
+                    s1_second_i]
 
         return result
+
 
 @export
 class EventPositions(strax.LoopPlugin):
@@ -223,6 +227,8 @@ class EventPositions(strax.LoopPlugin):
         for key in ['xr', 'yr']:
             result[key] = pos[key]
         return result
+
+
 #
 #
 # @export

@@ -4,19 +4,32 @@ import os.path as osp
 import os
 import inspect
 import urllib.request
-
+import tarfile
+import io
 import numpy as np
 
 import strax
-export, __all__ = strax.exporter()
-__all__ += ['straxen_dir', 'to_pe']
 
-straxen_dir = os.path.dirname(os.path.abspath(
+export, __all__ = strax.exporter()
+__all__ += ['amstrax_dir', 'to_pe']
+
+amstrax_dir = os.path.dirname(os.path.abspath(
     inspect.getfile(inspect.currentframe())))
 
 # Current values 
 n_tpc_pmts = 8
 to_pe = 1
+
+
+def open_test_data(file_name
+                   ):
+    """Downloads amstrax test data to strax_test_data in the current directory"""
+    with open(file_name, mode='rb') as f:
+        result = f.read()
+    f = io.BytesIO(result)
+    tf = tarfile.open(fileobj=f)
+    tf.extractall()
+
 
 # Previous values
 # to_pe = np.array([4.252e1,4.252e1,1.3e-4,4.252e1,4.252e1,4.252e1,4.252e1,4.252e1,4,4])
@@ -28,13 +41,18 @@ to_pe = 1
 # total_amplification = gain * factor
 # to_pe = 2e-9 * 2 / (2**13 * 50 * gain * 10 * 1.602e-19)
 
-first_sr1_run ='1'
+
+first_sr1_run = '1'
+
+
 @export
 def pax_file(x):
     """Return URL to file hosted in the pax repository master branch"""
     return 'https://raw.githubusercontent.com/XENON1T/pax/master/pax/data/' + x
 
+
 cache_dict = dict()
+
 
 # Placeholder for resource management system in the future?
 @export
@@ -53,8 +71,8 @@ def get_resource(x, fmt='text'):
         # to prevent repeated downloads.
         cache_fn = strax.utils.deterministic_hash(x)
         cache_folders = ['./resource_cache',
-                         '/tmp/straxen_resource_cache',
-                         '/dali/lgrandi/strax/resource_cache']
+                         '/tmp/amstrax_resource_cache',
+                         ]
         for cache_folder in cache_folders:
             try:
                 os.makedirs(cache_folder, exist_ok=True)
@@ -106,6 +124,8 @@ def get_resource(x, fmt='text'):
     cache_dict[x] = result
 
     return result
+
+
 @export
 def get_elife(run_id):
     """Return electron lifetime for run_id in ns"""
@@ -118,7 +138,7 @@ def get_secret(x):
     """Return secret key x. In order of priority, we search:
 
       * Environment variable: uppercase version of x
-      * xenon_secrets.py (if included with your straxen installation)
+      * xenon_secrets.py (if included with your amstrax installation)
       * A standard xenon_secrets.py located on the midway analysis hub
         (if you are running on midway)
     """
@@ -132,7 +152,7 @@ def get_secret(x):
         from . import xenon_secrets
     except ImportError:
         message += ("nor was there a valid xenon_secrets.py "
-                    "included with your straxen installation, ")
+                    "included with your amstrax installation, ")
 
         # If on midway, try loading a standard secrets file instead
         if 'rcc' in socket.getfqdn():
@@ -154,6 +174,7 @@ def get_secret(x):
     if hasattr(xenon_secrets, x):
         return getattr(xenon_secrets, x)
     raise ValueError(message + " and the secret is not in xenon_secrets.py")
+
 
 @export
 def select_channels(arr, channel_list):

@@ -1,4 +1,7 @@
 # Amstrax
+[![Coverage Status](https://coveralls.io/repos/github/XAMS-nikhef/amstrax/badge.svg?branch=master)](https://coveralls.io/github/XAMS-nikhef/amstrax?branch=master)
+[![CodeFactor](https://www.codefactor.io/repository/github/xams-nikhef/amstrax/badge)](https://www.codefactor.io/repository/github/xams-nikhef/amstrax)
+
 Amsterdam Strax
 
 Amstrax is the analysis framework for XAMS, built on top of the generic [strax framework](https://github.com/AxFoundation/strax). 
