@@ -10,7 +10,7 @@ class TestStack(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         st = strax.Context()
-        st.register(amstrax.daqreader.DAQReaderXamsl)
+        st.register(amstrax.daqreader.DAQReader)
         st.storage = [strax.DataDirectory('./amstrax_data')]
         cls.run_id = '999999'
         cls.st = st
@@ -48,7 +48,7 @@ class TestStack(unittest.TestCase):
     def set_config(self):
         md = self.get_md()
         self.st.set_config(
-            {'n_readout_threads': len(md['daq_config']['processing_threads']),
+            {'readout_threads': md['daq_config']['processing_threads'],
              'daq_input_dir': './live_data/999999',
-             **amstrax.contexts.common_config_xamsl
+             **amstrax.contexts.common_config
              })

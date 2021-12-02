@@ -1,45 +1,21 @@
 import os
 import time
-import pymongo
-import json
-from sshtunnel import SSHTunnelForwarder
-from getkey import getkey
+import amstrax.amstrax
 
-version = '0.1.0'  # STRAX version, Feb. 2019
+version = '1.0.0'
 print('Starting autoprocess version %s...' % version)
 
 # settings
-nap_time = 10  # Seconds
+nap_time = 60  # Seconds
 
 script_template = """#!/bin/bash
-export PATH=/data/xenon/xams/anaconda3/bin:$PATH
-source activate strax
+export PATH=/data/xenon/joranang/anaconda/bin:$PATH
+source activate amstrax
 python /data/xenon/xams/amstrax/autoprocessing/process_run.py {run_name}
 echo "Script complete, bye!"
 """
-
-# Initialize connection to Mongo database
-MONGO_HOST = "145.102.133.174"
-MONGO_USER = "xams"
-if "MONGO_PASS" not in dict(os.environ).keys():
-    raise RuntimeError(
-        "DAQ password not set. Please define in .bashrc file. (i.e. 'export MONGO_PASS = <secret password>')")
-MONGO_PASS = os.environ['MONGO_PASS']
-
-print('Initializing server...')
-server = SSHTunnelForwarder(
-    MONGO_HOST,
-    ssh_username=MONGO_USER,
-    ssh_password=MONGO_PASS,
-    remote_bind_address=('127.0.0.1', 27017)
-)
-server.start()
-print('Server started.')
-
-print('Initializing runs db connection...')
-client = pymongo.MongoClient()
-runs_db = client['run']
-runs = runs_db['runs']
+runs_col = amstrax.amstrax.get_mongo_collection()
+runs = runs_col['runs']
 print('Runs db connected.')
 
 while 1:
@@ -53,11 +29,6 @@ while 1:
 
     for run_doc in run_docs_to_do:
         run_name = run_doc['name']
-
-        # Dump configuration, may be needed for fallback in processing script
-        # Nice to have a backup anyway, right? Doesn't hurt.
-        # with open(f'/data/xenon/xams/processing_folder/config/{run_name}.json', 'w') as outfile:
-        #    json.dump(run_doc, outfile)
 
         # Build a script to submit to stoomboot cluster
         script_name = (f'p_{run_name}.sh')
