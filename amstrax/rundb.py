@@ -27,10 +27,10 @@ def link_to_daq(
         daq_host="145.102.133.168",
         daq_user="xams"
 ):
+    """Create an SSH tunnel to the daq machine to get access to the runsdb"""
     port_key = f'{daq_host}_{daq_user}'
     if _SECRET_SERVING_PORT is not None and port_key in _SECRET_SERVING_PORT:
         return _SECRET_SERVING_PORT[port_key]
-    """Create an SSH tunnel to the daq machine to get access to the runsdb"""
     _check_environment_var("DAQ_PASSWORD")
     daq_password = os.environ['DAQ_PASSWORD']
     server = SSHTunnelForwarder(
@@ -92,7 +92,6 @@ class RunDB(strax.StorageFrontend):
         :param new_data_path: Path where new files are to be written.
             Defaults to None: do not write new data
             New files will be registered in the runs db!
-            TODO: register under hostname alias (e.g. 'dali')
         :param runid_field: Rundb field to which strax's run_id concept
             corresponds. Can be either
             - 'name': values must be strings, for XENON1T
@@ -177,7 +176,6 @@ class RunDB(strax.StorageFrontend):
                         'host': self.hostname,
                         'type': key.data_type,
                         'protocol': strax.FileSytemBackend.__name__,
-                        # TODO: duplication with metadata stuff elsewhere?
                         'meta': {'lineage': key.lineage}
                     }}})
 

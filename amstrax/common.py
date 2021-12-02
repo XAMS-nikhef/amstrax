@@ -7,7 +7,7 @@ import urllib.request
 import tarfile
 import io
 import numpy as np
-
+import straxen
 import strax
 
 export, __all__ = strax.exporter()
@@ -39,79 +39,11 @@ cache_dict = dict()
 # Placeholder for resource management system in the future?
 @export
 def get_resource(x, fmt='text'):
-    """Return contents of file or URL x
-    :param binary: Resource is binary. Return bytes instead of a string.
-    """
-    is_binary = fmt != 'text'
-
-    # Try to retrieve from in-memory cache
-    if x in cache_dict:
-        return cache_dict[x]
-
-    if '://' in x:
-        # Web resource; look first in on-disk cache
-        # to prevent repeated downloads.
-        cache_fn = strax.utils.deterministic_hash(x)
-        cache_folders = ['./resource_cache',
-                         '/tmp/amstrax_resource_cache',
-                         ]
-        for cache_folder in cache_folders:
-            try:
-                os.makedirs(cache_folder, exist_ok=True)
-            except (PermissionError, OSError):
-                continue
-            cf = osp.join(cache_folder, cache_fn)
-            if osp.exists(cf):
-                return get_resource(cf, fmt=fmt)
-
-        # Not found in any cache; download
-        result = urllib.request.urlopen(x).read()
-        if not is_binary:
-            result = result.decode()
-
-        # Store in as many caches as possible
-        m = 'wb' if is_binary else 'w'
-        available_cf = None
-        for cache_folder in cache_folders:
-            if not osp.exists(cache_folder):
-                continue
-            cf = osp.join(cache_folder, cache_fn)
-            try:
-                with open(cf, mode=m) as f:
-                    f.write(result)
-            except Exception:
-                pass
-            else:
-                available_cf = cf
-        if available_cf is None:
-            raise RuntimeError(
-                f"Could not load {x},"
-                "none of the on-disk caches are writeable??")
-
-        # Retrieve result from file-cache
-        # (so we only need one format-parsing logic)
-        return get_resource(available_cf, fmt=fmt)
-
-    # File resource
-    if fmt == 'npy':
-        result = np.load(x)
-    elif fmt == 'binary':
-        with open(x, mode='rb') as f:
-            result = f.read()
-    elif fmt == 'text':
-        with open(x, mode='r') as f:
-            result = f.read()
-
-    # Store in in-memory cache
-    cache_dict[x] = result
-
-    return result
-
+    return straxen.get_resource(x, fmt=fmt)
 
 @export
 def get_elife(run_id):
     """Return electron lifetime for run_id in ns"""
-    # TODO: Get/cache snapshot of needed values from run db valid for 1 hour
     return 642e3
 
 
