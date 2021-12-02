@@ -5,6 +5,9 @@
 [![PyPI downloads](https://img.shields.io/pypi/dm/amstrax.svg)](https://pypistats.org/packages/amstrax)
 [![DOI](https://zenodo.org/badge/263576054.svg)](https://zenodo.org/badge/latestdoi/263576054)
 
+## Documentation
+[![Documentation Status](https://readthedocs.org/projects/amstrax/badge/?version=latest)](https://amstrax.readthedocs.io/en/latest/?badge=latest)
+
 Amsterdam Strax
 
 Amstrax is the analysis framework for XAMS, built on top of the generic [strax framework](https://github.com/AxFoundation/strax). 
