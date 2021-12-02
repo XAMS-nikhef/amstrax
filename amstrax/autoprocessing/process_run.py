@@ -1,7 +1,6 @@
 import amstrax
 import amstraxer
 
-
 if __name__ == '__main__':
     args = amstraxer.parse_args()
 
@@ -20,7 +19,8 @@ if __name__ == '__main__':
         amstraxer.main(args)
     except Exception as e:
         run_collection.find_one_and_update({"name": run_name},
-                                           {"$set": {"processing_status": f"failed due to {str(e)}"}})
+                                           {"$set": {
+                                               "processing_status": f"failed due to {str(e)}"}})
         raise e
 
     run_collection.find_one_and_update({"name": run_name},

@@ -3,6 +3,7 @@ import numba
 from amstrax.SiPMdata import *
 
 import strax
+
 export, __all__ = strax.exporter()
 
 # These are also needed in peaklets, since hitfinding is repeated

@@ -97,7 +97,7 @@ def main(args):
     st.context_config['max_messages'] = args.max_messages
     if args.build_lowlevel:
         st.context_config['forbid_creation_of'] = tuple()
-    
+
     if 'raw_records' in args.target:
         st = amstrax.contexts.context_for_daq_reader(st, args.run_id)
 

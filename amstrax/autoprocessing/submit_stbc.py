@@ -1,7 +1,6 @@
 import os
 import argparse
 
-
 script_template = """#!/bin/bash
 export PATH=/project/xenon/jorana/software/miniconda3/bin:$PATH
 source activate /data/xenon/joranang/anaconda/envs/amstrax_2021
@@ -13,7 +12,7 @@ echo "Script complete, bye!"
 """
 
 
-def submit_job(run_id, target, job_folder='./jobs', log_folder ='./logs'):
+def submit_job(run_id, target, job_folder='./jobs', log_folder='./logs'):
     for folder in (job_folder, log_folder):
         if not os.path.exists(folder):
             os.makedirs(folder)

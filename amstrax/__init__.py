@@ -1,6 +1,5 @@
 __version__ = '0.1.0'
 
-
 from . import hitfinder_thresholds
 from .hitfinder_thresholds import *
 

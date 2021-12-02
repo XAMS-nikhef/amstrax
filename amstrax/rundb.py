@@ -8,7 +8,6 @@ import pymongo
 
 import strax
 
-
 export, __all__ = strax.exporter()
 
 default_mongo_dbname = 'run'
@@ -51,8 +50,8 @@ def get_mongo_client(**link_kwargs):
     _check_environment_var('MONGO_USER')
     _check_environment_var('MONGO_PASSWORD')
     local_port = link_to_daq(**link_kwargs)
-    user=os.environ['MONGO_USER']
-    password=os.environ['MONGO_PASSWORD']
+    user = os.environ['MONGO_USER']
+    password = os.environ['MONGO_PASSWORD']
     return pymongo.MongoClient(f'mongodb://{user}:{password}@127.0.0.1:{local_port}/admin')
 
 
