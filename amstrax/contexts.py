@@ -5,9 +5,9 @@ import amstrax as ax
 from immutabledict import immutabledict
 
 common_opts = dict(
-    register_all=[ax.pulse_processing,
-                  ax.peak_processing,
-                  ax.event_processing],
+    # register_all=[ax.pulse_processing,
+    #               ax.peak_processing,
+    #               ax.event_processing],
     register=[ax.DAQReader],
     store_run_fields=(
         'name', 'number',
