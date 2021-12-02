@@ -238,7 +238,7 @@ class Reconstruction:
                 istat = int(input("Type: 0 to quit, 1 to continue, 2 to make pdf...."))
                 if istat == 0:
                     return self.df_rec
-                elif istat == 2:
+                if istat == 2:
                     self.generate_pdf()
 
                 clear_output()
@@ -327,9 +327,9 @@ class Reconstruction:
 
         plt.show()
 
-    def plot(self, type, **kwargs):
+    def plot(self, plt_type, **kwargs):
         """Draw plots"""
-        range = kwargs.pop('range', None)
+        plt_range = kwargs.pop('range', None)
         bins = kwargs.pop('bins', 100)
         # cut on the fit quality
         fcut = kwargs.pop('fcut', 99999.)
@@ -337,19 +337,19 @@ class Reconstruction:
         # seect well reconstructed events
         df = self.df_rec[((self.df_rec.status == 1) & (self.df_rec.fval < fcut))]
 
-        if type == "alpha":
-            plt.hist(df.alpha, bins=bins, range=range)
+        if plt_type == "alpha":
+            plt.hist(df.alpha, bins=bins, range=plt_range)
             plt.xlable('alpha value')
 
-        if type == "res":
+        if plt_type == "res":
             #
             # distributions of reconstructed position
             #
             plt.figure(figsize=(7, 5))
 
             # histograms with x and y positions
-            plt.hist(df.xr, bins=bins, range=range)
-            plt.hist(df.yr, bins=bins, range=range)
+            plt.hist(df.xr, bins=bins, range=plt_range)
+            plt.hist(df.yr, bins=bins, range=plt_range)
             plt.xlabel('reconstructed position (mm)')
             plt.legend(['x', 'y'])
 
@@ -358,12 +358,12 @@ class Reconstruction:
             print("<yr> = ", df.yr.mean(), " +/-", df.yr.sem(), " mm")
             print("    rms_y = ", df.yr.std(), " mm")
 
-        elif type == "xy":
+        elif plt_type == "xy":
             # 2D histogram with y as a function of x
             # superimposed is a outlien of a 3" PMT
             plt.figure(figsize=(8, 8))
 
-            plt.hist2d(df.xr, df.yr, bins=(bins, bins), range=range)
+            plt.hist2d(df.xr, df.yr, bins=(bins, bins), range=plt_range)
             ax = plt.gca()
 
             mx_eff = -1
@@ -385,18 +385,18 @@ class Reconstruction:
 
             plt.savefig('sipm_vs_pmt.pdf')
 
-        elif type == "intensity":
+        elif plt_type == "intensity":
             # reconstructed intensity
-            plt.hist(df.I, bins=bins, range=range)
+            plt.hist(df.I, bins=bins, range=plt_range)
             plt.xlabel('$N_{UV}$ reconstructed')
 
             print(" N(UV) reco = ", df.I.mean(), " +/-", df.I.sem())
-        elif type == "fit_quality":
+        elif plt_type == "fit_quality":
             # fit quality
-            plt.hist(df.fval, bins=bins, range=range)
+            plt.hist(df.fval, bins=bins, range=plt_range)
             plt.xlabel('Fit quality')
         else:
-            print("Reconstruction::plot BAD plot type selected. type=", type)
+            print("Reconstruction::plot BAD plot type selected. type=", plt_type)
 
         return plt.gca()
 

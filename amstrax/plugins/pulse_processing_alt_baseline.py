@@ -234,12 +234,13 @@ class PeakBasicsTopAltBl(strax.Plugin):
 
 @export
 class PeakBasicsBottomAltBl(strax.Plugin):
-    provides = 'peak_basics_bottom_alt_bl',
-    depends_on = 'peaks_bottom_alt_bl',
-    data_kind = 'peaks',
-    parallel = 'False',
-    rechunk_on_save = True,
-    __version__ = '0.1.0',
+    provides = 'peak_basics_bottom_alt_bl'
+    depends_on = 'peaks_bottom_alt_bl'
+    data_kind = 'peaks'
+    parallel = 'False'
+    rechunk_on_save = True
+    __version__ = '0.1.0'
+
     dtype = [
         (('Start time of the peak (ns since unix epoch)',
           'time'), np.int64),
@@ -336,7 +337,7 @@ def baseline_std(records, baseline_samples=40):
     Assumes record_i information is accurate (so don't cut pulses before
     baselining them!)
     """
-    if not len(records):
+    if len(records)==0:
         return records
 
     # Array for looking up last baseline seen in channel
@@ -365,7 +366,7 @@ def find_hits(records, threshold=70, _result_buffer=None):
     NB: returned hits are NOT sorted yet!
     """
     buffer = _result_buffer
-    if not len(records):
+    if len(records)==0:
         return
     samples_per_record = len(records[0]['data'])
     offset = 0
@@ -379,7 +380,6 @@ def find_hits(records, threshold=70, _result_buffer=None):
         for i in range(samples_per_record):
             # We can't use enumerate over r['data'],
             # numba gives errors if we do.
-            # TODO: file issue?
             x = r['data'][i]
             above_threshold = x > threshold
             # print(r['data'][i], above_threshold, in_interval, hit_start)
@@ -445,7 +445,7 @@ def rough_sum(regions, records, to_pe, n, dt):
      - all regions have the same length and dt
     and probably not carying too much about boundaries
     """
-    if not len(regions) or not len(records):
+    if len(regions) == 0 or len(records)==0:
         return
 
     # dt and n are passed explicitly to avoid overflows/wraparounds
@@ -564,15 +564,13 @@ def get_record_index(raw_records, channel, direction):
         for i in range(-1, -len(raw_records), -1):
             if raw_records[i]['channel'] == channel:
                 return i
-        else:
-            return 0
+        return 0
 
     if direction == +1:
         for i in range(1, len(raw_records), 1):
             if raw_records[i]['channel'] == channel:
                 return i
-        else:
-            return len(raw_records)
+        return len(raw_records)
 
 
 @export
@@ -639,15 +637,15 @@ def fill_records(raw_records, hits, trigger_window, _result_buffer=None):
                     input_record_index.append(previous)
 
             if p_end > samples_per_record:
-                next = hit_buffer[-1]['record_i'] + get_record_index(
+                next_idx = hit_buffer[-1]['record_i'] + get_record_index(
                     raw_records[hit_buffer[-1]['record_i']:],
                     hit_buffer[-1]['channel'],
                     +1)
                 # print(next)
-                if next < len(raw_records):
-                    input_record_index.append(next)
+                if next_idx < len(raw_records):
+                    input_record_index.append(next_idx)
 
-                if next > len(raw_records):
+                if next_idx > len(raw_records):
                     p_length -= (p_end % samples_per_record)
                     # print('hmm')
 
