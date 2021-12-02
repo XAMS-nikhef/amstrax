@@ -6,3 +6,4 @@ pymongo<4.0
 IPython
 sshtunnel
 matplotlib~=3.4
+packaging~=20.8
