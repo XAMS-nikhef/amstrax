@@ -183,7 +183,7 @@ def context_for_daq_reader(st,
     st.set_context_config(dict(forbid_creation_of=tuple()))
     st.set_config(
         {'readout_threads': daq_config['processing_threads'],
-         'daq_input_dir': os.path.join(live_dir, run_id, run_id),
+         'daq_input_dir': os.path.join(live_dir, run_id),
          'record_length': daq_config['strax_fragment_payload_bytes'] // 2,
          'max_digitizer_sampling_time': 10,
          'run_start_time': rd['start'].replace(tzinfo=timezone.utc).timestamp(),
