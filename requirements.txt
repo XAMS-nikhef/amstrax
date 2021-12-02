@@ -1,11 +1,11 @@
-multihist>=0.6.3
-matplotlib
-packaging
-immutabledict
 numpy~=1.19.5
 numba>=0.50.0
 strax>=0.12.0
 straxen
+multihist>=0.6.3
+matplotlib
+packaging
+immutabledict
 requests
 iminuit
 pymongo<4.0
