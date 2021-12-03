@@ -619,15 +619,11 @@ def fill_records(raw_records, hits, trigger_window, _result_buffer=None):
             input_record_index = [np.unique(hit_buffer['record_i']).tolist()][0]
 
             assert input_record_index != [0]
-            #     print('Dit hoort niet')
-            #     print(hit)
-            #     continue
             if p_offset < 0:
                 previous = hit_buffer[0]['record_i'] + get_record_index(
                     raw_records[:hit_buffer[0]['record_i']],
                     hit_buffer[0]['channel'],
                     -1)
-                # print(previous)
                 if previous < 0 or previous == hit_buffer[0]['record_i']:
                     p_length += p_offset
                     p_offset = 0
@@ -641,24 +637,19 @@ def fill_records(raw_records, hits, trigger_window, _result_buffer=None):
                     raw_records[hit_buffer[-1]['record_i']:],
                     hit_buffer[-1]['channel'],
                     +1)
-                # print(next)
+
                 if next_idx < len(raw_records):
                     input_record_index.append(next_idx)
 
                 if next_idx > len(raw_records):
                     p_length -= (p_end % samples_per_record)
-                    # print('hmm')
-
-            # if len(np.unique(raw_records['channel'][input_record_index])) !=1:
-            #     print('fuck')
 
             input_record_index.sort()
             record_buffer = []
-            # print(input_record_index)
             for i in input_record_index:
                 if i > len(raw_records) - 1:
                     p_length -= tw * dt
-                    # print('here')
+
                     continue
                 record_buffer.extend(list(raw_records[i]['data']))
 

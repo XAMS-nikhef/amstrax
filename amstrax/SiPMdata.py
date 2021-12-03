@@ -46,18 +46,18 @@ class GeoParameters:
 class SiPM:
     """ Class for a single silicon PM """
 
-    def __init__(self, type, position, qeff):
+    def __init__(self, plot_type, position, qeff):
         """__init__ Constructor """
-        if type not in ("plane", "cylinder"):
+        if plot_type not in ("plane", "cylinder"):
             print("SiPM::__init__ ERROR wrong SiPM type selected")
-        self.type = type  # type=plane or type=cylinder
+        self.type = plot_type  # type=plane or type=cylinder
         # SiPM position
         self.x = position
         # normal vector to the SiPM
-        if type == "plane":
+        if plot_type == "plane":
             # pointing down
             self.rhat = [0, 0, -1]
-        elif type == "cylinder":
+        elif plot_type == "cylinder":
             # pointing inward
             self.rhat = [-position[0], -position[1], 0]
             self.rhat = self.rhat / np.linalg.norm(self.rhat)
@@ -426,7 +426,7 @@ class PosFit:
         #
         lnlike = 0
 
-        for i in range(len(self.n)):
+        for i, _ in enumerate(self.n):
             #
             # calculate the number of expected photons
             #

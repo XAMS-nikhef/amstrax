@@ -157,7 +157,7 @@ def main(args):
         mem_mb = process.memory_info().rss / 1e6
         peak_ram = max(mem_mb, peak_ram)
 
-        if not len(d):
+        if len(d) == 0:
             print(f"Got chunk {i}, but it is empty! Using {mem_mb:.1f} MB RAM.")
             continue
 
