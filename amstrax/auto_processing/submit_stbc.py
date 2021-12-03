@@ -8,7 +8,7 @@ source activate /data/xenon/joranang/anaconda/envs/amstrax_2021
 cd /data/xenon/xamsl/processing_stage
 echo "starting script!"
 which python
-python {amstrax_dir}/autoprocessing/process_run.py {arguments}
+python {amstrax_dir}/auto_processing/process_run.py {arguments}
 echo "Script complete, bye!"
 """
 
