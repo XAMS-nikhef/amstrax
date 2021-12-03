@@ -1,6 +1,6 @@
 import os
 import time
-import amstrax.amstrax
+import amstrax
 import submit_to_stoomboot
 import argparse
 
@@ -29,7 +29,7 @@ if __name__ == '__main__':
     # settings
     nap_time = int(args.timeout)
 
-    runs_col = amstrax.amstrax.get_mongo_collection()
+    runs_col = amstrax.get_mongo_collection()
     runs = runs_col['runs']
 
     while 1:

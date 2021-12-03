@@ -1,5 +1,5 @@
 import amstrax
-import amstraxer
+from . import amstraxer
 
 if __name__ == '__main__':
     args = amstraxer.parse_args()
