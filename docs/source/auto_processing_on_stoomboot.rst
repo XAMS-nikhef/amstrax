@@ -122,7 +122,7 @@ Next open a screen (on stoomboot): ``screen -S auto_process`` and do
 .. code-block:: bash
 
     cd <amstrax_installation_folder>/amstrax/auto_processing
-    python submit_stbc.py <run_id> --target raw_records_v1730 # Use --help to get more info
+    python submit_stbc.py --run_id <run_id> --target raw_records_v1730 # Use --help to get more info
 
 
 exit the screen and enjoy data being automatically being processed for 
