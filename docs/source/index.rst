@@ -16,27 +16,24 @@ Content
     :caption: Setup and basics
 
     setup
-
-
-.. toctree::
-    :maxdepth: 2
-    :caption: Tutorials:
-
-    tutorials/Getting_started_with_Pema.ipynb
+    writing_documentation
 
 
 .. toctree::
     :maxdepth: 1
     :caption: Reference
 
-    reference/datastructure
+    reference/datastructure_xams
+    reference/datastructure_xams_little
 
 
 .. toctree::
     :maxdepth: 1
     :caption: Reference
 
-    reference/pema
+    reference/amstrax
+    reference/amstrax.plugins
+    reference/amstrax.auto_processing
 
 
 Indices and tables
