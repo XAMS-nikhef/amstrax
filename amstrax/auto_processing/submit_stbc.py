@@ -1,5 +1,6 @@
 import os
 import argparse
+from amstrax import amstrax_dir
 
 script_template = """#!/bin/bash
 export PATH=/project/xenon/jorana/software/miniconda3/bin:$PATH
@@ -7,7 +8,7 @@ source activate /data/xenon/joranang/anaconda/envs/amstrax_2021
 cd /data/xenon/xamsl/processing_stage
 echo "starting script!"
 which python
-python /data/xenon/xamsl/software/amstrax/amstrax/auto_processing/process_run.py {arguments}
+python {amstrax_dir}/autoprocessing/process_run.py {arguments}
 echo "Script complete, bye!"
 """
 
@@ -30,6 +31,7 @@ def submit_job(run_id, target, job_folder='./jobs', log_folder='./logs'):
     script_file = open(script_name, 'w')
     script_file_content = script_template.format(
         arguments=arguments,
+        amstrax_dir=amstrax_dir,
     )
     script_file.write(script_file_content)
     script_file.close()
