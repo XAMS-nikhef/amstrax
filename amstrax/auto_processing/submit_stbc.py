@@ -1,5 +1,6 @@
-import os
 import argparse
+import os
+
 from amstrax import amstrax_dir
 
 script_template = """#!/bin/bash

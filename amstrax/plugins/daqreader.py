@@ -1,9 +1,10 @@
 import glob
 import warnings
-from immutabledict import immutabledict
+
 import numpy as np
 import strax
 import straxen
+from immutabledict import immutabledict
 from straxen.plugins.daqreader import split_channel_ranges
 
 export, __all__ = strax.exporter()

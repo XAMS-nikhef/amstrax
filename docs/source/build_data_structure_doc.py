@@ -6,14 +6,15 @@ and configuration options that apply to each plugins.
 
 For extra credit, the SVGs are clickable.
 """
-from collections import defaultdict
 import os
 import shutil
-import pandas as pd
+from collections import defaultdict
+
 import graphviz
-import strax
-import amstrax
 import numpy as np
+import pandas as pd
+
+import amstrax
 
 this_dir = os.path.dirname(os.path.realpath(__file__))
 

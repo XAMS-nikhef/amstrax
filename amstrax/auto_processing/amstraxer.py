@@ -4,14 +4,15 @@ Process a single run with amstrax
 """
 import argparse
 import datetime
+import json
 import logging
-import time
 import os
 import os.path as osp
 import platform
-import psutil
 import sys
-import json
+import time
+
+import psutil
 
 
 def parse_args():

@@ -1,14 +1,11 @@
-import socket
-import sys
-import os.path as osp
-import os
 import inspect
-import urllib.request
-import tarfile
 import io
+import os
+import tarfile
+
 import numpy as np
-import straxen
 import strax
+import straxen
 
 export, __all__ = strax.exporter()
 __all__ += ['amstrax_dir', 'to_pe']

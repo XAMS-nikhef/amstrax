@@ -1,5 +1,5 @@
-import strax
 import numpy as np
+import strax
 from amstrax.SiPMdata import *
 
 export, __all__ = strax.exporter()

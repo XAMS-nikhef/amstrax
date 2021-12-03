@@ -1,15 +1,10 @@
-from iminuit import Minuit
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
-from copy import deepcopy
-
-import matplotlib
-import matplotlib.pyplot as plt
+from IPython.display import clear_output
+from iminuit import Minuit
 from matplotlib.colors import BoundaryNorm
 from matplotlib.ticker import MaxNLocator
-
-from IPython.display import clear_output
 
 np.random.seed(12345)
 inch = 25.4  # mm

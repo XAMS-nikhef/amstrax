@@ -1,12 +1,11 @@
-import logging
 import gzip
 import json
+import logging
 import re
 
 import numpy as np
-from scipy.spatial import cKDTree
-
 import strax
+from scipy.spatial import cKDTree
 
 export, __all__ = strax.exporter()
 

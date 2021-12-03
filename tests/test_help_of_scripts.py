@@ -1,6 +1,7 @@
 import os
-from amstrax import amstrax_dir
 import unittest
+
+from amstrax import amstrax_dir
 
 
 class TestHelpOfScripts(unittest.TestCase):

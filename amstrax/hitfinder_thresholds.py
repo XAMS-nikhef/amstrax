@@ -1,6 +1,6 @@
 import numpy as np
-
 import strax
+
 import amstrax
 
 export, __all__ = strax.exporter()

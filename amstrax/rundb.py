@@ -1,12 +1,12 @@
 import os
 import re
-import typing
 import socket
+import typing
+
+import pymongo
+import strax
 from sshtunnel import SSHTunnelForwarder
 from tqdm import tqdm
-import pymongo
-
-import strax
 
 export, __all__ = strax.exporter()
 
@@ -107,7 +107,7 @@ class RunDB(strax.StorageFrontend):
         self.local_only = local_only
         self.new_data_path = new_data_path
         self.reader_ini_name_is_mode = reader_ini_name_is_mode
-        self.readonly=readonly
+        self.readonly = readonly
         if self.new_data_path is None:
             self.readonly = True
 

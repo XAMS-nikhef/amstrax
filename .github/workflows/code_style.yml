@@ -1,7 +1,7 @@
 name: Python style
 on:
   pull_request:
-    types: [opened]
+    types: [ opened ]
 jobs:
   qa:
     name: Quality check
@@ -14,7 +14,7 @@ jobs:
           python-version: 3.8
       - name: Change __all__ exports for pyflake
         run: |
-             bash .github/scripts/pre_pyflakes.sh
+          bash .github/scripts/pre_pyflakes.sh
       - name: Wemake Python Stylguide
         uses: wemake-services/wemake-python-styleguide@0.15.3
         continue-on-error: true

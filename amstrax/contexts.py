@@ -1,8 +1,10 @@
 import os
 from datetime import timezone
+
 import strax
-import amstrax as ax
 from immutabledict import immutabledict
+
+import amstrax as ax
 
 common_opts = dict(
     # register_all=[ax.pulse_processing,
