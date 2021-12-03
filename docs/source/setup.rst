@@ -49,5 +49,8 @@ Straxen warnings
 To make our live easier, we did not only include
 `strax <https://github.com/AxFoundation/strax>`_ into the requirements
 but also `straxen <https://github.com/XENONnT/straxen>`_. This might
-give a few annoying warnings
+give a few annoying warnings.
+
+If you want to get rid of the utilix warning (which is totally
+irrelevant for us, you can do ``touch ~/.xenon_config``).
 
