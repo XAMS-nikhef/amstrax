@@ -4,19 +4,36 @@ import strax
 import amstrax_files
 import shutil
 import os
+import datetime
 
 
 class TestXamsStack(unittest.TestCase):
+    """
+    Basic test for running amstrax
+
+    In this test, we use a few chunks of live data and see if we can
+    make data and everything works as expected.
+
+    """
+    run_doc_name = 'rundoc_999999.json'
+    live_data_path = './live_data/'
+
     @classmethod
     def setUpClass(cls) -> None:
         st = amstrax.contexts.xams(init_rundb=False)
         st.storage = [strax.DataDirectory('./amstrax_data')]
-        st.set_context_config(dict(forbid_creation_of=tuple()))
-        cls.run_id = '999999'
+        st.set_config({'live_data_dir': cls.live_data_path})
         cls.st = st
+        cls.run_id = '999999'
 
     def setUp(self) -> None:
-        self.set_config()
+        self.get_test_data()
+        self.rd = self.get_metadata()
+        st = amstrax.contexts.context_for_daq_reader(
+            self.st,
+            run_id=self.run_id,
+            run_doc=self.rd)
+        self.st = st
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -36,22 +53,25 @@ class TestXamsStack(unittest.TestCase):
             self.st.make(run_id, target)
             if plugin_class.save_when >= strax.SaveWhen.TARGET:
                 assert self.st.is_stored(run_id, target)
+        with self.assertRaises(ValueError):
+            # Now since we have the 'raw' data, we cannot be allowed to
+            # make it again!
+            amstrax.contexts.context_for_daq_reader(
+                self.st,
+                run_id=self.run_id,
+                run_doc=self.rd)
 
-    @staticmethod
-    def get_md():
-        return amstrax_files.get_file('rundoc_999999.json')
+    def get_metadata(self):
+        md = amstrax_files.get_file(self.run_doc_name)
+        # This is a flat dict but we need to have a datetime object,
+        # since this is only a test, let's just replace it with a
+        # placeholder
+        md['start'] = datetime.datetime.now()
+        return md
 
     def get_test_data(self):
         path = amstrax_files.get_abspath(f'{self.run_id}.tar')
         amstrax.common.open_test_data(path)
-
-    def set_config(self):
-        md = self.get_md()
-        self.st.set_config(
-            {'readout_threads': md['daq_config']['processing_threads'],
-             'daq_input_dir': './live_data/999999',
-             **amstrax.contexts.xams_little_common_config
-             })
 
 
 class TestXamsLittleStack(TestXamsStack):
@@ -60,6 +80,6 @@ class TestXamsLittleStack(TestXamsStack):
     def setUpClass(cls) -> None:
         st = amstrax.contexts.xams_little(init_rundb=False)
         st.storage = [strax.DataDirectory('./amstrax_data')]
-        st.set_context_config(dict(forbid_creation_of=tuple()))
-        cls.run_id = '999999'
+        st.set_config({'live_data_dir': cls.live_data_path})
         cls.st = st
+        cls.run_id = '999999'
