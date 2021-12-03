@@ -26,7 +26,7 @@ def submit_job(run_id, target, job_folder='./jobs', log_folder='./logs'):
                             log_folder,
                             f'p_{run_id}_{target}.log')
 
-    arguments = f'{run_id} --target {target}'
+    arguments = f' {run_id} --target {target}'
 
     script_file = open(script_name, 'w')
     script_file_content = script_template.format(
