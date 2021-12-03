@@ -14,10 +14,10 @@ common_opts = dict(
     store_run_fields=(
         'name', 'number',
         'start', 'end', 'livetime',
+        'processing_status',
         'tags'),
     check_available=('raw_records_v1730',
                      'raw_records_v1724',
-                     'records',
                      ),
     free_options=('live_data_dir',),
 )

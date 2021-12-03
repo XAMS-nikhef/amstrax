@@ -9,12 +9,16 @@ source activate /data/xenon/joranang/anaconda/envs/amstrax_2021
 cd /data/xenon/xamsl/processing_stage
 echo "starting script!"
 which python
-python {amstrax_dir}/auto_processing/process_run.py {arguments}
+python {amstrax_dir}/auto_processing/{script}.py {arguments}
 echo "Script complete, bye!"
 """
 
 
-def submit_job(run_id, target, job_folder='./jobs', log_folder='./logs'):
+def submit_job(run_id, target,
+               job_folder='./jobs', 
+               log_folder='./logs',
+               script = 'amstraxer'
+              ):
     for folder in (job_folder, log_folder):
         if not os.path.exists(folder):
             os.makedirs(folder)
@@ -33,12 +37,15 @@ def submit_job(run_id, target, job_folder='./jobs', log_folder='./logs'):
     script_file_content = script_template.format(
         arguments=arguments,
         amstrax_dir=amstrax_dir,
+        script=script,
     )
     script_file.write(script_file_content)
     script_file.close()
 
     # Submit the job
-    os.system(f'qsub {script_name} -e e{log_file} -o o{log_file}')
+    command = f'qsub {script_name} -e {log_file} -o {log_file}'
+    print(command)
+    os.system(command)
     print(f'Submitted job for run {run_id}:{target}')
 
 
