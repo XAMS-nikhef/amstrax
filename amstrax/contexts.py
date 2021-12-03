@@ -37,8 +37,8 @@ xams_common_config = dict(
     n_tpc_pmts=16,
     channel_map=immutabledict(
         # NB! Not the same as XAMSL
-        v1730=(8, 16),
         v1724=(0, 8),
+        v1730=(8, 16),
         aqmon=(40, 41),  # register strax deadtime
     ))
 
