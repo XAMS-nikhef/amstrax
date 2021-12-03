@@ -41,53 +41,11 @@ cache_dict = dict()
 def get_resource(x, fmt='text'):
     return straxen.get_resource(x, fmt=fmt)
 
+
 @export
 def get_elife(run_id):
     """Return electron lifetime for run_id in ns"""
     return 642e3
-
-
-@export
-def get_secret(x):
-    """Return secret key x. In order of priority, we search:
-
-      * Environment variable: uppercase version of x
-      * xenon_secrets.py (if included with your amstrax installation)
-      * A standard xenon_secrets.py located on the midway analysis hub
-        (if you are running on midway)
-    """
-    env_name = x.upper()
-    if env_name in os.environ:
-        return os.environ[env_name]
-
-    message = (f"Secret {x} requested, but there is no environment "
-               f"variable {env_name}, ")
-    try:
-        from . import xenon_secrets
-    except ImportError:
-        message += ("nor was there a valid xenon_secrets.py "
-                    "included with your amstrax installation, ")
-
-        # If on midway, try loading a standard secrets file instead
-        if 'rcc' in socket.getfqdn():
-            path_to_secrets = '/home/aalbers/xenon_secrets.py'
-            if os.path.exists(path_to_secrets):
-                sys.path.append(osp.dirname(path_to_secrets))
-                import xenon_secrets
-                sys.path.pop()
-            else:
-                raise ValueError(
-                    message + ' nor could we load the secrets module from '
-                              f'{path_to_secrets}, even though you seem '
-                              'to be on the midway analysis hub.')
-
-        else:
-            raise ValueError(
-                message + 'nor are you on the midway analysis hub.')
-
-    if hasattr(xenon_secrets, x):
-        return getattr(xenon_secrets, x)
-    raise ValueError(message + " and the secret is not in xenon_secrets.py")
 
 
 @export
