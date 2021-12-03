@@ -13,17 +13,17 @@ if __name__ == '__main__':
 
     # Now read configuration
     print(f'Update database')
-    run_doc = run_collection.find_one({"name": run_name})
-    run_collection.find_one_and_update({"name": run_name},
+    run_doc = run_collection.find_one({"number": int(run_name)})
+    run_collection.find_one_and_update({"number": int(run_name)},
                                        {"$set": {"processing_status": f"building_{target}"}})
     print(f'Start amstraxer')
     try:
         amstraxer.main(args)
     except Exception as e:
-        run_collection.find_one_and_update({"name": run_name},
+        run_collection.find_one_and_update({"number": int(run_name)},
                                            {"$set": {
                                                "processing_status": f"failed due to {str(e)}"}})
         raise e
 
-    run_collection.find_one_and_update({"name": run_name},
+    run_collection.find_one_and_update({"number": int(run_name)},
                                        {"$set": {"processing_status": "done"}})
