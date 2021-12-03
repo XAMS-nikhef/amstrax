@@ -44,6 +44,10 @@ class TestAmstraxerXAMSL(unittest.TestCase):
             print(f'rm {path}')
 
     def test_amstraxer(self):
+        """Run
+        ```python amstrax.py --some options```
+        This should make some raw-data that we will check is stored afterwards
+        """
         self.get_test_data()
         target = [p for p in self.st._plugin_class_registry.keys() if 'raw' in p][0]
         run_id = self.run_id
@@ -62,6 +66,10 @@ class TestAmstraxerXAMSL(unittest.TestCase):
         assert self.st.is_stored(run_id, target)
 
     def test_amstraxer_for_coveralls(self):
+        """
+        Same as `test_amstraxer` but now in such a way that coveralls
+        understands that we are using this code
+        """
         self.get_test_data()
         target = [p for p in self.st._plugin_class_registry.keys() if 'raw' in p][0]
         run_id = self.run_id
