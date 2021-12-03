@@ -1,3 +1,8 @@
+1.0.1 / 2021-12-02
+------------------
+- Flip the channel map for xams (#44)
+- Few tweaks when submitting to stoomboot (#45)
+
 1.0.0 / 2021-12-02
 ------------------
 Stable version after first [`amstrax` project](https://github.com/XAMS-nikhef/amstrax/projects/1)
