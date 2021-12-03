@@ -11,7 +11,6 @@ import shutil
 from collections import defaultdict
 
 import graphviz
-import numpy as np
 import pandas as pd
 
 import amstrax
@@ -74,7 +73,6 @@ because changing any of those options affect this data indirectly.
 titles = {'xams': 'XAMS - amstrax datastructure',
           'xams_little': 'XAMSL - amstrax datastructure',
           }
-
 
 kind_colors = dict(
     events='#ffffff',
@@ -199,5 +197,5 @@ try:
         build_data_structure_doc()
 except KeyError as e:
     print(e)
-    raise(e)
+    raise (e)
     pass
