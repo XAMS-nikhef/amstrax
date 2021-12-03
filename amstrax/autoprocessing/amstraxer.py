@@ -11,6 +11,7 @@ import os.path as osp
 import platform
 import psutil
 import sys
+import json
 
 
 def parse_args():
@@ -24,7 +25,7 @@ def parse_args():
         help="ID of the run to process; usually the run name.")
     parser.add_argument(
         '--context',
-        default='xamsl',
+        default='xams_little',
         help="Name of context to use")
     parser.add_argument(
         '--target',
@@ -37,10 +38,25 @@ def parse_args():
              'Saving will ONLY occur to ./strax_data! If you already have the target'
              'data in ./strax_data, you need to delete it there first.')
     parser.add_argument(
-        '--max_messages',
-        default=4, type=int,
-        help=("Size of strax's internal mailbox buffers. "
-              "Lower to reduce memory usage, at increasing risk of deadlocks."))
+        '--config_kwargs',
+        type=json.loads,
+        help='Use a json-dict to set the context to. For example:'
+             '--config_kwargs '
+             '\'{'
+             '"allow_multiprocess": true, '
+             '"max_messages":4, '
+             '"allow_shm": true, '
+             '"allow_lazy": true}\''
+    )
+    parser.add_argument(
+        '--testing_rundoc',
+        type=json.loads,
+        help='This is only used for testing, do not use!'
+    )
+    parser.add_argument(
+        '--context_kwargs',
+        type=json.loads,
+        help='Use a json-file to load the context with (see config_kwargs for JSON-example)')
     parser.add_argument(
         '--timeout',
         default=None, type=int,
@@ -50,18 +66,6 @@ def parse_args():
         default=1, type=int,
         help=("Number of worker threads/processes. "
               "Strax will multithread (1/plugin) even if you set this to 1."))
-    parser.add_argument(
-        '--notlazy',
-        action='store_true',
-        help='Forbid lazy single-core processing. Not recommended.')
-    parser.add_argument(
-        '--multiprocess',
-        action='store_true',
-        help="Allow multiprocessing.")
-    parser.add_argument(
-        '--shm',
-        action='store_true',
-        help="Allow passing data via /dev/shm when multiprocessing.")
     parser.add_argument(
         '--debug',
         action='store_true',
@@ -88,18 +92,30 @@ def main(args):
     import amstrax
     print(f"\tamstrax {amstrax.__version__} at {osp.dirname(amstrax.__file__)}")
 
-    st = getattr(amstrax.contexts, args.context)()
-    st.context_config['allow_multiprocess'] = args.multiprocess
-    st.context_config['allow_shm'] = args.shm
-    st.context_config['allow_lazy'] = not (args.notlazy is True)
+    if args.context_kwargs:
+        logging.info(f'set context kwargs {args.context_kwargs}')
+        st = getattr(amstrax.contexts, args.context)(**args.context_kwargs)
+    else:
+        st = getattr(amstrax.contexts, args.context)()
+
+    if args.config_kwargs:
+        logging.info(f'set context options to {args.config_kwargs}')
+        st.set_config(to_dict_tuple(args.config_kwargs))
+
     if args.timeout is not None:
         st.context_config['timeout'] = args.timeout
-    st.context_config['max_messages'] = args.max_messages
+
     if args.build_lowlevel:
         st.context_config['forbid_creation_of'] = tuple()
 
     if 'raw_records' in args.target:
-        st = amstrax.contexts.context_for_daq_reader(st, args.run_id)
+        # Only for testing!
+        testing_rd = args.testing_rundoc
+        if testing_rd is not None:
+            testing_rd['start'] = datetime.datetime.now()
+        st = amstrax.contexts.context_for_daq_reader(st,
+                                                     args.run_id,
+                                                     run_doc=testing_rd)
 
     if args.from_scratch:
         for q in st.storage:
@@ -111,8 +127,13 @@ def main(args):
     if st.is_stored(args.run_id, args.target):
         print("This data is already available.")
         return 1
-
-    md = st.run_metadata(args.run_id)
+    try:
+        md = st.run_metadata(args.run_id)
+    except strax.RunMetadataNotAvailable:
+        logging.warning('Using dummy timestamps')
+        md = {}
+        md['end']=datetime.datetime.now()
+        md['start']=md['end']-datetime.timedelta(seconds=360)
     t_start = md['start'].replace(tzinfo=datetime.timezone.utc).timestamp()
     t_end = md['end'].replace(tzinfo=datetime.timezone.utc).timestamp()
     run_duration = t_end - t_start
@@ -161,6 +182,16 @@ def main(args):
     print(f"\nAmstraxer is done! "
           f"We took {time.time() - clock_start:.1f} seconds, "
           f"peak RAM usage was around {peak_ram:.1f} MB.")
+
+
+def to_dict_tuple(res: dict):
+    """Convert list configs to tuple configs"""
+    res = res.copy()
+    for k, v in res.copy().items():
+        if type(v) == list:
+            # Remove lists to tuples
+            res[k] = tuple(_v if type(_v) != list else tuple(_v) for _v in v)
+    return res
 
 
 if __name__ == '__main__':

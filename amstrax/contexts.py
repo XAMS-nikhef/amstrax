@@ -66,7 +66,7 @@ def xams_little(*args, **kwargs):
 
 
 def _xams_xamsl_context(
-        output_folder='./strax_data',
+        output_folder='./amstrax_data',
         raw_data_folder='/data/xenon/{detector}/raw/',
         processed_data_folder='/data/xenon/{detector}/processed/',
         _detector='xams',
