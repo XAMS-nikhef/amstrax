@@ -12,3 +12,4 @@ from . import plugins
 from .plugins import *
 
 from .contexts import *
+from . import auto_processing

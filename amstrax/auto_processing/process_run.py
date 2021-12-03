@@ -1,9 +1,10 @@
-import amstrax
-import amstraxer
+from amstrax.auto_processing import amstraxer
 
 if __name__ == '__main__':
     args = amstraxer.parse_args()
 
+    # Do import later to get fast --help
+    import amstrax
     run_collection = amstrax.get_mongo_collection()
     run_name = args.run_id
     target = args.target
