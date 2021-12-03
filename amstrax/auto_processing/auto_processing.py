@@ -25,7 +25,7 @@ def parse_args():
 
 if __name__ == '__main__':
     args = parse_args()
-    version = '2.0.0'
+    version = '2.1.0'
     print('Starting autoprocess version %s...' % version)
 
     # Later import to prevent slow --help
@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
     # settings
     nap_time = int(args.timeout)
-    max_jobs = int(args.max_jobs)
+    max_jobs = int(args.max_jobs) if args.max_jobs is not None else None
     runs_col = amstrax.get_mongo_collection()
 
     while 1:
