@@ -5,6 +5,7 @@ if __name__ == '__main__':
 
     # Do import later to get fast --help
     import amstrax
+
     run_collection = amstrax.get_mongo_collection()
     run_name = args.run_id
     target = args.target
