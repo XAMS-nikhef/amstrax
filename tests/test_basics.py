@@ -76,6 +76,7 @@ class TestXamsStack(unittest.TestCase):
 
 class TestXamsLittleStack(TestXamsStack):
     """Repeat the same trick for the XAMSL context"""
+
     @classmethod
     def setUpClass(cls) -> None:
         st = amstrax.contexts.xams_little(init_rundb=False)

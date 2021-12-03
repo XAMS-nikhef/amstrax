@@ -41,6 +41,7 @@ cache_dict = dict()
 def get_resource(x, fmt='text'):
     return straxen.get_resource(x, fmt=fmt)
 
+
 @export
 def get_elife(run_id):
     """Return electron lifetime for run_id in ns"""

@@ -50,7 +50,7 @@ class TestAmstraxerXAMSL(unittest.TestCase):
         arguments += f' --context {self.test_for_context}'
         arguments += f' --context_kwargs \'{json.dumps(dict(init_rundb=False))}\''
         arguments += f' --testing_rundoc \'{json.dumps(self.get_metadata())}\''
-        arguments += f' --config_kwargs \'{json.dumps(dict(live_data_dir = self.live_data_path))}\''
+        arguments += f' --config_kwargs \'{json.dumps(dict(live_data_dir=self.live_data_path))}\''
         command = f'{amstraxer_command} {arguments}'
         print(command)
         return_code = os.system(command)

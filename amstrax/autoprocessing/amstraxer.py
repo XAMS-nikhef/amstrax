@@ -132,8 +132,8 @@ def main(args):
     except strax.RunMetadataNotAvailable:
         logging.warning('Using dummy timestamps')
         md = {}
-        md['end']=datetime.datetime.now()
-        md['start']=md['end']-datetime.timedelta(seconds=360)
+        md['end'] = datetime.datetime.now()
+        md['start'] = md['end'] - datetime.timedelta(seconds=360)
     t_start = md['start'].replace(tzinfo=datetime.timezone.utc).timestamp()
     t_end = md['end'].replace(tzinfo=datetime.timezone.utc).timestamp()
     run_duration = t_end - t_start

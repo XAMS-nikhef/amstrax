@@ -172,8 +172,8 @@ def amstrax_run10_analysis(output_folder='./strax_data'):
 
 def context_for_daq_reader(st: strax.Context,
                            run_id: str,
-                           runs_col_kwargs: dict=None,
-                           run_doc: dict=None,
+                           runs_col_kwargs: dict = None,
+                           run_doc: dict = None,
                            check_exists=True,
                            ):
     """
@@ -225,7 +225,7 @@ def context_for_daq_reader(st: strax.Context,
     return st
 
 
-def _check_raw_records_exists(st: strax.Context, run_id: str)->bool:
+def _check_raw_records_exists(st: strax.Context, run_id: str) -> bool:
     for plugin_name in st._plugin_class_registry.keys():
         if 'raw' in plugin_name:
             if st.is_stored(run_id, plugin_name):
