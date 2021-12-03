@@ -44,3 +44,10 @@ on the DAQ machine (just add the output of ``cat .ssh/id_rsa.pub`` on
 stoomboot to the ``.ssh/authorized_keys`` on the DAQ machine). If you don't
 have an ssh key under ``.ssh/id_rsa.pub`` on stoomboot, google how to make one.
 
+Straxen warnings
+----------------
+To make our live easier, we did not only include
+`strax <https://github.com/AxFoundation/strax>`_ into the requirements
+but also `straxen <https://github.com/XENONnT/straxen>`_. This might
+give a few annoying warnings
+

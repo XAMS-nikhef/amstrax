@@ -44,7 +44,7 @@ if __name__ == '__main__':
 
         for run_doc in run_docs_to_do:
             run_name = run_doc['name']
-            submit_stbc.submit(run_name, target='raw_records')
+            submit_stbc.submit(run_name, target='raw_records_aqmon')
             runs.find_one_and_update({'name': run_name},
                                      {'$set': {'processing_status': 'submitted_job'
                                                }})

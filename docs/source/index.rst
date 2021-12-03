@@ -12,7 +12,7 @@ Content
 
 
 .. toctree::
-    :maxdepth: 1
+    :maxdepth: 3
     :caption: Setup and basics
 
     setup
@@ -28,7 +28,7 @@ Content
 
 
 .. toctree::
-    :maxdepth: 1
+    :maxdepth: 2
     :caption: Reference
 
     reference/amstrax
