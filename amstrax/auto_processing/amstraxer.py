@@ -4,14 +4,15 @@ Process a single run with amstrax
 """
 import argparse
 import datetime
+import json
 import logging
-import time
 import os
 import os.path as osp
 import platform
-import psutil
 import sys
-import json
+import time
+
+import psutil
 
 
 def parse_args():
@@ -157,7 +158,7 @@ def main(args):
         mem_mb = process.memory_info().rss / 1e6
         peak_ram = max(mem_mb, peak_ram)
 
-        if not len(d):
+        if len(d) == 0:
             print(f"Got chunk {i}, but it is empty! Using {mem_mb:.1f} MB RAM.")
             continue
 

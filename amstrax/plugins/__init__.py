@@ -1,20 +1,14 @@
 from . import daqreader
-from .daqreader import *
-
-from . import peak_processing
-from .peak_processing import *
-
-from . import pulse_processing
-from .pulse_processing import *
-
-from . import pulse_processing_alt_baseline
-from .pulse_processing_alt_baseline import *
-
-from . import peak_processing
-from .peak_processing import *
-
 from . import event_processing
-from .event_processing import *
-
 from . import pax_interface
+from . import peak_processing
+from . import peak_processing
+from . import pulse_processing
+from . import pulse_processing_alt_baseline
+from .daqreader import *
+from .event_processing import *
 from .pax_interface import *
+from .peak_processing import *
+from .peak_processing import *
+from .pulse_processing import *
+from .pulse_processing_alt_baseline import *

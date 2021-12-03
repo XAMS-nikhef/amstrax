@@ -1,12 +1,12 @@
 import os
 import re
-import typing
 import socket
+import typing
+
+import pymongo
+import strax
 from sshtunnel import SSHTunnelForwarder
 from tqdm import tqdm
-import pymongo
-
-import strax
 
 export, __all__ = strax.exporter()
 
@@ -84,7 +84,9 @@ class RunDB(strax.StorageFrontend):
                  local_only=True,
                  new_data_path=None,
                  reader_ini_name_is_mode=False,
-                 *args, **kwargs):
+                 readonly=True,
+                 *args,
+                 **kwargs):
         """
         :param mongo_url: URL to Mongo runs database (including auth)
         :param local_only: Do not show data as available if it would have to be
@@ -105,6 +107,7 @@ class RunDB(strax.StorageFrontend):
         self.local_only = local_only
         self.new_data_path = new_data_path
         self.reader_ini_name_is_mode = reader_ini_name_is_mode
+        self.readonly = readonly
         if self.new_data_path is None:
             self.readonly = True
 
@@ -226,8 +229,11 @@ class RunDB(strax.StorageFrontend):
             results_dict.get(k.run_id, False)
             for k in keys]
 
-    def _list_available(self, key: strax.DataKey,
-                        allow_incomplete, fuzzy_for, fuzzy_for_options):
+    def _list_available(self,
+                        key: strax.DataKey,
+                        allow_incomplete,
+                        fuzzy_for,
+                        fuzzy_for_options):
         if fuzzy_for or fuzzy_for_options:
             raise NotImplementedError("Can't do fuzzy with RunDB yet.")
 

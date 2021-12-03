@@ -1,11 +1,12 @@
 """Convert pax .zip files to flat records format
 """
-import numpy as np
-import os
 import glob
+import os
+
 import numba
-from straxen.plugins.pax_interface import records_needed
+import numpy as np
 import strax
+from straxen.plugins.pax_interface import records_needed
 
 export, __all__ = strax.exporter()
 

@@ -1,10 +1,12 @@
-import amstrax
-import unittest
-import strax
-import amstrax_files
-import shutil
-import os
 import datetime
+import os
+import shutil
+import unittest
+
+import strax
+
+import amstrax
+import amstrax_files
 
 
 class TestXamsStack(unittest.TestCase):

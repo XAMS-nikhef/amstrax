@@ -1,5 +1,5 @@
-import time
 import argparse
+import time
 
 
 def parse_args():

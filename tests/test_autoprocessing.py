@@ -1,10 +1,12 @@
-import amstrax
-import unittest
-import strax
-import amstrax_files
-import shutil
-import os
 import json
+import os
+import shutil
+import unittest
+
+import strax
+
+import amstrax
+import amstrax_files
 
 
 class TestAmstraxerXAMSL(unittest.TestCase):
@@ -45,7 +47,6 @@ class TestAmstraxerXAMSL(unittest.TestCase):
         """Run
         ```python amstrax.py --some options```
         This should make some raw-data that we will check is stored afterwards
-
         """
         self.get_test_data()
         target = [p for p in self.st._plugin_class_registry.keys() if 'raw' in p][0]

@@ -1,5 +1,5 @@
-import strax
 import numpy as np
+import strax
 from amstrax.SiPMdata import *
 
 export, __all__ = strax.exporter()
@@ -61,9 +61,6 @@ class Events(strax.OverlapWindowPlugin):
         self.events_seen += len(result)
 
         return result
-        # TODO: someday investigate if/why loopplugin doesn't give
-        # anything if events do not contain peaks..
-        # Likely this has been resolved in 6a2cc6c
 
 
 @export

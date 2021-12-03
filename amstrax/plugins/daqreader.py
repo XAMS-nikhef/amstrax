@@ -1,9 +1,10 @@
 import glob
 import warnings
-from immutabledict import immutabledict
+
 import numpy as np
 import strax
 import straxen
+from immutabledict import immutabledict
 from straxen.plugins.daqreader import split_channel_ranges
 
 export, __all__ = strax.exporter()
@@ -103,7 +104,6 @@ class DAQReader(straxen.DAQReader):
                     # We still have to break somewhere, but this can involve
                     # throwing away data.
                     # Let's do it at the end of the chunk
-                    # TODO: find a better time, e.g. a longish-but-not-quite
                     # satisfactory gap
                     break_time = end - min_gap
 
