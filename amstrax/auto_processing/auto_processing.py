@@ -1,7 +1,4 @@
-import os
 import time
-import amstrax
-import submit_to_stoomboot
 import argparse
 
 
@@ -26,6 +23,10 @@ if __name__ == '__main__':
     version = '2.0.0'
     print('Starting autoprocess version %s...' % version)
 
+    # Later import to prevent slow --help
+    import amstrax
+    from amstrax.auto_processing import submit_stbc
+
     # settings
     nap_time = int(args.timeout)
 
@@ -43,7 +44,7 @@ if __name__ == '__main__':
 
         for run_doc in run_docs_to_do:
             run_name = run_doc['name']
-            submit_to_stoomboot.submit(run_name, target='raw_records')
+            submit_stbc.submit(run_name, target='raw_records')
             runs.find_one_and_update({'name': run_name},
                                      {'$set': {'processing_status': 'submitted_job'
                                                }})
