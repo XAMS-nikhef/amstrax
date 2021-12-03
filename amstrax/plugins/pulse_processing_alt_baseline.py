@@ -337,7 +337,7 @@ def baseline_std(records, baseline_samples=40):
     Assumes record_i information is accurate (so don't cut pulses before
     baselining them!)
     """
-    if len(records)==0:
+    if len(records) == 0:
         return records
 
     # Array for looking up last baseline seen in channel
@@ -366,7 +366,7 @@ def find_hits(records, threshold=70, _result_buffer=None):
     NB: returned hits are NOT sorted yet!
     """
     buffer = _result_buffer
-    if len(records)==0:
+    if len(records) == 0:
         return
     samples_per_record = len(records[0]['data'])
     offset = 0
@@ -445,7 +445,7 @@ def rough_sum(regions, records, to_pe, n, dt):
      - all regions have the same length and dt
     and probably not carying too much about boundaries
     """
-    if len(regions) == 0 or len(records)==0:
+    if len(regions) == 0 or len(records) == 0:
         return
 
     # dt and n are passed explicitly to avoid overflows/wraparounds
