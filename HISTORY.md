@@ -1,7 +1,14 @@
+1.0.2 / 2021-12-07
+------------------
+ - Bugfix XAMS context (#46)
+
+
 1.0.1 / 2021-12-02
 ------------------
+**BUG** for xams context, please use v1.0.2
 - Flip the channel map for xams (#44)
 - Few tweaks when submitting to stoomboot (#45)
+
 
 1.0.0 / 2021-12-02
 ------------------
