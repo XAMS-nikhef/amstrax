@@ -50,7 +50,7 @@ def xams(*args, **kwargs):
                         runid_field='number',
                         mongo_dbname='run',
                         )
-    st = _xams_xamsl_context(*args, **kwargs, _detector='xamsl', mongo_kwargs=mongo_kwargs)
+    st = _xams_xamsl_context(*args, **kwargs, _detector='xams', mongo_kwargs=mongo_kwargs)
     st.set_config(xams_common_config)
     return st
 
