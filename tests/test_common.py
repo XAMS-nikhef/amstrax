@@ -1,4 +1,4 @@
-from amstrax
+import amstrax
 
 
 def test_print_versions():
