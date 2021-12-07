@@ -51,3 +51,10 @@ def select_channels(arr, channel_list):
     """
     sel = np.sum([arr['channel'] == channel for channel in channel_list], axis=0) > 0
     return arr[sel]
+
+
+@export
+def print_versions(*args, **kwargs):
+    """Use straxen print_versions (see help(straxen.print_versions))"""
+    kwargs.setdefault('modules', ('amstrax', 'strax', 'straxen'))
+    return straxen.print_versions(*args, **kwargs)
