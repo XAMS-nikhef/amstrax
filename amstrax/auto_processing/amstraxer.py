@@ -30,7 +30,7 @@ def parse_args():
         help="Name of context to use")
     parser.add_argument(
         '--target',
-        default='raw_records',
+        default='raw_records_v1724',
         help='Target final data type to produce')
     parser.add_argument(
         '--from_scratch',
