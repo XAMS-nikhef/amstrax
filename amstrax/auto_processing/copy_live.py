@@ -7,10 +7,16 @@ import argparse
 def main():
     parser = argparse.ArgumentParser(
         description='Script that automatically copies new runs to stoomboot')
-    parser.add_argument('--detector', type=str, help='The detector that you are using',
-                        default='xams')
-    parser.add_argument('--max_runs', type=int, help='How many runs you want to copy every time',
-                        default=1)
+    parser.add_argument(
+        '--detector',
+        type=str,
+        help='The detector that you are using',
+        default='xams')
+    parser.add_argument(
+        '--max_runs',
+        type=int,
+        help='How many runs you want to copy every time',
+        default=1)
     args = parser.parse_args()
     detector = args.detector
     max_runs = args.max_runs
