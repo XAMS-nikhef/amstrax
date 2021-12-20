@@ -103,14 +103,14 @@ def main():
                         )
                         for doc in data_fields:
                             if doc['location'] == f'{dest_loc}':  
-                                log.info('I updated the RunsDB with the new location for this run %s!' %{str(run)})
+                                log.info('I updated the RunsDB with the new location for this run %s!' %str(run))
 
                         shutil.move(f'{location}/{run:06d}', f'{final_destination}')  # After testing, let's change this to shutil.rmtree(location)
                         if os.path.exists(f'{final_destination}/{run:06d}'):
                             log.info(f'I moved the data on the DAQ machine to its final destination before it gets removed')
 
                     else:
-                        log.error(f'Copying did not succeed. Probably run {run:06d} is already copied.')
+                        log.error('Copying did not succeed. Probably run %s is already copied.' %(str(run)))
 
     return
 
