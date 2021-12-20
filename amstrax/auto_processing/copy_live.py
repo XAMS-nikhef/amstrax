@@ -43,6 +43,8 @@ def main():
                                                     
         for doc in data_fields:
             if doc['type'] == 'live':  
+               if doc['host']=='stoomboot':
+                   print(f'Skip {run} it is already transferred according to the rundoc!!')
                location = doc['location']
         if run is None or location is None: 
              print(f'For {run:06d} we got no data? Rundoc: {rd}')
