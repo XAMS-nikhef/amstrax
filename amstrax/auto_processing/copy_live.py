@@ -20,9 +20,16 @@ def main():
     args = parser.parse_args()
     detector = args.detector
     max_runs = args.max_runs
+    
+    if detector == 'xams':
+        runsdb = amstrax.get_mongo_collection(database_name='run',
+                                              database_col='runs_gas') # or the new collection I still want to make (e.g runs_xams?)
+    if detector == 'xamsl':
+        runsdb = amstrax.get_mongo_collection(database_name='run',
+                                              database_col='runs_new')
+    else: 
+        raise TypeError(f'Your detector {detector} does not exist. Use xams or xamsl.') # TODO: find a way to show this error in the webinterface
 
-    runsdb = amstrax.get_mongo_collection()
-    max_runs = 1
     dest_loc = f'/data/xenon/{detector}/live_data'
 
     # Take last 'max_runs' runs and sort them
