@@ -8,7 +8,7 @@ def parse_args():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         '--target',
-        default='raw_records',
+        default='raw_records_v1724',
         help="Name of context to use")
     parser.add_argument(
         '--timeout',
