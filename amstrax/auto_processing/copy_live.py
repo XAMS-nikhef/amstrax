@@ -28,7 +28,7 @@ def main():
         runsdb = amstrax.get_mongo_collection(database_name='run',
                                               database_col='runs_new')
     else: 
-        raise TypeError(f'Your detector {detector} does not exist. Use xams or xamsl.') # TODO: find a way to show this error in the webinterface
+        raise TypeError(f'Your detector {detector} does not exist. Use xams or xamsl.')
 
     dest_loc = f'/data/xenon/{detector}/live_data'
 
@@ -43,9 +43,9 @@ def main():
                                                     
         for doc in data_fields:
             if doc['type'] == 'live':  
-               if doc['host']=='stoomboot':
-                   print(f'Skip {run} it is already transferred according to the rundoc!!')
-               location = doc['location']
+               if doc['host']=='stoomboot' and doc['location'] is not None:
+                    print(f'Skip {run:06d} it is already transferred according to the rundoc!')
+               else: location = doc['location']
         if run is None or location is None: 
              print(f'For {run:06d} we got no data? Rundoc: {rd}')
 
