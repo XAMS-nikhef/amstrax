@@ -33,7 +33,7 @@ def main():
     dest_loc = f'/data/xenon/{detector}/live_data'
 
     query = {}  # TODO for now, but we should query on the data field in the future
-    rundocs = list(runsdb.find(query, projection = {'number:1, data:1, _id:1} ))
+    rundocs = list(runsdb.find(query, projection = {'number':1, 'data':1, '_id':1}).sort('number', pymongo.DESCENDING)[:max_runs])
                                                     
     for rd in rundocs:
         run = rd.get('number')
@@ -66,11 +66,10 @@ def main():
                  }
             )
 
-                print(
-                    f'I succesfully copied run {run:06d} from {location} to {dest_loc} and updated the RunsDB!')
+            print(f'I succesfully copied run {run:06d} from {location} to {dest_loc} and updated the RunsDB!')
 
-            else:
-                print(f'Copying did not succeed. Probably run {run:06d} is already copied.')
+        else:
+            print(f'Copying did not succeed. Probably run {run:06d} is already copied.')
 
     return
 
