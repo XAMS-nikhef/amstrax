@@ -24,7 +24,7 @@ def main():
     if detector == 'xams':
         runsdb = amstrax.get_mongo_collection(database_name='run',
                                               database_col='runs_gas') # or the new collection I still want to make (e.g runs_xams?)
-    if detector == 'xamsl':
+    elif detector == 'xamsl':
         runsdb = amstrax.get_mongo_collection(database_name='run',
                                               database_col='runs_new')
     else: 
@@ -32,56 +32,45 @@ def main():
 
     dest_loc = f'/data/xenon/{detector}/live_data'
 
-    # Take last 'max_runs' runs and sort them
-    runs = list(run_id.get('number', 'no_number')
-                for run_id in
-                runsdb.find({},
-                            projection={'number': 1, '_id': 0}
-                            ).sort('number', pymongo.DESCENDING)[:max_runs])
+    query = {}  # TODO for now, but we should query on the data field in the future
+    rundocs = list(runsdb.find(query, projection = {'number:1, data:1, _id:1} ))
+                                                    
+    for rd in rundocs:
+        run = rd.get('number')
+        data_fields = rd.get('data')
+        ids = rd.get('_id')
+        location = None
+                                                    
+        for doc in data_fields:
+            if doc['type'] == 'live':  
+               location = doc['location']
+        if run is None or location is None: 
+             print(f'For {run:06d} we got no data? Rundoc: {rd}')
 
-    rundata = list(run_id.get('data', 'no_data')
-                   for run_id in
-                   runsdb.find({},
-                               projection={'data': 1, '_id': 0}
-                               ).sort('number', pymongo.DESCENDING)[:max_runs])
+        copy = f'rsync -a {location}/{run:06d} -e ssh stbc:{dest_loc}'
+        copy_execute = subprocess.call(copy, shell=True)
 
-    live_location = []
-
-    for i, j in enumerate(rundata):
-        if rundata[i][0]['type'] == 'live':
-            live_location.append(rundata[i][0]['location'])
-
-    for (run, location) in zip(runs, live_location):
-        try:
-            copy = f'rsync -a {location}/00{run} -e ssh stbc:{dest_loc}'
-            copy_execute = subprocess.call(copy, shell=True)
-
-            rundoc = runsdb.find_one({'number': int(run)})
-
-            if copy_execute == 0:
-                # In stead of changing the old location, maybe better to add new location?
-                runsdb.update_one(
-                    {'number': int(run),
-                     'data': {
-                         '$elemMatch': {
-                             'location': f'{location}'
-                         }}
-                     },
-                    {'$set':
-                         {'data.$.host': 'stoomboot',
-                          'data.$.location': f'{dest_loc}'
-                          }
-                     }
-                )
+        if copy_execute == 0:
+            # In stead of changing the old location, maybe better to add new location?
+            runsdb.update_one(
+                {'_id': ids,
+                 'data': {
+                     '$elemMatch': {
+                         'location': f'{location}'
+                     }}
+                 },
+                {'$set':
+                     {'data.$.host': 'stoomboot',
+                      'data.$.location': f'{dest_loc}'
+                      }
+                 }
+            )
 
                 print(
-                    f'I succesfully copied run {run} from {location} to {dest_loc} and updated the RunsDB!')
+                    f'I succesfully copied run {run:06d} from {location} to {dest_loc} and updated the RunsDB!')
 
             else:
-                print(f'Copying did not succeed. Probably the run is already copied.')
-
-        except:
-            print(f"Run {run} is probably already copied. Just continue.")
+                print(f'Copying did not succeed. Probably run {run:06d} is already copied.')
 
     return
 
