@@ -139,7 +139,8 @@ def exec_commands_and_cleanup(runsdb: pymongo.collection.Collection,
                  },
                 {'$set':
                      {'data.$.host': 'stoomboot',
-                      'data.$.location': target_location
+                      'data.$.location': target_location,
+                      'processing_status': 'pending'
                       }
                  }
 
