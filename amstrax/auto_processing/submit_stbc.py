@@ -15,9 +15,10 @@ echo "Script complete, bye!"
 
 
 def submit_job(run_id, target,
+               script = 'amstraxer',
                job_folder='./jobs', 
-               log_folder='./logs',
-               script = 'amstraxer'
+               log_folder='./logs'
+               
               ):
     for folder in (job_folder, log_folder):
         if not os.path.exists(folder):
