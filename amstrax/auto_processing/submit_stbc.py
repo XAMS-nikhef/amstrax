@@ -14,10 +14,11 @@ echo "Script complete, bye!"
 """
 
 
-def submit_job(run_id, target,
-               script = 'amstraxer',
+def submit_job(run_id, 
+               target,
                job_folder='./jobs', 
-               log_folder='./logs'
+               log_folder='./logs',
+               script = 'amstraxer'
                
               ):
     for folder in (job_folder, log_folder):
