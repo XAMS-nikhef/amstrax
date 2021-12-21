@@ -6,10 +6,10 @@ import argparse
 import configparser
 import shutil
 import logging
+import time
 from datetime import datetime
 
-
-def main():
+def parse_args():
     parser = argparse.ArgumentParser(
         description='Script that automatically copies new runs to stoomboot')
     parser.add_argument(
@@ -22,23 +22,41 @@ def main():
         type=int,
         help='How many runs you want to copy every time',
         default=1)
+    parser.add_argument(
+        '--sleep_time',
+        type=int,
+        help='After how many seconds you want the script to check the database again',
+        default=60)
+    parser.add_argument(
+        '--loop_infinite',
+        type=bool,
+        help='If True, the file checks every sleep_time seconds for new runs in the runs database',
+        default=True)
     parser.add_argument('--config', 
         type=str, help='Path to your configuration file', 
         default='/home/xams/daq/webinterface/web/config.ini')
-    args = parser.parse_args()
 
-    # If we use a config file, it becomes super easy to set the database collections! <3 _ <3 (shall we then remove the if statements?)
+    return parser.parse_args()
+
+def parse_config(args):
     config = configparser.ConfigParser()
     config.read(args.config)
-    config = config['DEFAULT']
 
-    detector = args.detector
-    max_runs = args.max_runs
-    logs_path = config['logs_path']
-    final_destination = config['final_destination']
+    return config['DEFAULT']
 
+def log(msg,level):
+    """
+    Function that returns log file with desired entry
+    :param msg: (str) message to display in the logfile
+    :param level: (level to display in the log file; can be critical, error, warning, info, debug (str) or 50, 40, 30, 20, 10 (int) respectively
+    :return: file with log(msg,level) entry
+    """
     today = datetime.today()
     fileName = f"{today.year:04d}{today.month:02d}{today.day:02d}_copying"
+    
+    args = parse_args()
+    config = parse_config(args)
+    logs_path = config['logs_path']
 
     logFormatter = logging.Formatter(f"{today.isoformat(sep=' ')} | %(levelname)-5.5s | %(message)s")
     log = logging.getLogger()
@@ -46,25 +64,44 @@ def main():
     fileHandler = logging.FileHandler("{0}/{1}.log".format(logs_path, fileName))
     fileHandler.setFormatter(logFormatter)
     log.addHandler(fileHandler)
-    log.setLevel(logging.ERROR)
-    log.setLevel(logging.INFO)
 
     consoleHandler = logging.StreamHandler()
     consoleHandler.setFormatter(logFormatter)
     log.addHandler(consoleHandler)
+
+    if level == 'info' or level == 20:
+        log.setLevel(logging.INFO)
+        return log.info(msg)
+    elif level == 'warning' or level == 30:
+        log.setLevel(logging.WARNING)
+        return log.warning(msg)
+    elif level == 'error' or level == 40:
+        log.setLevel(logging.ERROR)
+        return log.error(msg)
+    else:
+        log.setLevel(logging.NOTSET)
+        return log(msg)
+
+def main():
+    args = parse_args()
+    config = parse_config(args)
+
+    detector = args.detector
+
+    log('I am ready to start copying data for %s!' %detector,'info')
     
-    if detector == 'xams':
-        runsdb = amstrax.get_mongo_collection(database_name='run',
-                                              database_col='runs_gas') # or the new collection I still want to make (e.g runs_xams?)
-    elif detector == 'xamsl':
-        runsdb = amstrax.get_mongo_collection(database_name='run',
-                                              database_col='runs_new')
-    else: 
-        log.error(f'Your detector {detector} does not exist. Use xams or xamsl.')
-        raise TypeError(f'Your detector {detector} does not exist. Use xams or xamsl.')
+    max_runs = args.max_runs
+    final_destination = config['final_destination']
+    dest_loc = config['dest_location']
+    
+    # Initialize runsdatabase collection
+    runs_database = config['RunsDatabaseName']
+    runs_collection = config['RunsDatabaseCollection']
+    runsdb = amstrax.get_mongo_collection(database_name = runs_database,
+                                            database_col= runs_collection)
 
-    dest_loc = f'/data/xenon/{detector}/live_data'
-
+    # Make a list of the last 'max_runs' items in the runs database, 
+    # only keeping the fields 'number', 'data' and '_id'.
     query = {}  # TODO for now, but we should query on the data field in the future
     rundocs = list(runsdb.find(query, projection = {'number':1, 'data':1, '_id':1}).sort('number', pymongo.DESCENDING)[:max_runs])
                                                     
@@ -73,20 +110,24 @@ def main():
         data_fields = rd.get('data')
         ids = rd.get('_id')
         location = None
-                                                    
+
+        # Check if in the 'data' field of the document if a location is stored                                            
         for doc in data_fields:
             location = doc['location']
             if run is None or location is None: 
-                log.error('For %s we got no data? Rundoc: %s' %(str(run),str(rd)))
+                log('For %s we got no data? Rundoc: %s' %(str(run),str(rd)),'error')
             if doc['type'] == 'live':  
+               # Check if the data is already stored on stoomboot 
                if doc['host']=='stoomboot' and location is not None:
-                    log.info('Run %s is already transferred according to the rundoc!' %str(run))
+                    log('Run %s is already transferred according to the rundoc! I check later for new runs.' %str(run),'info')
                else: 
+                    # If the data is not yet on stoomboot, copy it to there
                     copy = f'rsync -a {location}/{run:06d} -e ssh stbc:{dest_loc}'
                     copy_execute = subprocess.call(copy, shell=True)
 
+                    # If copying was succesful, update the runsdatabase with the new location of the data
                     if copy_execute == 0:
-                        log.info('I succesfully copied run %s from %s to %s' %(str(run),str(location),str(dest_loc)))
+                        log('I succesfully copied run %s from %s to %s' %(str(run),str(location),str(dest_loc)),'info')
                         # In stead of changing the old location, maybe better to add new location?
                         runsdb.update_one(
                             {'_id': ids,
@@ -103,17 +144,26 @@ def main():
                         )
                         for doc in data_fields:
                             if doc['location'] == f'{dest_loc}':  
-                                log.info('I updated the RunsDB with the new location for this run %s!' %str(run))
+                                log('I updated the RunsDB with the new location for this run %s!' %str(run),'info')
 
+                        # After updating the runsdatabase and checking if the data is indeed on stoomboot,
+                        # move the data on the DAQ machine to a folder from which it can be removed (later)
                         shutil.move(f'{location}/{run:06d}', f'{final_destination}')  # After testing, let's change this to shutil.rmtree(location)
                         if os.path.exists(f'{final_destination}/{run:06d}'):
-                            log.info(f'I moved the data on the DAQ machine to its final destination before it gets removed')
+                            log(f'I moved the data on the DAQ machine to its final destination before it gets removed','info')
 
                     else:
-                        log.error('Copying did not succeed. Probably run %s is already copied.' %(str(run)))
+                        log('Copying did not succeed. Probably run %s is already copied.' %(str(run)),'error')
 
     return
 
 
 if __name__ == '__main__':
-    main()
+    args = parse_args()
+    if not args.loop_infinite:
+        main()
+    else:
+        while True:
+            print("I woke up! Let me check for new runs")
+            main()
+            time.sleep(args.sleep_time)
