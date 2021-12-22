@@ -123,6 +123,7 @@ def exec_commands_and_cleanup(runsdb: pymongo.collection.Collection,
 
         cmd = f'rsync -a {location}/{run:06d} -e ssh stbc:{target_location}'
         logs.warning(f'Do {cmd} for {run}')
+        # disable bandit
         copy_execute = subprocess.call(cmd, shell=True)
 
         # If copying was successful, update the runsdatabase
@@ -180,6 +181,7 @@ def main(args):
 
     # Make a list of the last 'max_runs' items in the runs database, 
     # only keeping the fields 'number', 'data' and '_id'.
+    # pylint: disable=fixme
     query = {}  # TODO for now, but we should query on the data field in the future
     rundocs = list(runsdb.find(query,
                                projection={'number': 1, 'data': 1, '_id': 1}
