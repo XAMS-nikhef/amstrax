@@ -14,19 +14,11 @@ echo "Script complete, bye!"
 """
 
 
-<<<<<<< HEAD
 def submit_job(run_id, 
                target,
                job_folder='./jobs', 
                log_folder='./logs',
                script = 'amstraxer'
-               
-=======
-def submit_job(run_id, target,
-               job_folder='./jobs', 
-               log_folder='./logs',
-               script = 'amstraxer'
->>>>>>> parent of aeafdc5... Changed autoprocessing to one with config file
               ):
     for folder in (job_folder, log_folder):
         if not os.path.exists(folder):
