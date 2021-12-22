@@ -10,7 +10,8 @@ common_opts = dict(
     # register_all=[ax.pulse_processing,
     #               ax.peak_processing,
     #               ax.event_processing],
-    register=[ax.DAQReader],
+    register=[ax.DAQReader,
+             ax.pulse_processing],
     store_run_fields=(
         'name', 'number',
         'start', 'end', 'livetime',
