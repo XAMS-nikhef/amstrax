@@ -18,6 +18,7 @@ Content
     setup
     auto_processing_on_stoomboot
     writing_documentation
+    making_a_release
 
 
 .. toctree::
