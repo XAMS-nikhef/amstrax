@@ -17,6 +17,8 @@ python:
   - requirements: extra_requirements/requirements-docs.txt
   - method: pip
     path: .
+  - method: setuptools
+    path: .
 
 formats:
   - pdf
