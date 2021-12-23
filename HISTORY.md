@@ -1,3 +1,7 @@
+1.0.3 / 2021-12-23
+------------------
+ - Made a file that automatically copies new data files to stoomboot (#51)
+
 1.0.2 / 2021-12-07
 ------------------
  - Bugfix XAMS context (#46)
