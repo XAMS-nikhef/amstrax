@@ -7,4 +7,4 @@ IPython
 sshtunnel
 iminuit
 matplotlib~=3.4
-packaging~=20.8
+packaging
