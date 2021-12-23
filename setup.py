@@ -1,5 +1,6 @@
 import setuptools
 
+
 # Get requirements from requirements.txt, stripping the version tags
 with open('requirements.txt') as f:
     requires = [
