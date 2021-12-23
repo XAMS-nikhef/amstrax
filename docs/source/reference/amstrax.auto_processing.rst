@@ -20,6 +20,14 @@ amstrax.auto\_processing.auto\_processing module
    :undoc-members:
    :show-inheritance:
 
+amstrax.auto\_processing.copy\_live module
+------------------------------------------
+
+.. automodule:: amstrax.auto_processing.copy_live
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 amstrax.auto\_processing.process\_run module
 --------------------------------------------
 
