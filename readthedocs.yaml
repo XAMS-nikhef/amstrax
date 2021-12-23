@@ -7,9 +7,13 @@ build:
   tools:
     python: "3.8"
 
+sphinx:
+  configuration: docs/conf.py
+
 python:
   # Install our python package before building the docs
   install:
+  - requirements: docs/requirements.txt
   - method: pip
     path: .
 
