@@ -16,8 +16,7 @@ HITFINDER_OPTIONS = tuple([
         help='Minimum hit amplitude in ADC counts above baseline. '
              'See straxen.hit_min_amplitude for options.'
     )])
-
-
+    
 @export
 @strax.takes_config(
     strax.Option(
@@ -46,12 +45,14 @@ HITFINDER_OPTIONS = tuple([
     *HITFINDER_OPTIONS)
 class PulseProcessing(strax.Plugin):
     """
-    1. Split raw_records into:
-     - (tpc) records
-     - pulse_counts
-    For TPC records, apply basic processing:
+    Split raw_records into:
+     - records_v1730 from the raw_records_v1730
+     - records_v1724 from the raw_records_v1724
+     - records_v1724 from the raw_records_v1724
+     - aqmon_records from the raw_records_aqmon
+    Apply basic processing:
         1. Flip, baseline, and integrate the waveform
-        3. Find hits, and zero outside hits.
+        2. Find hits, and zero outside hits.
 
     pulse_counts holds some average information for the individual PMT
     channels for each chunk of raw_records. This includes e.g.
@@ -59,28 +60,37 @@ class PulseProcessing(strax.Plugin):
     overlap with any other pulse), or mean values of baseline and
     baseline rms channel.
     """
-    __version__ = '0.2.12'
+    __version__ = '0.2.17'
     # save_when = strax.SaveWhen.NEVER
+    provides = ('records_v1724','records_v1730','aqmon_records','pulse_counts')
+    depends_on = ['raw_records_v1724',
+          'raw_records_v1730',
+          'raw_records_aqmon'
+                 ]
+    data_kind = {k: k for k in provides}
     parallel = 'process'
     rechunk_on_save = immutabledict(
-        records=False,
+        records_v1724=False,
+        records_v1730=False,
+        aqmon_records=False,
         pulse_counts=True)
     compressor = 'lz4'
 
-    depends_on = 'raw_records'
-
-    provides = ('records', 'pulse_counts')
-    data_kind = {k: k for k in provides}
-
     def infer_dtype(self):
         # Get record_length from the plugin making raw_records
-        self.record_length = strax.record_length_from_dtype(
-            self.deps['raw_records'].dtype_for('raw_records'))
-
+        self.record_length_v1724 = strax.record_length_from_dtype(
+            self.deps['raw_records_v1724'].dtype_for('raw_records_v1724'))
+        self.record_length_v1730 = strax.record_length_from_dtype(
+            self.deps['raw_records_v1730'].dtype_for('raw_records_v1730')) 
+        self.record_length_aqmon = strax.record_length_from_dtype(
+            self.deps['raw_records_aqmon'].dtype_for('raw_records_aqmon')) 
+        
         dtype = dict()
-        for p in self.provides:
-            if 'records' in p:
-                dtype[p] = strax.record_dtype(self.record_length)
+        
+        dtype['records_v1724'] = strax.record_dtype(self.record_length_v1724)
+        dtype['records_v1730'] = strax.record_dtype(self.record_length_v1730)
+        dtype['aqmon_records'] = strax.record_dtype(self.record_length_aqmon)
+                
         dtype['pulse_counts'] = pulse_count_dtype(self.config['n_tpc_pmts'])
 
         return dtype
