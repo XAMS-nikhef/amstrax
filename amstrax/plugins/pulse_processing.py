@@ -63,10 +63,10 @@ class PulseProcessing(strax.Plugin):
     __version__ = '0.2.17'
     # save_when = strax.SaveWhen.NEVER
     provides = ('records_v1724','records_v1730','aqmon_records','pulse_counts')
-    depends_on = ['raw_records_v1724',
+    depends_on = ('raw_records_v1724',
           'raw_records_v1730',
-          'raw_records_aqmon'
-                 ]
+          'raw_records_aqmon',
+                 )
     data_kind = {k: k for k in provides}
     parallel = 'process'
     rechunk_on_save = immutabledict(
@@ -79,20 +79,20 @@ class PulseProcessing(strax.Plugin):
     def infer_dtype(self):
         # Get record_length from the plugin making raw_records
         self.record_length_v1724 = strax.record_length_from_dtype(
-            self.deps['raw_records_v1724'].dtype_for('raw_records'))
+            self.deps['raw_records_v1724'].dtype_for('raw_records_v1724'))
         self.record_length_v1730 = strax.record_length_from_dtype(
-            self.deps['raw_records_v1730'].dtype_for('raw_records')) 
+            self.deps['raw_records_v1730'].dtype_for('raw_records_v1730')) 
         self.record_length_aqmon = strax.record_length_from_dtype(
-            self.deps['raw_records_aqmon'].dtype_for('raw_records')) 
+            self.deps['raw_records_aqmon'].dtype_for('raw_records_aqmon')) 
         
         dtype = dict()
-        
+            
         dtype['records_v1724'] = strax.record_dtype(self.record_length_v1724)
         dtype['records_v1730'] = strax.record_dtype(self.record_length_v1730)
         dtype['aqmon_records'] = strax.record_dtype(self.record_length_aqmon)
                 
         dtype['pulse_counts'] = pulse_count_dtype(self.config['n_tpc_pmts'])
-
+        
         return dtype
 
     def compute(self, raw_records, start, end):
