@@ -8,9 +8,10 @@ import amstrax as ax
 
 common_opts = dict(
     register_all=[ax.pulse_processing,
-    #               ax.peak_processing,
-    #               ax.event_processing
-                 ],
+                 ax.pulse_processing_fast_sampling,
+    #             ax.peak_processing,
+    #             ax.event_processing
+    ],
     register=[ax.DAQReader],
     store_run_fields=(
         'name', 'number',
