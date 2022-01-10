@@ -5,6 +5,7 @@ from . import peak_processing
 from . import peak_processing
 from . import pulse_processing
 from . import pulse_processing_alt_baseline
+from . import pulse_processing_fast_sampling
 from .daqreader import *
 from .event_processing import *
 from .pax_interface import *
@@ -12,3 +13,4 @@ from .peak_processing import *
 from .peak_processing import *
 from .pulse_processing import *
 from .pulse_processing_alt_baseline import *
+from .pulse_processing_fast_sampling import *
