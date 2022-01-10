@@ -45,16 +45,15 @@ HITFINDER_OPTIONS = tuple([
     *HITFINDER_OPTIONS)
 class PulseProcessing(strax.Plugin):
     """
-    Split raw_records into:
-     - records_v1730 from the raw_records_v1730
-     - records_v1724 from the raw_records_v1724
-     - records_v1724 from the raw_records_v1724
-     - aqmon_records from the raw_records_aqmon
+    Split raw_records_v1724 into:
+     - records_v1724
+     - (aqmon_records?)
+     - pulse_counts_v1724
     Apply basic processing:
         1. Flip, baseline, and integrate the waveform
-        2. Find hits, and zero outside hits.
+        2. Find hits, and zero outside hits
 
-    pulse_counts holds some average information for the individual PMT
+    pulse_counts_v1724 holds some average information for the individual PMT
     channels for each chunk of raw_records. This includes e.g.
     number of recorded pulses, lone_pulses (pulses which do not
     overlap with any other pulse), or mean values of baseline and
@@ -62,57 +61,45 @@ class PulseProcessing(strax.Plugin):
     """
     __version__ = '0.2.17'
     # save_when = strax.SaveWhen.NEVER
-    provides = ('records_v1724','records_v1730','aqmon_records','pulse_counts')
-    depends_on = ('raw_records_v1724',
-          'raw_records_v1730',
-          'raw_records_aqmon',
-                 )
+    provides = ('records_v1724','pulse_counts_v1724')
+    depends_on = ('raw_records_v1724')
     data_kind = {k: k for k in provides}
     parallel = 'process'
     rechunk_on_save = immutabledict(
         records_v1724=False,
-        records_v1730=False,
-        aqmon_records=False,
-        pulse_counts=True)
+        pulse_counts_v1724=True)
     compressor = 'lz4'
 
     def infer_dtype(self):
         # Get record_length from the plugin making raw_records
-        self.record_length_v1724 = strax.record_length_from_dtype(
+        self.record_length = strax.record_length_from_dtype(
             self.deps['raw_records_v1724'].dtype_for('raw_records_v1724'))
-        self.record_length_v1730 = strax.record_length_from_dtype(
-            self.deps['raw_records_v1730'].dtype_for('raw_records_v1730')) 
-        self.record_length_aqmon = strax.record_length_from_dtype(
-            self.deps['raw_records_aqmon'].dtype_for('raw_records_aqmon')) 
         
-        dtype = dict()
-            
-        dtype['records_v1724'] = strax.record_dtype(self.record_length_v1724)
-        dtype['records_v1730'] = strax.record_dtype(self.record_length_v1730)
-        dtype['aqmon_records'] = strax.record_dtype(self.record_length_aqmon)
-                
-        dtype['pulse_counts'] = pulse_count_dtype(self.config['n_tpc_pmts'])
+        dtype = dict() 
+        dtype['records_v1724'] = strax.record_dtype(self.record_length)                
+        dtype['pulse_counts_v1724'] = pulse_count_dtype(self.config['n_tpc_pmts'])
         
         return dtype
 
-    def compute(self, raw_records, start, end):
+    def compute(self, raw_records_v1724, start, end):
         if self.config['check_raw_record_overlaps']:
-            check_overlaps(raw_records, n_channels=3000)
+            check_overlaps(raw_records_v1724, n_channels=3000) 
 
         # Throw away any non-TPC records; this should only happen for XENON1T
         # converted data
-        raw_records = raw_records[
-            raw_records['channel'] < self.config['n_tpc_pmts']]
+        raw_records_v1724 = raw_records_v1724[
+            raw_records_v1724['channel'] < self.config['n_tpc_pmts']]
 
         # Convert everything to the records data type -- adds extra fields.
-        r = strax.raw_to_records(raw_records)
-        del raw_records
+        r = strax.raw_to_records(raw_records_v1724)
+        del raw_records_v1724
 
         # Do not trust in DAQ + strax.baseline to leave the
         # out-of-bounds samples to zero.
         # TODO: better to throw an error if something is nonzero
         strax.zero_out_of_bounds(r)
 
+        
         strax.baseline(r,
                        baseline_samples=self.config['baseline_samples'],
                        allow_sloppy_chunking=self.config['allow_sloppy_chunking'],
@@ -141,14 +128,14 @@ class PulseProcessing(strax.Plugin):
 
         # First 7 entries give a positive area even though sum('data') = 0
         # Changing their area to 0 before filtering
-        for i in range(0, 7):
-            r[i]['area'] = 0
+#         for i in range(0, 7):
+#             r[i]['area'] = 0
 
-        r = r[r['area'] > 0]
-        # r = r[np.average(r['data']) > 0]
+#         r = r[r['area'] > 0]
+#         # r = r[np.average(r['data']) > 0]
 
-        return dict(records=r,
-                    pulse_counts=pulse_counts)
+        return dict(records_v1724=r,
+                    pulse_counts_v1724=pulse_counts)
 
 
 ##
