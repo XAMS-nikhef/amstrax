@@ -46,7 +46,7 @@ xams_common_config = dict(
 def xams(*args, **kwargs):
     if '_detector' in kwargs:
         raise ValueError('Don\'t specifify _detector!')
-    mongo_kwargs = dict(mongo_collname='runs_new',
+    mongo_kwargs = dict(mongo_collname='runs_gas',
                         runid_field='number',
                         mongo_dbname='run',
                         )
