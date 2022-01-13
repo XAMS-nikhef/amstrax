@@ -1,6 +1,26 @@
+1.1.2 / 2021-12-23
+------------------
+ Previous release was a consequence of mflierm's clumsyness.
+
+ Since release v1.0.2, some things changed, of which the most important is the script that copies data to the stoomboot cluster.
+
+-  Made a file that automatically copies new data files to stoomboot (#51)
+
+Other merged PRs are:
+
+- Add small utility to amstrax for version printing (#48)
+- Set default to something that is produced (#49)
+- fix line endings (#53) 
+- Add readthedocs instructions (#67) 
+- A lot of bumped versions in requirements.txt (PR #58 t/m #66)
+- Fix docs (#68) 
+- Update HISTORY.md with new release (#71) 
+
+
 1.0.3 / 2021-12-23
 ------------------
  - Made a file that automatically copies new data files to stoomboot (#51)
+
 
 1.0.2 / 2021-12-07
 ------------------
