@@ -2,26 +2,21 @@ import numba
 import numpy as np
 import strax
 from amstrax.SiPMdata import *
+from .pulse_processing import HITFINDER_OPTIONS
 
 export, __all__ = strax.exporter()
 
-# These are also needed in peaklets, since hitfinding is repeated
-HITFINDER_OPTIONS = tuple([
-    strax.Option(
-        'hit_min_amplitude',
-        default='pmt_commissioning_initial',
-        help='Minimum hit amplitude in ADC counts above baseline. '
-             'See straxen.hit_min_amplitude for options.'
-    )])
-
-
 @strax.takes_config(
-    strax.Option('peak_gap_threshold', default=3000,
+    strax.Option('peak_gap_threshold', default=700, infer_type=False,
                  help="No hits for this many ns triggers a new peak"),
-    strax.Option('peak_left_extension', default=1000,
+    strax.Option('peak_left_extension', default=30, infer_type=False,
                  help="Include this many ns left of hits in peaks"),
-    strax.Option('peak_right_extension', default=1000,
+    strax.Option('peak_right_extension', default=200, infer_type=False,
                  help="Include this many ns right of hits in peaks"),
+    strax.Option('peak_min_pmts', default=2, infer_type=False,
+                 help="Minimum number of contributing PMTs needed to define a peak"),
+    strax.Option('n_tpc_pmts', type=int,
+                 help='Number of TPC PMTs'),
     strax.Option('peak_min_area', default=1,
                  help="Minimum contributing PMTs needed to define a peak"),
     strax.Option('peak_min_pmts', default=1,
@@ -34,21 +29,45 @@ HITFINDER_OPTIONS = tuple([
     strax.Option('peak_split_min_ratio', default=4,
                  help="Minimum ratio between local sum waveform"
                       "minimum and maxima on either side, to trigger a split"),
-    strax.Option('diagnose_sorting', track=False, default=False,
+    strax.Option('diagnose_sorting', track=False, default=False, infer_type=False,
                  help="Enable runtime checks for sorting and disjointness"),
+    strax.Option('channel_map', track=False, type=immutabledict,
+                 help="immutabledict mapping subdetector to (min, max) "
+                      "channel number."),
     strax.Option('pmt_channel', default=0,
-                 help="PMT channel for splitting pmt and sipms"), )
+                 help="PMT channel for splitting pmt and sipms"),
+    *HITFINDER_OPTIONS,
+)
+
 class Peaks(strax.Plugin):
-    depends_on = ('records',)
-    # data_kind = dict(peaks='peaks')
-    data_kind = 'peaks'
+    """
+    Split records into:
+        - peaks 
+        - lone_hits
+    
+    Peaks are calculated from records with the following method:
+        1. Hit finding
+        2. Peak finding 
+        3. Peak splitting using the natural breaks algorithm in strax
+        4. Compute the digital sum waveform
+        
+    Lone hits are all hits which are outside any peak. The area of
+    the lone_hits includes the left and right hit extension, except the 
+    extension overlaps with any peaks or other hits. 
+    """
+    depends_on = ('records_v1724','records_v1730')
+    provides = ('peaks','lone_hits')
+    data_kind = dict(peaks='peaks',
+                    lone_hits='lone_hits')
     parallel = 'process'
-    provides = ('peaks')
-    rechunk_on_save = True
+    compressor = 'zstd'
 
     __version__ = '0.1.50'
-    # dtype = dict(peaks = strax.peak_dtype(n_channels=8))
-    dtype = strax.peak_dtype(n_channels=8)
+    
+    def infer_dtype(self):
+        return dict(peaks=strax.peak_dtype(
+                        n_channels=self.config['n_tpc_pmts']),
+                    lone_hits=strax.hit_dtype)
 
     def compute(self, records):
         # Remove hits in zero-gain channels	
