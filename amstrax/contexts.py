@@ -27,9 +27,9 @@ xams_little_common_config = dict(
     live_data_dir='/data/xenon/xamsl/live_data',
     n_tpc_pmts=4,
     channel_map=immutabledict(
-        v1730=(0, 2),
-        v1724=(2, 4),
-        aqmon=(40, 41),  # register strax deadtime
+        v1730=(0, 1),
+        v1724=(2, 3),
+        aqmon=(40, 40),  # register strax deadtime
     ))
 
 xams_common_config = dict(
