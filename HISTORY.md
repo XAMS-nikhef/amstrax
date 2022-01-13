@@ -1,3 +1,12 @@
+1.1.3 / 2021-01-13
+------------------
+ Major changes:
+ - Fix off by one error in the channel map of XAMS #91
+ - Update contexts.py #95 (a revision of #92, but this one was closed and opened another one to correct for the first V1730 channel)
+ - Updated HISTORY.md again for (same, but more complete) new release #71
+ - A bunch bumped requirements by dependabot (#72, #74, #78, #79, #83, #84, #85, #86, #87)
+
+
 1.1.2 / 2021-12-23
 ------------------
  Previous release was a consequence of mflierm's clumsyness.
