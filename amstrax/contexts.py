@@ -27,9 +27,9 @@ xams_little_common_config = dict(
     live_data_dir='/data/xenon/xamsl/live_data',
     n_tpc_pmts=4,
     channel_map=immutabledict(
-        v1730=(0, 2),
-        v1724=(2, 4),
-        aqmon=(40, 41),  # register strax deadtime
+        v1730=(0, 1),
+        v1724=(2, 3),
+        aqmon=(40, 40),  # register strax deadtime
     ))
 
 xams_common_config = dict(
@@ -37,16 +37,16 @@ xams_common_config = dict(
     n_tpc_pmts=16,
     channel_map=immutabledict(
         # NB! Not the same as XAMSL
-        v1724=(0, 8),
-        v1730=(8, 16),
-        aqmon=(40, 41),  # register strax deadtime
+        v1724=(0, 7),
+        v1730=(8, 15),
+        aqmon=(40, 40),  # register strax deadtime
     ))
 
 
 def xams(*args, **kwargs):
     if '_detector' in kwargs:
         raise ValueError('Don\'t specifify _detector!')
-    mongo_kwargs = dict(mongo_collname='runs_new',
+    mongo_kwargs = dict(mongo_collname='runs_gas',
                         runid_field='number',
                         mongo_dbname='run',
                         )
