@@ -28,7 +28,9 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v2
       - name: Install amstrax
-        run: python setup.py install
+        run: |
+            pip install -r requirements.txt
+            python setup.py install
       - name: Test import
         run: python -c "import amstrax; print('done')"
       - name: goodbye

@@ -1,7 +1,14 @@
+1.2.0 / 2022-01-14
+------------------
+Major changes:
+- Fix off by one error in the channel map of XAMS (#91)
+- Fix off by one error in the channel map of XAMS (#92, #95)
+- Updated HISTORY.md again for (same, but more complete) new release (#71)
+- A bunch bumped requirements by dependabot (#72, #74, #78, #79, #83, #84, #85, #86, #87)
+
+
 1.1.2 / 2021-12-23
 ------------------
- Previous release was a consequence of mflierm's clumsyness.
-
  Since release v1.0.2, some things changed, of which the most important is the script that copies data to the stoomboot cluster.
 
 -  Made a file that automatically copies new data files to stoomboot (#51)
@@ -15,6 +22,9 @@ Other merged PRs are:
 - A lot of bumped versions in requirements.txt (PR #58 t/m #66)
 - Fix docs (#68) 
 - Update HISTORY.md with new release (#71) 
+
+Notes:
+- Previous release was a consequence of mflierm's clumsyness.
 
 
 1.0.3 / 2021-12-23
