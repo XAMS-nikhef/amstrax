@@ -7,7 +7,7 @@ script_template = """#!/bin/bash
 cd /data/xenon/{detector}/processing_staged_run
 echo "starting script!"
 which python
-python {amstrax_dir}/auto_processing/{script}.py {arguments}
+python {amstrax_dir}/auto_processing/{script}.py {arguments} --detector {detector}
 echo "Script complete, bye!"
 """
 
@@ -35,11 +35,13 @@ def submit_job(run_id,
     script_file = open(script_name, 'w')
     script_file_content = script_template.format(
         arguments=arguments,
+        detector=detector,
         amstrax_dir=amstrax_dir,
         script=script,
     )
     script_file.write(script_file_content)
     script_file.close()
+
     # Submit the job
     command = f'qsub {script_name} -j oe -o {log_file}'
     print(command)
