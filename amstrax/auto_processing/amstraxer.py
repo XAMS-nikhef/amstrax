@@ -33,6 +33,10 @@ def parse_args():
         default='raw_records_v1724',
         help='Target final data type to produce')
     parser.add_argument(
+        '--detector',
+        default='xamsl',
+        help="xamsl or xams")
+    parser.add_argument(
         '--from_scratch',
         action='store_true',
         help='Start processing at raw_records, regardless of what data is available. '
@@ -83,7 +87,7 @@ def main(args):
         level=logging.DEBUG if args.debug else logging.INFO,
         format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s')
 
-    print(f"Starting processing of run {args.run_id} until {args.target}")
+    print(f"Starting processing of run {args.run_id} until {args.target} for {args.detector} in context {args.context}")
     print(f"\tpython {platform.python_version()} at {sys.executable}")
 
     # These imports take a bit longer, so it's nicer
