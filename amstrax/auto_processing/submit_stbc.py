@@ -4,20 +4,17 @@ import os
 from amstrax import amstrax_dir
 
 script_template = """#!/bin/bash
-export PATH=/project/xenon/jorana/software/miniconda3/bin:$PATH
-source activate /data/xenon/joranang/anaconda/envs/amstrax_2021
-cd /data/xenon/xamsl/processing_stage
+cd /data/xenon/xamsl/processing_staged_run
 echo "starting script!"
 which python
 python {amstrax_dir}/auto_processing/{script}.py {arguments}
 echo "Script complete, bye!"
 """
 
-
 def submit_job(run_id, 
                target,
-               job_folder='./jobs', 
-               log_folder='./logs',
+               job_folder='jobs', 
+               log_folder='logs',
                script = 'amstraxer'
               ):
     for folder in (job_folder, log_folder):
@@ -33,7 +30,6 @@ def submit_job(run_id,
                             f'p_{run_id}_{target}.log')
 
     arguments = f' {run_id} --target {target}'
-
     script_file = open(script_name, 'w')
     script_file_content = script_template.format(
         arguments=arguments,
@@ -44,7 +40,7 @@ def submit_job(run_id,
     script_file.close()
 
     # Submit the job
-    command = f'qsub {script_name} -e {log_file} -o {log_file}'
+    command = f'qsub {script_name} -j oe -o {log_file}'
     print(command)
     os.system(command)
     print(f'Submitted job for run {run_id}:{target}')
