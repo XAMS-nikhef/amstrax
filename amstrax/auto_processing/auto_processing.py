@@ -9,7 +9,7 @@ def parse_args():
     parser.add_argument(
         '--target',
         default='raw_records_v1724',
-        help="Name of context to use")
+        help="Target final data type to produce.")
     parser.add_argument(
         '--timeout',
         default=60,
