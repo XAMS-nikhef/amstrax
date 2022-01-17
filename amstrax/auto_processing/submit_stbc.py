@@ -4,6 +4,8 @@ import os
 from amstrax import amstrax_dir
 
 script_template = """#!/bin/bash
+export PATH=/project/xenon/jorana/software/miniconda3/bin:$PATH
+source activate /data/xenon/joranang/anaconda/envs/amstrax_2021
 cd /data/xenon/{detector}/processing_staged_run
 echo "starting script!"
 which python
@@ -19,6 +21,10 @@ def submit_job(run_id,
                log_folder='logs',
                script = 'amstraxer'
               ):
+    """
+    This script will save data to
+    /data/xenon/{detector}/processing_staged_run/amstrax_data
+    """
     for folder in (job_folder, log_folder):
         if not os.path.exists(folder):
             os.makedirs(folder)
