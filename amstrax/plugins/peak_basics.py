@@ -1,6 +1,8 @@
 import numba
 import numpy as np
 import strax
+import amstrax
+from amstrax.common import n_top_pmts
 from immutabledict import immutabledict
 
 export, __all__ = strax.exporter()
