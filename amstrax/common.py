@@ -8,7 +8,7 @@ import strax
 import straxen
 
 export, __all__ = strax.exporter()
-__all__ += ['amstrax_dir', 'to_pe']
+__all__ += ['amstrax_dir', 'to_pe','n_top_pmts']
 
 amstrax_dir = os.path.dirname(os.path.abspath(
     inspect.getfile(inspect.currentframe())))
@@ -16,6 +16,7 @@ amstrax_dir = os.path.dirname(os.path.abspath(
 # Current values 
 n_tpc_pmts = 8
 to_pe = 1
+n_top_pmts = 7
 
 
 def open_test_data(file_name
