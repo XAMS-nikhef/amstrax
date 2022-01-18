@@ -7,9 +7,11 @@ from immutabledict import immutabledict
 import amstrax as ax
 
 common_opts = dict(
-    # register_all=[ax.pulse_processing,
-    #               ax.peak_processing,
-    #               ax.event_processing],
+    register_all=[ax.radon_pulse_processing,
+                  ax.radon_peaks,
+                  ax.radon_peak_basics,
+                  ax.peak_basics,
+      #            ax.event_processing],
     register=[ax.DAQReader],
     store_run_fields=(
         'name', 'number',
@@ -35,6 +37,7 @@ xams_little_common_config = dict(
 xams_common_config = dict(
     live_data_dir='/data/xenon/xams/live_data',  # doesn't work yet
     n_tpc_pmts=16,
+    n_top_pmts=7, # num of sipm at the top
     channel_map=immutabledict(
         # NB! Not the same as XAMSL
         v1724=(0, 7),
