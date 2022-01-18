@@ -5,7 +5,7 @@ from immutabledict import immutabledict
 from strax.processing.general import _touching_windows
 
 from amstrax.SiPMdata import *
-from .pulse_processing import HITFINDER_OPTIONS
+from .radon_pulse_processing import HITFINDER_OPTIONS
 
 export, __all__ = strax.exporter()
 
