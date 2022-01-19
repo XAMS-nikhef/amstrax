@@ -184,10 +184,10 @@ class RadonPeaks(strax.Plugin):
             min_area=self.config['peak_split_min_area'],
             do_iterations=self.config['peak_split_iterations'])
 
-        # Saturation correction using non-saturated channels
-        # TODO
-
-        # Compute tight coincidence level. TODO
+        # FIXME: Saturation correction using non-saturated channels
+        
+        # FIXME: Compute tight coincidence level.
+        
         if self.config['diagnose_sorting'] and len(r):
             assert np.diff(r['time']).min(initial=1) >= 0, "Records not sorted"
             assert np.diff(hitlets['time']).min(initial=1) >= 0, "Hits/Hitlets not sorted"
