@@ -127,7 +127,7 @@ class RadonPulseProcessing(strax.Plugin):
 
         # Do not trust in DAQ + strax.baseline to leave the
         # out-of-bounds samples to zero.
-        # TODO: better to throw an error if something is nonzero
+        # FIXME: better to throw an error if something is nonzero
         strax.zero_out_of_bounds(r)
 
         strax.baseline(r,
