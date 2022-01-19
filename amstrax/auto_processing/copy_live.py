@@ -174,7 +174,7 @@ def main(args):
     # Initialize runsdatabase collection
     runs_database = config['RunsDatabaseName']
     runs_collection = config['RunsDatabaseCollection']
-    runsdb = amstrax.get_mongo_collection(
+    runsdb = amstrax.get_mongo_collection(detector,
         database_name=runs_database,
         database_col=runs_collection
     )

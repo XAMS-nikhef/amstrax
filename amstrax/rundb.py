@@ -55,14 +55,24 @@ def get_mongo_client(**link_kwargs):
     return pymongo.MongoClient(f'mongodb://{user}:{password}@127.0.0.1:{local_port}/admin')
 
 
+# @export
+# def get_mongo_collection(database_name='run',
+#                          database_col='runs_new',
+#                          **link_kwargs,
+#                          ):
+#     """Get the runs collection"""
+#     return get_mongo_client(**link_kwargs)[database_name][database_col]
+
 @export
-def get_mongo_collection(database_name='run',
-                         database_col='runs_new',
+def get_mongo_collection(detector,
                          **link_kwargs,
                          ):
-    """Get the runs collection"""
-    return get_mongo_client(**link_kwargs)[database_name][database_col]
-
+    if detector == 'xams':
+        return get_mongo_client(**link_kwargs)['run']['runs_gas']
+    elif detector == 'xamsl':
+        return get_mongo_client(**link_kwargs)['run']['runs_new']
+    else:
+        print(f'NameError: detector {detector} is not a valid detector name.')
 
 @export
 class RunDB(strax.StorageFrontend):

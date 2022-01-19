@@ -6,7 +6,8 @@ if __name__ == '__main__':
     # Do import later to get fast --help
     import amstrax
 
-    run_collection = amstrax.get_mongo_collection()
+    detector = args.detector
+    run_collection = amstrax.get_mongo_collection(detector)
     run_name = args.run_id
     target = args.target
     print(f'Start processing {run_name}: {target}')
