@@ -99,7 +99,7 @@ class RadonPeaks(strax.Plugin):
 
     def infer_dtype(self):
         return dict(radon_peaks=strax.peak_dtype(
-                        n_channels=self.config['n_xamsl_channel']),
+                        n_channels=4),
                     radon_lone_hits=strax.hit_dtype)
 
     def compute(self, radon_records, start, end):
