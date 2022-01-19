@@ -15,6 +15,7 @@ amstrax_dir = os.path.dirname(os.path.abspath(
 
 # Current values 
 n_tpc_pmts = 8
+n_xamsl_channel = 4
 to_pe = 1
 
 
