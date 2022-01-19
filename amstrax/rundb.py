@@ -72,7 +72,7 @@ def get_mongo_collection(detector,
     elif detector == 'xamsl':
         return get_mongo_client(**link_kwargs)['run']['runs_new']
     else:
-        print(f'NameError: detector {detector} is not a valid detector name.')
+        raise NameError(f'detector {detector} is not a valid detector name.')
 
 @export
 class RunDB(strax.StorageFrontend):
