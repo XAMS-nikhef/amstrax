@@ -179,7 +179,7 @@ def main(args):
     # Make a list of the last 'max_runs' items in the runs database, 
     # only keeping the fields 'number', 'data' and '_id'.
     # pylint: disable=fixme
-    query = {}  # TODO for now, but we should query on the data field in the future
+    query = {'end':{"$ne":None}}  # Only keep the runs that have an 'end' timestamp
     rundocs = list(runsdb.find(query,
                                projection={'number': 1, 'data': 1, '_id': 1}
                                ).sort('number', pymongo.DESCENDING)[:max_runs])
