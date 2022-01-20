@@ -121,10 +121,12 @@ def exec_commands_and_cleanup(runsdb: pymongo.collection.Collection,
             logs.debug(f'Nothing to transfer for {run}')
             continue
 
-        cmd = f'rsync -a {location}/{run:06d} -e ssh stbc:{target_location}'
-        logs.warning(f'Do {cmd} for {run}')
-        # disable bandit
-        copy_execute = subprocess.call(cmd, shell=True)
+        # Only copy the data if the run has finished
+        if 'THE_END' in os.listdir(f'{location}/{run:06d}'):
+            cmd = f'rsync -a {location}/{run:06d} -e ssh stbc:{target_location}'
+            logs.warning(f'Do {cmd} for {run}')
+            # disable bandit
+            copy_execute = subprocess.call(cmd, shell=True)
 
         # If copying was successful, update the runsdatabase
         # with the new location of the data
