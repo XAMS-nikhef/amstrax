@@ -34,7 +34,8 @@ class TestXamsStack(unittest.TestCase):
         st = amstrax.contexts.context_for_daq_reader(
             self.st,
             run_id=self.run_id,
-            run_doc=self.rd)
+            run_doc=self.rd,
+            detector='xams')
         self.st = st
 
     @classmethod
@@ -61,7 +62,8 @@ class TestXamsStack(unittest.TestCase):
             amstrax.contexts.context_for_daq_reader(
                 self.st,
                 run_id=self.run_id,
-                run_doc=self.rd)
+                run_doc=self.rd,
+                detector='xams')
 
     def get_metadata(self):
         md = amstrax_files.get_file(self.run_doc_name)

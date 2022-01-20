@@ -46,7 +46,7 @@ if __name__ == '__main__':
     context = args.context
     detector = args.detector
     target = args.target
-    runs_col = amstrax.get_mongo_collection()
+    runs_col = amstrax.get_mongo_collection(detector)
 
     while 1:
         # Update task list
