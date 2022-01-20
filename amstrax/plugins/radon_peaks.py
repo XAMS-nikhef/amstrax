@@ -417,15 +417,6 @@ def _peak_saturation_correction_inner(channel_saturated, records, p,
                 r['area'] = np.sum(r['data'])
 
 
-@numba.njit(cache=True, nogil=True)
-def hit_max_sample(records, hits):
-    """Return the index of the maximum sample for hits"""
-    result = np.zeros(len(hits), dtype=np.int16)
-    for i, h in enumerate(hits):
-        r = records[h['record_i']]
-        w = r['data'][h['left']:h['right']]
-        result[i] = np.argmax(w)
-    return result
 
 
 @export
