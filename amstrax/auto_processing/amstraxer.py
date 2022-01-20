@@ -120,7 +120,8 @@ def main(args):
             testing_rd['start'] = datetime.datetime.now()
         st = amstrax.contexts.context_for_daq_reader(st,
                                                      args.run_id,
-                                                     run_doc=testing_rd)
+                                                     run_doc=testing_rd,
+                                                     detector=args.detector)
 
     if args.from_scratch:
         for q in st.storage:

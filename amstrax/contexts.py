@@ -46,7 +46,7 @@ xams_common_config = dict(
 def xams(*args, **kwargs):
     if '_detector' in kwargs:
         raise ValueError('Don\'t specifify _detector!')
-    mongo_kwargs = dict(mongo_collname='runs_gas',
+    mongo_kwargs = dict(mongo_collname='runs_gas', #IF YOU CHANGE THIS, ALSO CHANGE IN GET_MONGO_COLLECTION (RUNSDB.PY)!
                         runid_field='number',
                         mongo_dbname='run',
                         )
@@ -175,6 +175,7 @@ def amstrax_run10_analysis(output_folder='./strax_data'):
 
 def context_for_daq_reader(st: strax.Context,
                            run_id: str,
+                           detector: str,
                            runs_col_kwargs: dict = None,
                            run_doc: dict = None,
                            check_exists=True,
@@ -204,7 +205,7 @@ def context_for_daq_reader(st: strax.Context,
     if runs_col_kwargs is None:
         runs_col_kwargs = {}
     if run_doc is None:
-        run_col = ax.get_mongo_collection(**runs_col_kwargs)
+        run_col = ax.get_mongo_collection(detector)
         run_doc = run_col.find_one({'number': int(run_id)})
     daq_config = run_doc['daq_config']
     live_dir = st.config['live_data_dir']
