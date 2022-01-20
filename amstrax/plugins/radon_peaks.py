@@ -1,6 +1,7 @@
 import numba
 import numpy as np
 import strax
+import amstrax
 from immutabledict import immutabledict
 from strax.processing.general import _touching_windows
 
