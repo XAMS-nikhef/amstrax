@@ -174,8 +174,6 @@ def main(args):
     dest_loc = config['dest_location']
 
     # Initialize runsdatabase collection
-    runs_database = config['RunsDatabaseName']
-    runs_collection = config['RunsDatabaseCollection']
     runsdb = amstrax.get_mongo_collection(detector)
 
     # Make a list of the last 'max_runs' items in the runs database, 
