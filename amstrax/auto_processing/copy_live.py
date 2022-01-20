@@ -121,7 +121,7 @@ def exec_commands_and_cleanup(runsdb: pymongo.collection.Collection,
             logs.debug(f'Nothing to transfer for {run}')
             continue
 
-        # Only copy the data if the run has finished
+        # Only copy the data if the run has finished and there is actually data
         if 'THE_END' in os.listdir(f'{location}/{run:06d}'):
             cmd = f'rsync -a {location}/{run:06d} -e ssh stbc:{target_location}'
             logs.warning(f'Do {cmd} for {run}')
