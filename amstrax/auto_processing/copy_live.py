@@ -108,7 +108,6 @@ def exec_commands_and_cleanup(runsdb: pymongo.collection.Collection,
                               locations: ty.List[ty.Union[str, None]],
                               target_location: str,
                               temporary_location: str,
-                              no_end_loc: str,
                               ):
     """
     For each <rundoc>, copy each of the <locations> if it's not <None>
@@ -122,22 +121,10 @@ def exec_commands_and_cleanup(runsdb: pymongo.collection.Collection,
             logs.debug(f'Nothing to transfer for {run}')
             continue
 
-        # Only copy the data if the run has finished and there is actually data
-        if 'THE_END' in os.listdir(f'{location}/{run:06d}'):
-            cmd = f'rsync -a {location}/{run:06d} -e ssh stbc:{target_location}'
-            logs.warning(f'Do {cmd} for {run}')
-            # disable bandit
-            copy_execute = subprocess.call(cmd, shell=True)
-
-        # If there is not 'THE_END' file, move the run data to a separate folder
-        # for further investigation
-        else:
-            shutil.move(f'{location}/{run:06d}', no_end_loc)
-            if os.path.exists(f'{no_end_loc}/{run:06d}'):
-                logs.info(f'Run {run} had no end file in the data so '
-                          f'I moved it to {no_end_loc} for further investigation')
-            else:
-                logs.error(f'Whut happened to {run}?!?!')
+        cmd = f'rsync -a {location}/{run:06d} -e ssh stbc:{target_location}'
+        logs.warning(f'Do {cmd} for {run}')
+        # disable bandit
+        copy_execute = subprocess.call(cmd, shell=True)
 
         # If copying was successful, update the runsdatabase
         # with the new location of the data
@@ -183,7 +170,6 @@ def main(args):
     max_runs = args.max_runs
     final_destination = config['final_destination']
     dest_loc = config['dest_location']
-    no_end_loc = config['no_end_destination']
 
     # Initialize runsdatabase collection
     runsdb = amstrax.get_mongo_collection(detector)
@@ -201,8 +187,7 @@ def main(args):
                               rundocs=rundocs,
                               locations=locations,
                               target_location=dest_loc,
-                              temporary_location=final_destination,
-                              no_end_loc=no_end_loc
+                              temporary_location=final_destination
                               )
 
     return
