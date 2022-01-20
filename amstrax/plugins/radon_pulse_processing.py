@@ -45,7 +45,7 @@ HITFINDER_OPTIONS = tuple([
         help='Number of TPC PMTs'),
     strax.Option(
         'check_raw_record_overlaps',
-        default=False, track=False, infer_type=False,
+        default=True, track=False, infer_type=False,
         help='Crash if any of the pulses in raw_records overlap with others '
              'in the same channel'),
     strax.Option(
