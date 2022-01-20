@@ -168,7 +168,7 @@ class RadonPulseProcessing(strax.Plugin):
     # Make one records for future processing
     ###
 
-@staticmethod
+    @staticmethod
     def choose_records(raw_records_v1724, raw_records_v1730):
         """
         This function implements a decisional loop over which raw_records to keep.
