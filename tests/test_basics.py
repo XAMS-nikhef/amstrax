@@ -25,6 +25,8 @@ class TestXamsStack(unittest.TestCase):
         st = amstrax.contexts.xams(init_rundb=False)
         st.storage = [strax.DataDirectory('./amstrax_data')]
         st.set_config({'live_data_dir': cls.live_data_path})
+        # Run extra tests during the processing
+        st.set_config({'diagnose_sorting': True, 'check_raw_record_overlaps': True})
         cls.st = st
         cls.run_id = '999999'
 
