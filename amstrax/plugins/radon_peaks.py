@@ -434,7 +434,7 @@ class RadonHits(strax.Plugin):
     """
     __version__ = '0.0.7'
 
-    parallel = 'False'
+    parallel = 'True'
     rechunk_on_save = False
     depends_on = 'radon_records'
     data_kind = 'radon_peaks'
