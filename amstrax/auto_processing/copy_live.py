@@ -176,10 +176,7 @@ def main(args):
     # Initialize runsdatabase collection
     runs_database = config['RunsDatabaseName']
     runs_collection = config['RunsDatabaseCollection']
-    runsdb = amstrax.get_mongo_collection(detector,
-        database_name=runs_database,
-        database_col=runs_collection
-    )
+    runsdb = amstrax.get_mongo_collection(detector)
 
     # Make a list of the last 'max_runs' items in the runs database, 
     # only keeping the fields 'number', 'data' and '_id'.
