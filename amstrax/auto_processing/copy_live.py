@@ -172,17 +172,12 @@ def main(args):
     dest_loc = config['dest_location']
 
     # Initialize runsdatabase collection
-    runs_database = config['RunsDatabaseName']
-    runs_collection = config['RunsDatabaseCollection']
-    runsdb = amstrax.get_mongo_collection(detector,
-        database_name=runs_database,
-        database_col=runs_collection
-    )
+    runsdb = amstrax.get_mongo_collection(detector)
 
     # Make a list of the last 'max_runs' items in the runs database, 
     # only keeping the fields 'number', 'data' and '_id'.
     # pylint: disable=fixme
-    query = {}  # TODO for now, but we should query on the data field in the future
+    query = {'end':{"$ne":None}}  # Only keep the runs that have an 'end' timestamp
     rundocs = list(runsdb.find(query,
                                projection={'number': 1, 'data': 1, '_id': 1}
                                ).sort('number', pymongo.DESCENDING)[:max_runs])
@@ -192,7 +187,7 @@ def main(args):
                               rundocs=rundocs,
                               locations=locations,
                               target_location=dest_loc,
-                              temporary_location=final_destination,
+                              temporary_location=final_destination
                               )
 
     return
