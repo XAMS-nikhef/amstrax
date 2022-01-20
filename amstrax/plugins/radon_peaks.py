@@ -188,7 +188,7 @@ class RadonPeaks(strax.Plugin):
         
         # FIXME: Compute tight coincidence level.
         
-        if self.config['diagnose_sorting'] and len(r):
+        if self.config['diagnose_sorting'] and len(radon_records):
             assert np.diff(radon_records['time']).min(initial=1) >= 0, "Records not sorted"
             assert np.diff(hitlets['time']).min(initial=1) >= 0, "Hits/Hitlets not sorted"
             assert np.all(peaks['time'][1:]
