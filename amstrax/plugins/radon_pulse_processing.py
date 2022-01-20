@@ -12,16 +12,10 @@ __all__ += ['NO_PULSE_COUNTS']
 HITFINDER_OPTIONS = tuple([
     strax.Option(
         'hit_min_amplitude',
-        default='pmt_commissioning_initial',
+        default='xamsl_thresholds',
         help='Minimum hit amplitude in ADC counts above baseline. '
-             'See straxen.hit_min_amplitude for options.'
-    ),
-    strax.Option(
-        'hit_threshold',
-        default=10,
-        help='Hitfinder threshold in ADC counts above baseline'
-        )
-    ])
+             'See amstrax.hit_min_amplitude in hitfinder_thresholds.py for options.'
+    )])
 
 
 @export
@@ -146,7 +140,7 @@ class RadonPulseProcessing(strax.Plugin):
             # -- before filtering,since this messes with the with the S/N
             hits = strax.find_hits(
                 r, min_amplitude=amstrax.hit_min_amplitude(
-                    self.config['hit_min_amplitude']))
+                    self.config['hit_min_amplitude'],threshold=15))
 
             if self.config['pmt_pulse_filter']:
                 # Filter to concentrate the PMT pulses
