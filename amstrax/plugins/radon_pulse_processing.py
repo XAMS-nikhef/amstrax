@@ -168,7 +168,8 @@ class RadonPulseProcessing(strax.Plugin):
     # Make one records for future processing
     ###
 
-    def choose_records(self, raw_records_v1724, raw_records_v1730):
+@staticmethod
+    def choose_records(raw_records_v1724, raw_records_v1730):
         """
         This function implements a decisional loop over which raw_records to keep.
         There are for possibilities:
@@ -188,33 +189,31 @@ class RadonPulseProcessing(strax.Plugin):
             https://github.com/XAMS-nikhef/amstrax_files/tree/master/data
         """
 
-        try:
-            # Case v1724 measurement: data only in the raw_records_v1724
-            if (np.any(raw_records_v1724['channel']) and not np.any(raw_records_v1730['channel'])):
-                ret = True
-            # Case v1730 measurement: data only in the raw_records_v1730
-            elif (np.any(raw_records_v1730['channel']) and not np.any(raw_records_v1724['channel'])):
-                ret = False
-            # raw_records_v1730 and raw_records_v1724 both returning data
-            elif (np.any(raw_records_v1730['channel']) and np.any(raw_records_v1724['channel'])):
-                raise ValueError(
-                    f"Bad data! The raw_records are both returning data and"
-                    f"this is not possible for a XAMSL measurement."
-                    f"Check the raw_records data of this measurement"
-                    f"or do not process it.")
-            # no data in both raw_records_v1730 and raw_records_v1724
-            elif (not np.any(raw_records_v1730['channel']) and not np.any(raw_records_v1724['channel'])):
-                raise ValueError(
-                    f"Bad data! The raw_records are both empty and"
-                    f"this is not possible for a XAMSL measurement."
-                    f"Check the raw_records data of this measurement"
-                    f"or do not process it.")               
-            # For the sake of the if-else statement 
-            else:
-                pass 
-        except Exception as e:
-            print(f"We've got a {type(e)} error in choose_records() and {str(e)}.")
-        return ret
+        has_v1724 = np.any(raw_records_v1724['channel'])
+        has_v1730 = np.any(raw_records_v1730['channel'])
+        # Case v1724 measurement: data only in the raw_records_v1724
+        if has_v1724 and not has_v1730:
+            return True
+        # Case v1730 measurement: data only in the raw_records_v1730
+        elif not has_v1724 and has_v1730:
+            return False
+        # Apparently something went wrong
+        
+        # raw_records_v1730 and raw_records_v1724 both returning data
+        if has_v1724 and has_v1730:
+            raise ValueError(
+                f"Bad data! The raw_records are both returning data and"
+                f"this is not possible for a XAMSL measurement."
+                f"Check the raw_records data of this measurement"
+                f"or do not process it.")
+        # no data in both raw_records_v1730 and raw_records_v1724
+        if not has_v1724 and not has_v1730:
+            raise ValueError(
+                f"Bad data! The raw_records are both empty and"
+                f"this is not possible for a XAMSL measurement."
+                f"Check the raw_records data of this measurement"
+                f"or do not process it.")
+        raise ValueError('How did we end up here?')
 
 ##
 # Pulse counting
