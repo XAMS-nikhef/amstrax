@@ -105,7 +105,7 @@ class RadonPeaks(strax.Plugin):
 
     def compute(self, radon_records, start, end):
         # Hit finding
-        hits = strax.find_hits(radon_records, min_amplitude=amstrax.hit_min_amplitude(self.config['hit_min_amplitude'],threshold=15))
+        hits = strax.find_hits(radon_records, min_amplitude=amstrax.hit_min_amplitude(self.config['hit_min_amplitude']))
 
         self.to_pe = np.ones(8)
 
@@ -442,5 +442,5 @@ class RadonHits(strax.Plugin):
     dtype = strax.hit_dtype
 
     def compute(self, radon_records):
-        hits = strax.find_hits(radon_records, min_amplitude=amstrax.hit_min_amplitude(self.config['hit_min_amplitude'],threshold=15))
+        hits = strax.find_hits(radon_records, min_amplitude=amstrax.hit_min_amplitude(self.config['hit_min_amplitude']))
         return hits
