@@ -140,7 +140,7 @@ class RadonPulseProcessing(strax.Plugin):
             # -- before filtering,since this messes with the with the S/N
             hits = strax.find_hits(
                 r, min_amplitude=amstrax.hit_min_amplitude(
-                    self.config['hit_min_amplitude'],threshold=15))
+                    self.config['hit_min_amplitude']))
 
             if self.config['pmt_pulse_filter']:
                 # Filter to concentrate the PMT pulses
