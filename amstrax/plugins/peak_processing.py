@@ -165,9 +165,9 @@ class Peaks(strax.Plugin):
         hitlets['time'] = hitlets['time'] - hitlet_time_shift
         hitlets['length'] = (hitlets['right_integration'] - hitlets['left_integration'])
         hitlets = strax.sort_by_time(hitlets)
-        rlinks = strax.record_links(records_test)
+        rlinks = strax.record_links(records)
 
-        strax.sum_waveform(peaks, hitlets, records_test, rlinks, self.to_pe)
+        strax.sum_waveform(peaks, hitlets, records, rlinks, self.to_pe)
 
         strax.compute_widths(peaks)
         # Split peaks using low-split natural breaks;
@@ -186,8 +186,8 @@ class Peaks(strax.Plugin):
         
         # FIXME: Compute tight coincidence level.
         
-        if self.config['diagnose_sorting'] and len(records_test):
-            assert np.diff(records_test['time']).min(initial=1) >= 0, "Records not sorted"
+        if self.config['diagnose_sorting'] and len(records):
+            assert np.diff(records['time']).min(initial=1) >= 0, "Records not sorted"
             assert np.diff(hitlets['time']).min(initial=1) >= 0, "Hits/Hitlets not sorted"
             assert np.all(peaks['time'][1:]
                           >= strax.endtime(peaks)[:-1]), "Peaks not disjoint"    
@@ -426,21 +426,21 @@ def _peak_saturation_correction_inner(channel_saturated, records, p,
         help='Save (left, right) samples besides hits; cut the rest'),
         *HITFINDER_OPTIONS,
 )
-class TestHits(strax.Plugin):
+class Hits(strax.Plugin):
     """
     Find hits using the find_hits algorithm in strax.
     """
-    __version__ = '0.0.10'
+    __version__ = '0.0.11'
 
     parallel = 'True'
     rechunk_on_save = False
-    depends_on = 'records_test'
-    data_kind = 'peaks_test'
+    depends_on = 'records'
+    data_kind = 'peaks'
     dtype = strax.hit_dtype
 
-    def compute(self, records_test):
+    def compute(self, records):
         print('in compute of hits test')
-        hits = strax.find_hits(records_test, min_amplitude=amstrax.hit_min_amplitude(self.config['hit_min_amplitude']))
+        hits = strax.find_hits(records, min_amplitude=amstrax.hit_min_amplitude(self.config['hit_min_amplitude']))
         return hits
     
 # # For n_competing, which is temporarily added to PeakBasics	
