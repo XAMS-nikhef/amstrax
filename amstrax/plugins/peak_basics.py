@@ -3,10 +3,8 @@ import numpy as np
 import strax
 from immutabledict import immutabledict
 
-import amstrax
-
 export, __all__ = strax.exporter()
-__all__ += ['NO_PULSE_COUNTS']
+
 
 @export
 @strax.takes_config(
@@ -100,7 +98,7 @@ class PeakBasics(strax.Plugin):
             self.check_area(area_total, p, self.config['check_peak_sum_area_rtol'])
         # Negative or zero-area peaks have centertime at startime
         r['center_time'] = p['time']
-        r['center_time'][m] += self.compute_center_times(peaks_test[m])
+        r['center_time'][m] += self.compute_center_times(peaks[m])
 
         return r
 
