@@ -61,8 +61,6 @@ export, __all__ = strax.exporter()
     strax.Option('peak_split_min_ratio', default=4,
                  help="Minimum ratio between local sum waveform"
                       "minimum and maxima on either side, to trigger a split"),
-    strax.Option('channel_pmt', default=7,
-                 help="Channel of the PMT in the channel map which pulse we need to flip."), 
     strax.Option('peak_max_duration', default=int(10e6), infer_type=False,
                  help="Maximum duration [ns] of a peaklet"),
     strax.Option('channel_map', track=False, type=immutabledict,
