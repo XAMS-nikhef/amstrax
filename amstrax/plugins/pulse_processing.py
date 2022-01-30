@@ -37,9 +37,6 @@ HITFINDER_OPTIONS = tuple([
         'n_tpc_pmts', type=int,
         help='Number of TPC channels'),
     strax.Option(
-        'pmt_channel', default=7, type=int,
-        help='Channel of the PMT in the channel map which pulse we need to flip.'),   
-    strax.Option(
         'check_raw_record_overlaps',
         default=True, track=False, infer_type=False,
         help='Crash if any of the pulses in raw_records overlap with others '
@@ -130,7 +127,7 @@ class PulseProcessing(strax.Plugin):
 
         baseline_per_channel(r, baseline_samples=self.config['baseline_samples'],
                            allow_sloppy_chunking=self.config['allow_sloppy_chunking'],
-                            pmt_channel=self.config['channel_pmt'], flip=False)
+                            pmt_channel=7, flip=False)
              
         strax.integrate(r)       
 
