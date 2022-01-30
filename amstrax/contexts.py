@@ -6,12 +6,30 @@ from immutabledict import immutabledict
 
 import amstrax as ax
 
-common_opts = dict(
+common_opts_xams_little = dict(
     register_all=[ax.radon_pulse_processing,
                   ax.radon_peaks,
                   ax.radon_peak_basics,
-    #               ax.peak_processing,
 #                   ax.event_processing
+                 ],
+    register=[ax.DAQReader],
+    store_run_fields=(
+        'name', 'number',
+        'start', 'end', 'livetime',
+        'processing_status',
+        'tags'),
+    check_available=('raw_records_v1730',
+                     'raw_records_v1724',
+                     ),
+    free_options=('live_data_dir',),
+)
+
+
+common_opts_xams = dict(
+    register_all=[ax.pulse_processing,
+                  ax.peaks,
+                  ax.peak_basics,
+#                   ax.event_processing                  
                  ],
     register=[ax.DAQReader],
     store_run_fields=(
@@ -79,9 +97,15 @@ def _xams_xamsl_context(
         init_rundb=True,
         mongo_kwargs: dict = None
 ):
-    st = strax.Context(**common_opts,
+    if _detector=='xams':
+        st = strax.Context(**common_opts_xams,
                        forbid_creation_of=ax.DAQReader.provides,
                        )
+    elif _detector=='xamsl':
+        st = strax.Context(**common_opts_xams_little,
+                       forbid_creation_of=ax.DAQReader.provides,
+                       )        
+        
     raw_data_folder = raw_data_folder.format(detector=_detector)
     processed_data_folder = processed_data_folder.format(detector=_detector)
 
