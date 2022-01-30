@@ -27,7 +27,7 @@ common_opts_xams_little = dict(
 
 common_opts_xams = dict(
     register_all=[ax.pulse_processing,
-                  ax.peaks_processing,
+                  ax.peak_processing,
                   ax.peak_basics,
 #                   ax.event_processing                  
                  ],
