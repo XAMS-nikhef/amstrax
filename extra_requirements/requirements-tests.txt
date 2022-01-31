@@ -25,5 +25,5 @@ pytest-cov==3.0.0
 scikit-learn==1.0.2
 scipy==1.7.3                                    # Strax dependency
 tqdm==4.62.3
-xarray==0.20.2
+xarray==0.21.0
 zstd==1.5.1.0                                   # Strax dependency
