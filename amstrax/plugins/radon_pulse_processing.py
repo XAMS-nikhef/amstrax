@@ -12,7 +12,7 @@ __all__ += ['NO_PULSE_COUNTS']
 HITFINDER_OPTIONS = tuple([
     strax.Option(
         'hit_min_amplitude',
-        default='xams_thresholds',
+        default='xamsl_thresholds',
         help='Minimum hit amplitude in ADC counts above baseline. '
              'See amstrax.hit_min_amplitude in hitfinder_thresholds.py for options.'
     )])
