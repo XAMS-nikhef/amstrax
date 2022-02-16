@@ -1,7 +1,7 @@
 # File for the requirements of the documentation
 numpy==1.19.5
 autodocsumm==0.2.7
-scipy==1.7
+scipy==1.8.0
 commonmark==0.9.1
 gitpython==3.1.26
 graphviz==0.19.1
