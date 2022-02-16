@@ -22,10 +22,6 @@ jobs:
         test: [ 'coveralls', 'pytest' ]
         # Only run coverage / no_database on py3.8
         exclude:
-          - python-version: 3.7
-            test: coveralls
-          - python-version: 3.9
-            test: coveralls
           - python-version: "3.10"
             test: coveralls
     steps:
