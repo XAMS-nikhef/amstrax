@@ -9,7 +9,7 @@ coverage==6.3.1
 flake8==4.0.1
 iminuit==2.9.0
 hypothesis==6.36.2
-ipython==7.31.1
+ipython==8.1.0
 matplotlib==3.5.1
 multihist==0.6.5
 npshmex==0.2.1                                  # Strax dependency
