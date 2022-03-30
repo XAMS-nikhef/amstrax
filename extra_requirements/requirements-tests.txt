@@ -1,5 +1,5 @@
-strax==1.1.7
-straxen==1.2.7
+strax==1.2.0
+straxen==1.6.0
 
 blosc==1.10.6                                   # Strax dependency
 dill==0.3.4                                     # Strax dependency
