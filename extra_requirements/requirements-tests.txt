@@ -1,29 +1,4 @@
 strax==1.2.0
 straxen==1.6.0
 
-blosc==1.10.6                                   # Strax dependency
-dill==0.3.4                                     # Strax dependency
-coveralls==3.3.1
-commentjson==0.9.0
-coverage==6.3.2
-flake8==4.0.1
-iminuit==2.9.0
-hypothesis==6.46.0
-ipython==7.31.1
-matplotlib==3.5.1
-multihist==0.6.5
-npshmex==0.2.1                                  # Strax dependency
-numba==0.55.1                                   # Strax dependency
-numpy==1.21.5
-packaging==21.3
-pandas==1.4.2                                   # Strax dependency
-panel==0.13.0                                   # Bokeh dependency
-psutil==5.9.0                                   # Strax dependency
-pymongo==3.12.0                                 # Strax dependency
-pytest==7.1.2
-pytest-cov==3.0.0
-scikit-learn==1.0.2
-scipy==1.8.0                                    # Strax dependency
-tqdm==4.64.0
-xarray==2022.3.0
-zstd==1.5.2.4                                   # Strax dependency
+ax_env==0.2.4
