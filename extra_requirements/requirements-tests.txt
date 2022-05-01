@@ -8,7 +8,7 @@ commentjson==0.9.0
 coverage==6.3.2
 flake8==4.0.1
 iminuit==2.9.0
-hypothesis==6.40.1
+hypothesis==6.46.0
 ipython==7.31.1
 matplotlib==3.5.1
 multihist==0.6.5
