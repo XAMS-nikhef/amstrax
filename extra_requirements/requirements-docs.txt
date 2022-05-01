@@ -4,7 +4,7 @@ autodocsumm==0.2.7
 scipy==1.7
 commonmark==0.9.1
 gitpython==3.1.27
-graphviz==0.19.1
+graphviz==0.20
 nbsphinx==0.8.8
 recommonmark==0.7.1
 sphinx==4.4.0
