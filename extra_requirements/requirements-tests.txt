@@ -1,4 +1,4 @@
 strax==1.2.1
-straxen==1.6.1
+straxen==1.7.1
 
 ax_env==0.2.4
