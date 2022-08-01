@@ -1,6 +1,6 @@
 # File for the requirements of the documentation
 numpy==1.23.0
-autodocsumm==0.2.8
+autodocsumm==0.2.9
 scipy==1.9.0
 commonmark==0.9.1
 gitpython==3.1.27
