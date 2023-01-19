@@ -38,7 +38,7 @@ def parse_args():
         '--config',
         type=str,
         help='Path to your configuration file',
-        default='/home/xams/daq/webinterface/web/config.ini')
+        default='/home/xams/software/webinterface/config.ini')
 
     return parser.parse_args()
 
