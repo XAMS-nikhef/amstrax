@@ -6,9 +6,19 @@ import os
 import numba
 import numpy as np
 import strax
-from straxen.plugins.pax_interface import records_needed
+
 
 export, __all__ = strax.exporter()
+
+
+
+def records_needed(pulse_length, samples_per_record):
+    """
+    Imported from straxen by Carlo
+    Most probably it's not needed
+    Return records needed to store pulse_length samples"""
+    return np.ceil(pulse_length / samples_per_record).astype(np.int64)
+
 
 
 @export

@@ -5,7 +5,6 @@ import numpy as np
 import strax
 import straxen
 from immutabledict import immutabledict
-from straxen.plugins.daqreader import split_channel_ranges
 
 export, __all__ = strax.exporter()
 __all__ += ['ARTIFICIAL_DEADTIME_CHANNEL']
@@ -233,3 +232,53 @@ class Fake1TDAQReader(DAQReader):
         'raw_records_aqmon')
 
     data_kind = immutabledict(zip(provides, provides))
+    
+    
+    
+    
+    
+
+@export
+@numba.njit(nogil=True, cache=True)
+def split_channel_ranges(records, channel_ranges):
+    """
+    Copied from straxen by Carlo on 20 Jan 2023 
+    But most probably it's not needed 
+    Return numba.List of record arrays in channel_ranges.
+    ~2.5x as fast as a naive implementation with np.in1d
+    """
+    n_subdetectors = len(channel_ranges)
+    which_detector = np.zeros(len(records), dtype=np.int8)
+    n_in_detector = np.zeros(n_subdetectors, dtype=np.int64)
+
+    # First loop to count number of records per detector
+    for r_i, r in enumerate(records):
+        for d_i in range(n_subdetectors):
+            left, right = channel_ranges[d_i]
+            if r['channel'] > right:
+                continue
+            elif r['channel'] >= left:
+                which_detector[r_i] = d_i
+                n_in_detector[d_i] += 1
+                break
+            else:
+                # channel_ranges should be sorted ascending.
+                print(r['time'], r['channel'], channel_ranges)
+                raise ValueError(
+                    "Bad data from DAQ: data in unknown channel!")
+
+    # Allocate memory
+    results = numba.typed.List()
+    for d_i in range(n_subdetectors):
+        results.append(np.empty(n_in_detector[d_i], dtype=records.dtype))
+
+    # Second loop to fill results
+    # This is slightly faster than using which_detector == d_i masks,
+    # since it only needs one loop over the data.
+    n_placed = np.zeros(n_subdetectors, dtype=np.int64)
+    for r_i, r in enumerate(records):
+        d_i = which_detector[r_i]
+        results[d_i][n_placed[d_i]] = r
+        n_placed[d_i] += 1
+
+    return results
