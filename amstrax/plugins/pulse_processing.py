@@ -107,6 +107,8 @@ class PulseProcessing(strax.Plugin):
         # For the sake of the if-else statement    
         else:
             pass
+        
+        print('do we see something?', len(raw_records))
 
         if self.config['check_raw_record_overlaps']:
             check_overlaps(raw_records, n_channels=3000)
@@ -116,9 +118,12 @@ class PulseProcessing(strax.Plugin):
         raw_records = raw_records[
             raw_records['channel'] < self.config['n_tpc_pmts']]
 
+
         # Convert everything to the records data type -- adds extra fields.
         r = strax.raw_to_records(raw_records)
         del raw_records
+
+        print('--- records data', r[3]['data'])
         
         # Do not trust in DAQ + strax.baseline to leave the
         # out-of-bounds samples to zero.
@@ -127,14 +132,17 @@ class PulseProcessing(strax.Plugin):
 
         baseline_per_channel(r, baseline_samples=self.config['baseline_samples'],
                            allow_sloppy_chunking=self.config['allow_sloppy_chunking'],
-                            pmt_channel=7, flip=False)
+                             flip=True)
              
         strax.integrate(r)       
 
+        print('--- records data', r[3]['data'])
+        
         pulse_counts = count_pulses(r, self.config['n_tpc_pmts'])
         pulse_counts['time'] = start
         pulse_counts['endtime'] = end
 
+        """
         if len(r):
             # Find hits
             # -- before filtering,since this messes with the with the S/N
@@ -154,6 +162,9 @@ class PulseProcessing(strax.Plugin):
 
             # Probably overkill, but just to be sure...
             strax.zero_out_of_bounds(r)
+
+        """
+        print('--- records data', r[3]['data'])
 
         return dict(records=r,
                     pulse_counts=pulse_counts)
@@ -182,9 +193,14 @@ class PulseProcessing(strax.Plugin):
         For XAMSL measurements details, please have a look:
             https://github.com/XAMS-nikhef/amstrax_files/tree/master/data
         """
-
-        has_v1724 = np.any(raw_records_v1724['channel'])
-        has_v1730 = np.any(raw_records_v1730['channel'])
+        
+        #  What is this??
+        #has_v1724 = np.any(raw_records_v1724['channel'])
+        #has_v1730 = np.any(raw_records_v1730['channel'])
+    
+        has_v1724 = len(raw_records_v1724)>0
+        has_v1730 = len(raw_records_v1730)>0
+        
         # Case v1724 measurement: data only in the raw_records_v1724
         if has_v1724 and not has_v1730:
             return True
@@ -392,12 +408,7 @@ def baseline_per_channel(records, baseline_samples=40, flip=False,pmt_channel=7,
 
         # Subtract baseline from all data samples in the record
         # (any additional zeros should be kept at zero)
-        # DO NOT flip the pulse unless it is the PMT pulse
-        if (d['channel']==pmt_channel):
+        if flip:
             d['data'][:d['length']] = ((-1) * (d['data'][:d['length']] - int(bl)))
-            d['baseline'] = bl
-            d['baseline_rms'] = rms
-        else: # SiPM data
-            d['data'][:d['length']] = ((d['data'][:d['length']] - int(bl)))
-            d['baseline'] = bl
-            d['baseline_rms'] = rms
+        d['baseline'] = bl
+        d['baseline_rms'] = rms

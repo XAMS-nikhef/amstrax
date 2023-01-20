@@ -37,7 +37,7 @@ def link_to_daq(
         daq_host,
         ssh_username=daq_user,
         ssh_password=daq_password,
-        remote_bind_address=('127.0.0.1', 27017)
+        remote_bind_address=('127.0.0.1', 27017),
     )
     server.start()
     _SECRET_SERVING_PORT[port_key] = server.local_bind_port

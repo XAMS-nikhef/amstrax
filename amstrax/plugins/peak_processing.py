@@ -173,6 +173,8 @@ class Peaks(strax.Plugin):
         # Split peaks using low-split natural breaks;
         # see https://github.com/XENONnT/straxen/pull/45
         # and https://github.com/AxFoundation/strax/pull/225
+        
+        """
         peaks = strax.split_peaks(
             peaks, hitlets, records, rlinks, self.to_pe,
             algorithm='natural_breaks',
@@ -181,7 +183,7 @@ class Peaks(strax.Plugin):
             filter_wing_width=self.config['peak_split_filter_wing_width'],
             min_area=self.config['peak_split_min_area'],
             do_iterations=self.config['peak_split_iterations'])
-
+        """
         # FIXME: Saturation correction using non-saturated channels
         
         # FIXME: Compute tight coincidence level.
@@ -219,7 +221,7 @@ class Peaks(strax.Plugin):
 
     @staticmethod
     @numba.njit(nogil=True, cache=True)
-    def clip_peaklet_times(peaklets, start, end):
+    def clip_peak_times(peaklets, start, end):
         for p in peaklets:
             if p['time'] < start:
                 p['time'] = start

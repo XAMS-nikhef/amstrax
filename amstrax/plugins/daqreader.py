@@ -192,9 +192,11 @@ class DAQReader(straxen.DAQReader):
             np.asarray(list(self.config['channel_map'].values())))
         del records
 
+
         # Convert to strax chunks
         result = dict()
         for i, subd in enumerate(self.config['channel_map']):
+
             if len(result_arrays[i]):
                 # dt may differ per subdetector
                 dt = result_arrays[i]['dt'][0]
