@@ -108,8 +108,6 @@ class PulseProcessing(strax.Plugin):
         else:
             pass
         
-        print('do we see something?', len(raw_records))
-
         if self.config['check_raw_record_overlaps']:
             check_overlaps(raw_records, n_channels=3000)
 
@@ -122,8 +120,6 @@ class PulseProcessing(strax.Plugin):
         # Convert everything to the records data type -- adds extra fields.
         r = strax.raw_to_records(raw_records)
         del raw_records
-
-        print('--- records data', r[3]['data'])
         
         # Do not trust in DAQ + strax.baseline to leave the
         # out-of-bounds samples to zero.
@@ -135,8 +131,6 @@ class PulseProcessing(strax.Plugin):
                              flip=True)
              
         strax.integrate(r)       
-
-        print('--- records data', r[3]['data'])
         
         pulse_counts = count_pulses(r, self.config['n_tpc_pmts'])
         pulse_counts['time'] = start
@@ -164,7 +158,6 @@ class PulseProcessing(strax.Plugin):
             strax.zero_out_of_bounds(r)
 
         """
-        print('--- records data', r[3]['data'])
 
         return dict(records=r,
                     pulse_counts=pulse_counts)
