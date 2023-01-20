@@ -221,7 +221,7 @@ class Peaks(strax.Plugin):
 
     @staticmethod
     @numba.njit(nogil=True, cache=True)
-    def clip_peak_times(peaklets, start, end):
+    def clip_peaklet_times(peaklets, start, end):
         for p in peaklets:
             if p['time'] < start:
                 p['time'] = start
