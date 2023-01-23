@@ -1,45 +1,74 @@
 import glob
+import os
 import warnings
-import numba
-import numpy as np
-import strax
-import straxen
+from collections import Counter
 from immutabledict import immutabledict
+import numpy as np
+import numba
+
+import strax
 
 export, __all__ = strax.exporter()
 __all__ += ['ARTIFICIAL_DEADTIME_CHANNEL']
 
 ARTIFICIAL_DEADTIME_CHANNEL = 40
 
-
 class ArtificialDeadtimeInserted(UserWarning):
     pass
 
 
 @export
-class DAQReader(straxen.DAQReader):
+@strax.takes_config(
+    # All these must have track=False, so the raw_records hash never changes!
+    # DAQ settings -- should match settings given to redax
+    strax.Option('record_length', default=110, track=False, type=int,
+                 help="Number of samples per raw_record"),
+    strax.Option('max_digitizer_sampling_time',
+                 default=10, track=False, type=int,
+                 help="Highest interval time of the digitizer sampling times(s) used."),
+    strax.Option('run_start_time', type=float, track=False, default=0,
+                 help="time of start run (s since unix epoch)"),
+    strax.Option('daq_chunk_duration', track=False,
+                 default=int(5e9), type=int,
+                 help="Duration of regular chunks in ns"),
+    strax.Option('daq_overlap_chunk_duration', track=False,
+                 default=int(5e8), type=int,
+                 help="Duration of intermediate/overlap chunks in ns"),
+    strax.Option('daq_compressor', default="lz4", track=False,
+                 help="Algorithm used for (de)compressing the live data"),
+    strax.Option('readout_threads', type=dict, track=False,
+                 help="Dictionary of the readout threads where the keys "
+                      "specify the reader and value the number of threads"),
+    strax.Option('daq_input_dir', type=str, track=False,
+                 help="Directory where readers put data"),
+    # DAQReader settings
+    strax.Option('safe_break_in_pulses', default=1000, track=False, infer_type=False,
+                 help="Time (ns) between pulses indicating a safe break "
+                      "in the datastream -- gaps of this size cannot be "
+                      "interior to peaklets."),
+    strax.Option('channel_map', track=False, type=immutabledict, infer_type=False,
+                 help="immutabledict mapping subdetector to (min, max) "
+                      "channel number."))
+class DAQReader(strax.Plugin):
     """
     Read the XAMS DAQ-live_data from redax and split it to the
     appropriate raw_record data-types based on the channel-map.
     Does nothing whatsoever to the live_data; not even baselining.
     Provides: 
-        - raw_records_v1724, sampled from the V1724 digitizer with sampling resolution = 10ns
-        - raw_records_v1730, sampled from the V1730 digitizer with sampling resolution = 2ns
-        - raw_records_aqmon, actually empty unless we need some strax-deadtime
+        - raw_records 
     """
-    provides = (
-        'raw_records_v1724',
-        'raw_records_v1730',
-        'raw_records_aqmon',
-    )
 
     depends_on = tuple()
-    data_kind = immutabledict(zip(provides, provides))
     parallel = 'process'
     rechunk_on_save = False
     # never change the version!
     __version__ = '0.0.0'
     compressor = 'zstd'
+
+    provides  = 'raw_records'
+    data_kind = 'raw_records'
+
+
 
     def infer_dtype(self):
         if not self.multi_output:
@@ -51,13 +80,162 @@ class DAQReader(straxen.DAQReader):
                 samples_per_record=self.config["record_length"])
             for d in self.provides}
 
+ 
+    def compute(self, chunk_i):
+        dt_central = self.config['daq_chunk_duration']
+        dt_overlap = self.config['daq_overlap_chunk_duration']
+
+        t_start = chunk_i * (dt_central + dt_overlap)
+        t_end = t_start + dt_central
+
+        pre, current, post = self._chunk_paths(chunk_i)
+        r_pre, r_post = None, None
+        break_pre, break_post = t_start, t_end
+
+        if pre:
+            if chunk_i == 0:
+                warnings.warn(
+                    f"DAQ is being sloppy: there should be no pre dir {pre} "
+                    f"for chunk 0. We're ignoring it.",
+                    UserWarning)
+            else:
+                r_pre, break_pre = self._load_chunk(
+                    path=pre,
+                    start=t_start - dt_overlap,
+                    end=t_start,
+                    kind='pre')
+
+        r_main, _ = self._load_chunk(
+            path=current,
+            start=t_start,
+            end=t_end,
+            kind='central')
+
+        if post:
+            r_post, break_post = self._load_chunk(
+                path=post,
+                start=t_end,
+                end=t_end + dt_overlap,
+                kind='post')
+
+        # Concatenate the result.
+        records = np.concatenate([
+            x for x in (r_pre, r_main, r_post)
+            if x is not None])
+
+        # Convert to strax chunks        
+        dt = records['dt']
+
+        # Convert time to time in ns since unix epoch.
+        # Ensure the offset is a whole digitizer sample
+        records["time"] += dt * (self.t0 // dt)
+
+        result_name = 'raw_records'
+        result = self.chunk(
+            start=self.t0 + break_pre,
+            end=self.t0 + break_post,
+            data=records,
+            data_type=result_name)
+
+        print(f"Read chunk {chunk_i:06d} from DAQ")
+        # Print data rate / data type if any
+        print(f"\t{result}")
+
+        return result
+
+
+    # The following functions are copied unchanged from straxen
+    # https://github.com/XENONnT/straxen/blob/master/straxen/plugins/raw_records/daqreader.py
+    # copied on 23 January 2023
+
+    def setup(self):
+        self.t0 = int(self.config['run_start_time']) * int(1e9)
+        self.dt_max = self.config['max_digitizer_sampling_time']
+        self.n_readout_threads = sum(self.config['readout_threads'].values())
+        if (self.config['safe_break_in_pulses']
+                > min(self.config['daq_chunk_duration'],
+                      self.config['daq_overlap_chunk_duration'])):
+            raise ValueError(
+                "Chunk durations must be larger than the minimum safe break"
+                " duration (preferably a lot larger!)")
+
+    def _path(self, chunk_i):
+        return self.config["daq_input_dir"] + f'/{chunk_i:06d}'
+
+    def _chunk_paths(self, chunk_i):
+        """Return paths to previous, current and next chunk
+        If any of them does not exist, or they are not yet populated
+        with data from all readers, their path is replaced by False.
+        """
+        p = self._path(chunk_i)
+        result = []
+        for q in [p + '_pre', p, p + '_post']:
+            if os.path.exists(q):
+                n_files = self._count_files_per_chunk(q)
+                if n_files >= self.n_readout_threads:
+                    result.append(q)
+                else:
+                    print(f"Found incomplete folder {q}: "
+                          f"contains {n_files} files but expected "
+                          f"{self.n_readout_threads}. "
+                          f"Waiting for more data.")
+                    if self.source_finished():
+                        # For low rates, different threads might end in a
+                        # different chunck at the end of a run,
+                        # still keep the results in this case.
+                        print(f"Run finished correctly nonetheless: "
+                              f"saving the results")
+                        result.append(q)
+                    else:
+                        result.append(False)
+            else:
+                result.append(False)
+        return tuple(result)
+
+    @staticmethod
+    def _partial_chunk_to_thread_name(partial_chunk):
+        """Convert name of part of the chunk to the thread_name that wrote it"""
+        return '_'.join(partial_chunk.split('_')[:-1])
+
+    def _count_files_per_chunk(self, path_chunk_i):
+        """
+        Check that the files in the chunks have names consistent with
+        the readout threads
+        """
+        counted_files = Counter(
+            [self._partial_chunk_to_thread_name(p) for p in os.listdir(path_chunk_i)])
+        for thread, n_counts in counted_files.items():
+            if thread not in self.config['readout_threads']:
+                raise ValueError(f'Bad data for {path_chunk_i}. Got {thread}')
+            if n_counts > self.config['readout_threads'][thread]:
+                raise ValueError(f'{thread} wrote {n_counts}, expected'
+                                 f'{self.config["readout_threads"][thread]}')
+        return sum(counted_files.values())
+
+    def source_finished(self):
+        end_dir = self.config["daq_input_dir"] + '/THE_END'
+        if not os.path.exists(end_dir):
+            return False
+        else:
+            return self._count_files_per_chunk(end_dir) >= self.n_readout_threads
+
+    def is_ready(self, chunk_i):
+        ended = self.source_finished()
+        pre, current, post = self._chunk_paths(chunk_i)
+        next_ahead = os.path.exists(self._path(chunk_i + 1))
+        if (current and (
+                (pre and post
+                 or chunk_i == 0 and post
+                 or ended and (pre and not next_ahead)))):
+            return True
+        return False
+
     def _load_chunk(self, path, start, end, kind='central'):
-        first_provides = self.provides[0]
         records = [
             strax.load_file(
                 fn,
                 compressor=self.config["daq_compressor"],
-                dtype=self.dtype_for(first_provides))
+                dtype=self.dtype_for('raw_records'))
             for fn in sorted(glob.glob(f'{path}/*'))]
         records = np.concatenate(records)
         records = strax.sort_by_time(records)
@@ -103,6 +281,7 @@ class DAQReader(straxen.DAQReader):
                     # We still have to break somewhere, but this can involve
                     # throwing away data.
                     # Let's do it at the end of the chunk
+                    # Maybe find a better time, e.g. a longish-but-not-quite
                     # satisfactory gap
                     break_time = end - min_gap
 
@@ -139,146 +318,3 @@ class DAQReader(straxen.DAQReader):
                  dt=[dt],
                  channel=[ARTIFICIAL_DEADTIME_CHANNEL]),
             self.dtype_for('raw_records'))
-
-    def _path(self, chunk_i):
-        return self.config["daq_input_dir"] + f'/{chunk_i:06d}'
-
-    def compute(self, chunk_i):
-        dt_central = self.config['daq_chunk_duration']
-        dt_overlap = self.config['daq_overlap_chunk_duration']
-
-        t_start = chunk_i * (dt_central + dt_overlap)
-        t_end = t_start + dt_central
-
-        pre, current, post = self._chunk_paths(chunk_i)
-        r_pre, r_post = None, None
-        break_pre, break_post = t_start, t_end
-
-        if pre:
-            if chunk_i == 0:
-                warnings.warn(
-                    f"DAQ is being sloppy: there should be no pre dir {pre} "
-                    f"for chunk 0. We're ignoring it.",
-                    UserWarning)
-            else:
-                r_pre, break_pre = self._load_chunk(
-                    path=pre,
-                    start=t_start - dt_overlap,
-                    end=t_start,
-                    kind='pre')
-
-        r_main, _ = self._load_chunk(
-            path=current,
-            start=t_start,
-            end=t_end,
-            kind='central')
-
-        if post:
-            r_post, break_post = self._load_chunk(
-                path=post,
-                start=t_end,
-                end=t_end + dt_overlap,
-                kind='post')
-
-        # Concatenate the result.
-        records = np.concatenate([
-            x for x in (r_pre, r_main, r_post)
-            if x is not None])
-
-        # Split records by channel
-        result_arrays = split_channel_ranges(
-            records,
-            np.asarray(list(self.config['channel_map'].values())))
-        del records
-
-
-        # Convert to strax chunks
-        result = dict()
-        for i, subd in enumerate(self.config['channel_map']):
-
-            if len(result_arrays[i]):
-                # dt may differ per subdetector
-                dt = result_arrays[i]['dt'][0]
-                # Convert time to time in ns since unix epoch.
-                # Ensure the offset is a whole digitizer sample
-                result_arrays[i]["time"] += dt * (self.t0 // dt)
-
-            # Ignore data from the 'blank' channels, corresponding to
-            # channels that have nothing connected
-            if subd.endswith('blank'):
-                continue
-
-            result_name = 'raw_records'
-            result_name += '_' + subd
-            result[result_name] = self.chunk(
-                start=self.t0 + break_pre,
-                end=self.t0 + break_post,
-                data=result_arrays[i],
-                data_type=result_name)
-
-        print(f"Read chunk {chunk_i:06d} from DAQ")
-        for r in result.values():
-            # Print data rate / data type if any
-            if r._mbs() > 0:
-                print(f"\t{r}")
-        return result
-
-
-@export
-class Fake1TDAQReader(DAQReader):
-    provides = (
-        'raw_records',
-        'raw_records_diagnostic',
-        'raw_records_aqmon')
-
-    data_kind = immutabledict(zip(provides, provides))
-    
-    
-    
-    
-    
-
-@export
-@numba.njit(nogil=True, cache=True)
-def split_channel_ranges(records, channel_ranges):
-    """
-    Copied from straxen by Carlo on 20 Jan 2023 
-    But most probably it's not needed 
-    Return numba.List of record arrays in channel_ranges.
-    ~2.5x as fast as a naive implementation with np.in1d
-    """
-    n_subdetectors = len(channel_ranges)
-    which_detector = np.zeros(len(records), dtype=np.int8)
-    n_in_detector = np.zeros(n_subdetectors, dtype=np.int64)
-
-    # First loop to count number of records per detector
-    for r_i, r in enumerate(records):
-        for d_i in range(n_subdetectors):
-            left, right = channel_ranges[d_i]
-            if r['channel'] > right:
-                continue
-            elif r['channel'] >= left:
-                which_detector[r_i] = d_i
-                n_in_detector[d_i] += 1
-                break
-            else:
-                # channel_ranges should be sorted ascending.
-                print(r['time'], r['channel'], channel_ranges)
-                raise ValueError(
-                    "Bad data from DAQ: data in unknown channel!")
-
-    # Allocate memory
-    results = numba.typed.List()
-    for d_i in range(n_subdetectors):
-        results.append(np.empty(n_in_detector[d_i], dtype=records.dtype))
-
-    # Second loop to fill results
-    # This is slightly faster than using which_detector == d_i masks,
-    # since it only needs one loop over the data.
-    n_placed = np.zeros(n_subdetectors, dtype=np.int64)
-    for r_i, r in enumerate(records):
-        d_i = which_detector[r_i]
-        results[d_i][n_placed[d_i]] = r
-        n_placed[d_i] += 1
-
-    return results
