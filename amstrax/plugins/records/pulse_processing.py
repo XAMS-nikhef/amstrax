@@ -74,7 +74,7 @@ class PulseProcessing(strax.Plugin):
         pulse_counts=True)
     compressor = 'zstd'
 
-    depends_on = ('raw_records_v1724','raw_records_v1730')
+    depends_on = ('raw_records')
 
     provides = ('records', 'pulse_counts')
     data_kind = {k: k for k in provides}
@@ -84,7 +84,7 @@ class PulseProcessing(strax.Plugin):
         # The record_length is the same for both raw_records_v1724 and raw_records_v1730
         # therefore, we can just use one of the two
         self.record_length = strax.record_length_from_dtype(
-            self.deps['raw_records_v1724'].dtype_for('raw_records_v1724'))
+            self.deps['raw_records'].dtype_for('raw_records'))
 
         dtype = dict()
         for p in self.provides:
@@ -94,20 +94,8 @@ class PulseProcessing(strax.Plugin):
         ntpc = self.config['n_tpc_pmts']
         return dtype
 
-    def compute(self, raw_records_v1724, raw_records_v1730, start, end):  
-        ####
-        # Get the raw_records having data
-        ####
-        # Case 1: return True -> v1724 measurement
-        if self.choose_records(raw_records_v1724,raw_records_v1730):
-            raw_records = raw_records_v1724
-        # Case 2: return False ->  v1730 measurement
-        elif not self.choose_records(raw_records_v1724,raw_records_v1730):
-            raw_records = raw_records_v1730
-        # For the sake of the if-else statement    
-        else:
-            pass
-        
+    def compute(self, raw_records, start, end):  
+
         if self.config['check_raw_record_overlaps']:
             check_overlaps(raw_records, n_channels=3000)
 
@@ -161,63 +149,7 @@ class PulseProcessing(strax.Plugin):
 
         return dict(records=r,
                     pulse_counts=pulse_counts)
-
-    ###
-    # Make one records for future processing
-    ###
-
-    @staticmethod
-    def choose_records(raw_records_v1724, raw_records_v1730):
-        """
-        This function implements a decisional loop over which raw_records to keep.
-        There are for possibilities:
-            1. V1724 measurements 
-                    - data only from raw_records_v1724
-                    - return True
-            2. V1730 measurements
-                    - data only from raw_records_v1730
-                    - return False
-            3. We have data in both raw_records_v1724 and raw_records_v1730
-                    - this is not possible in XAMSL data campaign
-                    - raise ValueError
-            4. No data in both raw_records_v1724 and raw_records_v1730
-                    - this is not possible in XAMSL data campaign
-                    - raise ValueError          
-        For XAMSL measurements details, please have a look:
-            https://github.com/XAMS-nikhef/amstrax_files/tree/master/data
-        """
-        
-        #  What is this??
-        #has_v1724 = np.any(raw_records_v1724['channel'])
-        #has_v1730 = np.any(raw_records_v1730['channel'])
-    
-        has_v1724 = len(raw_records_v1724)>0
-        has_v1730 = len(raw_records_v1730)>0
-        
-        # Case v1724 measurement: data only in the raw_records_v1724
-        if has_v1724 and not has_v1730:
-            return True
-        # Case v1730 measurement: data only in the raw_records_v1730
-        elif not has_v1724 and has_v1730:
-            return False
-        # Apparently something went wrong
-        
-        # raw_records_v1730 and raw_records_v1724 both returning data
-        if has_v1724 and has_v1730:
-            raise ValueError(
-                f"Bad data! The raw_records are both returning data and"
-                f"this is not possible for a XAMSL measurement."
-                f"Check the raw_records data of this measurement"
-                f"or do not process it.")
-        # no data in both raw_records_v1730 and raw_records_v1724
-        if not has_v1724 and not has_v1730:
-            raise ValueError(
-                f"Bad data! The raw_records are both empty and"
-                f"this is not possible for a XAMSL measurement."
-                f"Check the raw_records data of this measurement"
-                f"or do not process it.")
-        raise ValueError('How did we end up here?')
-
+x
 ##
 # Pulse counting
 ##
