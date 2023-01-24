@@ -149,7 +149,7 @@ class PulseProcessing(strax.Plugin):
 
         return dict(records=r,
                     pulse_counts=pulse_counts)
-x
+
 ##
 # Pulse counting
 ##
