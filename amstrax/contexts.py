@@ -7,11 +7,7 @@ from immutabledict import immutabledict
 import amstrax as ax
 
 common_opts_xams_little = dict(
-    register_all=[ax.radon_pulse_processing,
-                  ax.radon_peaks,
-                  ax.radon_peak_basics,
-#                   ax.event_processing
-                 ],
+    register_all=[],
     register=[ax.DAQReader],
     store_run_fields=(
         'name', 'number',
@@ -26,11 +22,7 @@ common_opts_xams_little = dict(
 
 
 common_opts_xams = dict(
-    register_all=[ax.pulse_processing,
-                  ax.peak_processing,
-                  ax.peak_basics,
-#                   ax.event_processing                  
-                 ],
+    register_all=[],
     register=[ax.DAQReader],
     store_run_fields=(
         'name', 'number',
