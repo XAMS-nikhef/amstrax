@@ -40,20 +40,25 @@ class LEDCalibration(strax.Plugin):
     rechunk_on_save = False
 
     baseline_window = straxen.URLConfig(
-        default=(0, 60), infer_type=False,
+        default=(0, 50), infer_type=False,
         help="Window (samples) for baseline calculation.")
 
     led_window = straxen.URLConfig(
-        default=(60, 110), infer_type=False,
+        default=(80, 110), infer_type=False,
         help="Window (samples) where we expect the signal in LED calibration")
 
     noise_window = straxen.URLConfig(
-        default=(10, 30), infer_type=False,
+        default=(0, 10), infer_type=False,
         help="Window (samples) to analysis the noise")
 
     channel_list = straxen.URLConfig(
         default=(tuple(channel_list)), infer_type=False,
         help="List of PMTs. Defalt value: all the PMTs")
+
+    record_i_signal = straxen.URLConfig(
+        default=1, infer_type=False,
+        help="i of record where you expect the signal")
+
 
     dtype = [('area', np.float32, 'Area averaged in integration windows'),
              ('amplitude_led', np.float32, 'Amplitude in LED window'),
@@ -70,10 +75,9 @@ class LEDCalibration(strax.Plugin):
         '''
         mask = np.where(np.in1d(raw_records['channel'], self.channel_list))[0]
         rr = raw_records #[mask]
-        print('rr', len(rr))
-        r = get_records(rr, baseline_window=self.baseline_window)
-        print('r', len(r))
 
+        r = get_records(rr, baseline_window=self.baseline_window, record_i_signal=self.record_i_signal)
+  
 
         del rr, raw_records
 
@@ -90,7 +94,7 @@ class LEDCalibration(strax.Plugin):
         return temp
 
 
-def get_records(raw_records, baseline_window):
+def get_records(raw_records, baseline_window, record_i_signal):
     """
     Determine baseline as the average of the first baseline_samples
     of each pulse. Subtract the pulse float(data) from baseline.
@@ -108,19 +112,17 @@ def get_records(raw_records, baseline_window):
 
     records = np.zeros(len(raw_records), dtype=_dtype)
     strax.copy_to_buffer(raw_records, records, "_rr_to_r_led")
-    print('print first record', records[0])
-    print(records['record_i'][:15], records['record_i'])    
-    print(records['length'])    
-    mask = np.where((records['record_i'] == 1) & (records['length'] == record_length))[0] # WHY was it hardcoded 160???
-    print(mask)
+
+    mask = np.where((records['record_i'] == record_i_signal) & (records['length'] == record_length))[0] # WHY was it hardcoded 160???
     records = records[mask]
 
-    print('inside func', len(records))
 
     bl = records['data'][:, baseline_window[0]:baseline_window[1]].mean(axis=1)
-    print('inside func bl', len(bl))
+
 
     records['data'][:, :record_length] = -1. * (records['data'][:, :record_length].transpose() - bl[:]).transpose()
+
+
     return records
 
 
@@ -133,24 +135,13 @@ def get_amplitude(records, led_window, noise_window):
     Needed for the SPE computation.
     Take the maximum in two different regions, where there is the signal and where there is not.
     """
-    print('len records in get ampl', len(records))
     on = np.zeros((len(records)), dtype=_on_off_dtype)
     off = np.zeros((len(records)), dtype=_on_off_dtype)
-
-    print('led_window, noise_window')
-    print(led_window, noise_window)
-    print('find max of ', records['data'])
-    print('find max of ', records['data'][:, 0:10])
-    print('find max of ', records['data'][:, led_window[0]:led_window[1]])
 
     on['amplitude'] = np.max(records['data'][:, led_window[0]:led_window[1]], axis=1)
     on['channel'] = records['channel']
     off['amplitude'] = np.max(records['data'][:, noise_window[0]:noise_window[1]], axis=1)
     off['channel'] = records['channel']
-
-    print(on['amplitude'])
-    print(off['amplitude'])
-
 
     return on, off
 
@@ -166,7 +157,7 @@ def get_area(records, led_window):
     This is done in 6 integration window and it returns the average area.
     """
     left = led_window[0]
-    end_pos = [led_window[1] + 2 * i for i in range(6)]
+    end_pos = [led_window[1],] #+ 2 * i for i in range(6)]
 
     Area = np.zeros((len(records)), dtype=_area_dtype)
     for right in end_pos:
