@@ -311,4 +311,3 @@ class PeakPositions(strax.Plugin):
 
         result['r'] = (result['xr'] ** 2 + result['yr'] ** 2) ** (1 / 2)
         return result
-

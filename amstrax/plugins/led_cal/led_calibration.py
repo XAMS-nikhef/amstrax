@@ -166,4 +166,3 @@ def get_area(records, led_window):
     Area['area'] = Area['area'] / float(len(end_pos))
 
     return Area
-

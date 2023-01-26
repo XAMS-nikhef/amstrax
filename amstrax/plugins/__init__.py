@@ -14,4 +14,3 @@ from .peaks import *
 
 from . import events
 from .events import *
-

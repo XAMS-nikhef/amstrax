@@ -12,4 +12,3 @@ from . import hitfinder_thresholds
 from .hitfinder_thresholds import *
 
 from . import auto_processing
-
