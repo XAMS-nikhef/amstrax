@@ -60,6 +60,7 @@ class LEDCalibration(strax.Plugin):
         help="i of record where you expect the signal")
 
 
+
     dtype = [('area', np.float32, 'Area averaged in integration windows'),
              ('amplitude_led', np.float32, 'Amplitude in LED window'),
              ('amplitude_noise', np.float32, 'Amplitude in off LED window'),
@@ -77,7 +78,6 @@ class LEDCalibration(strax.Plugin):
         rr = raw_records #[mask]
 
         r = get_records(rr, baseline_window=self.baseline_window, record_i_signal=self.record_i_signal)
-  
 
         del rr, raw_records
 
@@ -113,7 +113,7 @@ def get_records(raw_records, baseline_window, record_i_signal):
     records = np.zeros(len(raw_records), dtype=_dtype)
     strax.copy_to_buffer(raw_records, records, "_rr_to_r_led")
 
-    mask = np.where((records['record_i'] == record_i_signal) & (records['length'] == record_length))[0] # WHY was it hardcoded 160???
+    mask = np.where((records['record_i'] == record_i_signal))[0] # & (records['length'] == record_length))[0] # WHY was it hardcoded 160???
     records = records[mask]
 
 

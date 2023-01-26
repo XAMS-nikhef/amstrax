@@ -26,15 +26,19 @@ def parse_args():
         help="ID of the run to process; usually the run name.")
     parser.add_argument(
         '--context',
-        default='xams_little',
+        default='xams',
         help="Name of context to use")
     parser.add_argument(
         '--target',
-        default='raw_records_v1724',
+        default='raw_records',
         help='Target final data type to produce')
     parser.add_argument(
+        '--output_folder',
+        default='./strax_data',
+        help='Output folder for context')
+    parser.add_argument(
         '--detector',
-        default='xamsl',
+        default='xams',
         help="xamsl or xams")
     parser.add_argument(
         '--from_scratch',
@@ -94,14 +98,19 @@ def main(args):
     # to do them after argparsing (so --help is fast)
     import strax
     print(f"\tstrax {strax.__version__} at {osp.dirname(strax.__file__)}")
+
+
+    #Use own version of amstrax, its currently a branch called carlo
+    sys.path.insert(0, '/home/xams/carlo/software/amstrax')
     import amstrax
     print(f"\tamstrax {amstrax.__version__} at {osp.dirname(amstrax.__file__)}")
 
+
     if args.context_kwargs:
         logging.info(f'set context kwargs {args.context_kwargs}')
-        st = getattr(amstrax.contexts, args.context)(**args.context_kwargs)
+        st = getattr(amstrax.contexts, args.context)(output_folder=args.output_folder, **args.context_kwargs)
     else:
-        st = getattr(amstrax.contexts, args.context)()
+        st = getattr(amstrax.contexts, args.context)(output_folder=args.output_folder)
 
     if args.config_kwargs:
         logging.info(f'set context options to {args.config_kwargs}')
@@ -121,7 +130,8 @@ def main(args):
         st = amstrax.contexts.context_for_daq_reader(st,
                                                      args.run_id,
                                                      run_doc=testing_rd,
-                                                     detector=args.detector)
+                                                     detector=args.detector,
+                                                     check_exists=False)
 
     if args.from_scratch:
         for q in st.storage:

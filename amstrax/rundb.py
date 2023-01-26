@@ -24,7 +24,7 @@ def _check_environment_var(key):
 
 
 def link_to_daq(
-        daq_host="145.102.133.168",
+        daq_host="145.102.134.61",
         daq_user="xams"
 ):
     """Create an SSH tunnel to the daq machine to get access to the runsdb"""

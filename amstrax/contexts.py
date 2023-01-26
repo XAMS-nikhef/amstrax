@@ -227,7 +227,7 @@ def context_for_daq_reader(st: strax.Context,
         run_col = ax.get_mongo_collection(detector)
         run_doc = run_col.find_one({'number': int(run_id)})
     daq_config = run_doc['daq_config']
-    live_dir = st.config['live_data_dir']
+    live_dir = daq_config['strax_output_path']
 
     input_dir = os.path.join(live_dir, run_id)
     if not os.path.exists(input_dir):
