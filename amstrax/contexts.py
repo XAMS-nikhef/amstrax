@@ -10,7 +10,6 @@ import amstrax as ax
 
 common_opts_xams_little = dict(
     register_all=[
-    
     ax.raw_records,
     ax.records,
     ax.pulse_processing,
@@ -23,9 +22,7 @@ common_opts_xams_little = dict(
         'start', 'end', 'livetime',
         'processing_status',
         'tags'),
-    check_available=('raw_records_v1730',
-                     'raw_records_v1724',
-                     ),
+    check_available=(),
     free_options=('live_data_dir',),
 )
 
@@ -38,9 +35,7 @@ common_opts_xams = dict(
         'start', 'end', 'livetime',
         'processing_status',
         'tags'),
-    check_available=('raw_records_v1730',
-                     'raw_records_v1724',
-                     ),
+    check_available=(),
     free_options=('live_data_dir',),
 )
 
@@ -74,6 +69,14 @@ def xams(*args, **kwargs):
                         )
     st = _xams_xamsl_context(*args, **kwargs, _detector='xams', mongo_kwargs=mongo_kwargs)
     st.set_config(xams_common_config)
+    ps = [ax.raw_records,
+    ax.records,
+    ax.pulse_processing,
+    ax.peak_processing,
+    ax.led_calibration]
+    for p in ps:
+        st.register_all(p)
+
     return st
 
 
@@ -95,7 +98,7 @@ def _xams_xamsl_context(
         raw_data_folder='/data/xenon/{detector}/raw/',
         processed_data_folder='/data/xenon/{detector}/processed/',
         _detector='xams',
-        init_rundb=True,
+        init_rundb=False,
         mongo_kwargs: dict = None
 ):
     if _detector=='xams':
@@ -134,7 +137,6 @@ def _xams_xamsl_context(
                             readonly=True),
         strax.DataDirectory(output_folder),
     ]
-    print(st.storage)
     return st
 
 
@@ -241,6 +243,14 @@ def context_for_daq_reader(st: strax.Context,
     input_dir = os.path.join(live_dir, run_id)
     if not os.path.exists(input_dir):
         raise FileNotFoundError(f'No path at {input_dir}')
+
+    ps = [ax.raw_records,
+    ax.records,
+    ax.pulse_processing,
+    ax.peak_processing,
+    ax.led_calibration]
+    for p in ps:
+        st.register_all(p)
 
     st.set_context_config(dict(forbid_creation_of=tuple()))
     st.set_config(

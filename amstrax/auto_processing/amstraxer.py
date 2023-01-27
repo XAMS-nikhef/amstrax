@@ -31,6 +31,7 @@ def parse_args():
     parser.add_argument(
         '--target',
         default='raw_records',
+        nargs="*",
         help='Target final data type to produce')
     parser.add_argument(
         '--output_folder',
@@ -127,6 +128,7 @@ def main(args):
         testing_rd = args.testing_rundoc
         if testing_rd is not None:
             testing_rd['start'] = datetime.datetime.now()
+        print("I'll try to create raw_records")
         st = amstrax.contexts.context_for_daq_reader(st,
                                                      args.run_id,
                                                      run_doc=testing_rd,
@@ -140,6 +142,9 @@ def main(args):
             strax.DataDirectory('./strax_data',
                                 overwrite='always',
                                 provide_run_metadata=False))
+
+    print(st._plugin_class_registry)
+
     if st.is_stored(args.run_id, args.target):
         print("This data is already available.")
         return 1
@@ -164,7 +169,7 @@ def main(args):
     def get_results():
         kwargs = dict(
             run_id=args.run_id,
-            targets=args.target,
+            targets=t,
             max_workers=int(args.workers))
         yield from st.get_iter(**kwargs)
 

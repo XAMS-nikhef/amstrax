@@ -1,6 +1,7 @@
 import sys
 sys.path.insert(0, '/home/xams/carlo/software/amstrax')
 from amstrax.auto_processing import amstraxer
+from amstrax.auto_processing import amstraxer_easy
 
 if __name__ == '__main__':
     args = amstraxer.parse_args()
@@ -24,7 +25,7 @@ if __name__ == '__main__':
                                        {"$set": {"processing_status": f"building_{target}"}})
     print(f'Start amstraxer')
     try:
-        amstraxer.main(args)
+        amstraxer_easy.main(args)
     except Exception as e:
         run_collection.find_one_and_update({"number": int(run_name)},
                                            {"$set": {"processing_status": f"failed due to {str(e)}"},

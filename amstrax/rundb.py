@@ -222,7 +222,7 @@ class RunDB(strax.StorageFrontend):
         projection = dq.copy()
         projection.update({
             k: True
-            for k in 'name number data.protocol data.location'.split()})
+            for k in 'name number'.split()})
 
         results_dict = dict()
         for doc in self.collection.find(
