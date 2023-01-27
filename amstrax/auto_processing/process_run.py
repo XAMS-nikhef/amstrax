@@ -27,8 +27,9 @@ if __name__ == '__main__':
         amstraxer.main(args)
     except Exception as e:
         run_collection.find_one_and_update({"number": int(run_name)},
-                                           {"$set": {
-                                               "processing_status": f"failed due to {str(e)}"}})
+                                           {"$set": {"processing_status": f"failed due to {str(e)}"},
+                                           "$inc": { "processing_failed": 1}
+                                           })
         raise e
 
     run_collection.find_one_and_update({"number": int(run_name)},

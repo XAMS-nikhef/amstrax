@@ -4,11 +4,20 @@ from datetime import timezone
 import strax
 from immutabledict import immutabledict
 
+import sys
+sys.path.insert(0, '/home/xams/carlo/software/amstrax')
 import amstrax as ax
 
 common_opts_xams_little = dict(
-    register_all=[],
-    register=[ax.DAQReader],
+    register_all=[
+    
+    ax.raw_records,
+    ax.records,
+    ax.pulse_processing,
+    ax.peak_processing,
+    ax.led_calibration],
+    
+    register=[],
     store_run_fields=(
         'name', 'number',
         'start', 'end', 'livetime',
