@@ -5,7 +5,11 @@ import numpy as np
 import strax
 import straxen
 from immutabledict import immutabledict
-from straxen.plugins.daqreader import split_channel_ranges
+try:
+    # Straxen > 2 changed the imports
+    from straxen.plugins.raw_records.daqreader import split_channel_ranges
+except ModuleNotFoundError:
+    from straxen.plugins.daqreader import split_channel_ranges
 
 export, __all__ = strax.exporter()
 __all__ += ['ARTIFICIAL_DEADTIME_CHANNEL']
