@@ -6,11 +6,16 @@ import os
 import numba
 import numpy as np
 import strax
-from straxen.plugins.pax_interface import records_needed
 
 export, __all__ = strax.exporter()
 
 
+# From https://github.com/XENONnT/straxen/blob/81da4e1c761033a220bb07a86910f8badafcabf6/straxen/legacy/plugins_1t/pax_interface.py  # noqa
+def records_needed(pulse_length, samples_per_record):
+    """Return records needed to store pulse_length samples"""
+    return np.ceil(pulse_length / samples_per_record).astype(np.int64)
+
+  
 @export
 def pax_to_records(input_filename,
                    samples_per_record=strax.DEFAULT_RECORD_LENGTH,
