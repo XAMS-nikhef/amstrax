@@ -16,13 +16,13 @@ HITFINDER_OPTIONS = tuple([
 
 
 @strax.takes_config(
-    strax.Option('peak_gap_threshold', default=3000,
+    strax.Option('peak_gap_threshold', default=300,
                  help="No hits for this many ns triggers a new peak"),
-    strax.Option('peak_left_extension', default=1000,
+    strax.Option('peak_left_extension', default=10,
                  help="Include this many ns left of hits in peaks"),
-    strax.Option('peak_right_extension', default=1000,
+    strax.Option('peak_right_extension', default=10,
                  help="Include this many ns right of hits in peaks"),
-    strax.Option('peak_min_area', default=1,
+    strax.Option('peak_min_area', default=10,
                  help="Minimum contributing PMTs needed to define a peak"),
     strax.Option('peak_min_pmts', default=1,
                  help="Minimum contributing PMTs needed to define a peak"),
@@ -60,7 +60,6 @@ class Peaks(strax.Plugin):
         self.to_pe = np.ones(self.config['n_tpc_pmts'])
 
         hits = strax.find_hits(r)
-
         hits = strax.sort_by_time(hits)
 
         rlinks = strax.record_links(r)
@@ -79,7 +78,7 @@ class Peaks(strax.Plugin):
         )
 
         
-        self.clip_peaklet_times(peaks, start, end)
+        # self.clip_peaklet_times(peaks, start, end)
 
         strax.sum_waveform(peaks, hits, r, rlinks, self.to_pe)
 

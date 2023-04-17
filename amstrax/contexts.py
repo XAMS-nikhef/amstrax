@@ -5,7 +5,6 @@ import strax
 from immutabledict import immutabledict
 
 import sys
-sys.path.insert(0, '/home/xams/carlo/software/amstrax')
 import amstrax as ax
 
 common_opts_xams_little = dict(
