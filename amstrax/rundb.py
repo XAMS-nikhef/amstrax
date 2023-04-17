@@ -24,10 +24,17 @@ def _check_environment_var(key):
 
 
 def link_to_daq(
-        daq_host="145.102.134.61",
-        daq_user="xams"
+        daq_host="",
+        daq_user=""
 ):
     """Create an SSH tunnel to the daq machine to get access to the runsdb"""
+
+    _check_environment_var("DAQ_HOST")
+    daq_host = os.environ['DAQ_USER']
+
+    _check_environment_var("DAQ_PASSWORD")
+    daq_user = os.environ['DAQ_PASSWORD']
+
     port_key = f'{daq_host}_{daq_user}'
     if _SECRET_SERVING_PORT is not None and port_key in _SECRET_SERVING_PORT:
         return _SECRET_SERVING_PORT[port_key]

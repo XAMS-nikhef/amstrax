@@ -38,15 +38,7 @@ def parse_args():
     parser.add_argument(
         '--detector',
         default='xams',
-        help="xamsl or xams")    
-    parser.add_argument(
-        '--daq_host',
-        default='145.102.134.61',
-        help="IP of host")    
-    parser.add_argument(
-        '--daq_user',
-        default='xams',
-        help="xams always")
+        help="xamsl or xams")
     return parser.parse_args()
 
 
@@ -64,6 +56,8 @@ if __name__ == '__main__':
     from amstrax import get_mongo_collection
     from amstrax import amstrax_dir
 
+    print('Imported amstrax functions')
+
     # settings
     nap_time = int(args.timeout)
     max_jobs = int(args.max_jobs) if args.max_jobs is not None else None
@@ -72,9 +66,9 @@ if __name__ == '__main__':
     process_stomboot = args.process_stomboot
     detector = args.detector
     target = args.target
-    daq_host = args.daq_host
-    daq_user = args.daq_user
-    runs_col = get_mongo_collection(detector, daq_host=daq_host, daq_user=daq_user)
+    runs_col = get_mongo_collection(detector)
+
+    print('I got the mongo collection')
 
     while 1:
         # Update task list

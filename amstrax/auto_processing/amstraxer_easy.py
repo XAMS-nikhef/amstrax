@@ -1,10 +1,8 @@
 import sys, os
-
 sys.path.insert(0, '/home/xams/carlo/software/amstrax')
+
 import amstrax
-
 import strax
-
 import numpy as np
 import pandas as pd
 import datetime
@@ -12,9 +10,6 @@ import argparse
 
 live_data = '/home/xams/data/test_data/'
 output_folder = '/home/xams/data/xams_processed/'
-
-
-daq_host = "145.102.134.61"
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -92,8 +87,8 @@ def parse_args():
 def main(args):
 
     run_id = args.run_id
-    client = amstrax.get_mongo_client(daq_host=daq_host)
-    run_col = amstrax.get_mongo_collection('xams', daq_host=daq_host, daq_user='xams')
+    client = amstrax.get_mongo_client()
+    run_col = amstrax.get_mongo_collection('xams')
     run_doc = run_col.find_one({'number': int(run_id)})
     st = amstrax.contexts.xams(output_folder=output_folder, init_rundb=False)
     st.storage += [strax.DataDirectory(live_data,
