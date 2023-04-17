@@ -1,6 +1,4 @@
 import sys, os
-sys.path.insert(0, '/home/xams/carlo/software/amstrax')
-
 import amstrax
 import strax
 import numpy as np

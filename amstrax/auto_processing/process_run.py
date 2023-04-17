@@ -1,5 +1,4 @@
 import sys
-sys.path.insert(0, '/home/xams/carlo/software/amstrax')
 from amstrax.auto_processing import amstraxer
 from amstrax.auto_processing import amstraxer_easy
 
@@ -9,7 +8,6 @@ if __name__ == '__main__':
     # Do import later to get fast --help
 
     import sys
-    sys.path.insert(0, '/home/xams/carlo/software/amstrax')
     import amstrax
 
     detector = args.detector
