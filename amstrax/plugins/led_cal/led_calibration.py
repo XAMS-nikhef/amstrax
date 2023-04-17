@@ -1,19 +1,10 @@
-"""
-Dear nT analyser, 
-if you want to complain please contact: chiara@physik.uzh.ch, gvolta@physik.uzh.ch, kazama@isee.nagoya-u.ac.jp
-"""
 from immutabledict import immutabledict
 import strax
 import straxen
 import numba
 import numpy as np
 
-# This makes sure shorthands for only the necessary functions
-# are made available under straxen.[...]
 export, __all__ = strax.exporter()
-
-channel_list = [i for i in range(494)]
-
 
 @export
 class LEDCalibration(strax.Plugin):
@@ -51,10 +42,6 @@ class LEDCalibration(strax.Plugin):
         default=(0, 10), infer_type=False,
         help="Window (samples) to analysis the noise")
 
-    channel_list = straxen.URLConfig(
-        default=(tuple(channel_list)), infer_type=False,
-        help="List of PMTs. Defalt value: all the PMTs")
-
     record_i_signal = straxen.URLConfig(
         default=1, infer_type=False,
         help="i of record where you expect the signal")
@@ -74,13 +61,12 @@ class LEDCalibration(strax.Plugin):
         The data for LED calibration are build for those PMT which belongs to channel list. 
         This is used for the different ligh levels. As defaul value all the PMTs are considered.
         '''
-        mask = np.where(np.in1d(raw_records['channel'], self.channel_list))[0]
-        rr = raw_records #[mask]
+
+        rr = raw_records
 
         r = get_records(rr, baseline_window=self.baseline_window, record_i_signal=self.record_i_signal)
 
         del rr, raw_records
-
 
         temp = np.zeros(len(r), dtype=self.dtype)
         strax.copy_to_buffer(r, temp, "_recs_to_temp_led")
@@ -113,15 +99,11 @@ def get_records(raw_records, baseline_window, record_i_signal):
     records = np.zeros(len(raw_records), dtype=_dtype)
     strax.copy_to_buffer(raw_records, records, "_rr_to_r_led")
 
-    mask = np.where((records['record_i'] == record_i_signal))[0] # & (records['length'] == record_length))[0] # WHY was it hardcoded 160???
+    mask = np.where((records['record_i'] == record_i_signal))[0]
     records = records[mask]
 
-
     bl = records['data'][:, baseline_window[0]:baseline_window[1]].mean(axis=1)
-
-
     records['data'][:, :record_length] = -1. * (records['data'][:, :record_length].transpose() - bl[:]).transpose()
-
 
     return records
 
@@ -157,12 +139,14 @@ def get_area(records, led_window):
     This is done in 6 integration window and it returns the average area.
     """
     left = led_window[0]
-    end_pos = [led_window[1],] #+ 2 * i for i in range(6)]
+    end_pos = [led_window[1] + 2 * i for i in range(6)]
 
     Area = np.zeros((len(records)), dtype=_area_dtype)
     for right in end_pos:
         Area['area'] += records['data'][:, left:right].sum(axis=1)
     Area['channel'] = records['channel']
     Area['area'] = Area['area'] / float(len(end_pos))
+
+    return Area
 
     return Area

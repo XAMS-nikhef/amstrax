@@ -10,7 +10,7 @@ def parse_args():
     parser.add_argument(
         '--target',
         nargs="*",
-        default='raw_records',
+        default='peak_basics',
         help="Target final data type to produce.")
     parser.add_argument(
         '--output_folder',
