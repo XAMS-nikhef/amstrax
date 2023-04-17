@@ -102,7 +102,6 @@ def main(args):
 
 
     #Use own version of amstrax, its currently a branch called carlo
-    sys.path.insert(0, '/home/xams/carlo/software/amstrax')
     import amstrax
     print(f"\tamstrax {amstrax.__version__} at {osp.dirname(amstrax.__file__)}")
 

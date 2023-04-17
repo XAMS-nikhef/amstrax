@@ -51,12 +51,9 @@ if __name__ == '__main__':
 
     import sys, os
     #Use own version of amstrax, its currently a branch called carlo
-    sys.path.insert(0, '/home/xams/carlo/software/amstrax')
 
     from amstrax import get_mongo_collection
     from amstrax import amstrax_dir
-
-    print('Imported amstrax functions')
 
     # settings
     nap_time = int(args.timeout)
@@ -67,8 +64,6 @@ if __name__ == '__main__':
     detector = args.detector
     target = args.target
     runs_col = get_mongo_collection(detector)
-
-    print('I got the mongo collection')
 
     while 1:
         # Update task list
