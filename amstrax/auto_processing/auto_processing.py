@@ -50,7 +50,6 @@ if __name__ == '__main__':
     # Later import to prevent slow --help
 
     import sys, os
-    #Use own version of amstrax, its currently a branch called carlo
 
     from amstrax import get_mongo_collection
     from amstrax import amstrax_dir
@@ -64,6 +63,8 @@ if __name__ == '__main__':
     detector = args.detector
     target = args.target
     runs_col = get_mongo_collection(detector)
+
+    print('Correctly connected, starting loop')
 
     while 1:
         # Update task list
