@@ -37,9 +37,7 @@ HITFINDER_OPTIONS = tuple([
     strax.Option('diagnose_sorting', track=False, default=False,
                  help="Enable runtime checks for sorting and disjointness"),
     strax.Option('n_tpc_pmts', track=False, default=False,
-                 help="Number of channels"),
-    strax.Option('pmt_channel', default=0,
-                 help="PMT channel for splitting pmt and sipms"), )
+                 help="Number of channels"), )
 class Peaks(strax.Plugin):
     depends_on = ('records',)
     data_kind = 'peaks'

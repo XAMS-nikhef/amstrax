@@ -99,10 +99,12 @@ def get_records(raw_records, baseline_window, record_i_signal):
     records = np.zeros(len(raw_records), dtype=_dtype)
     strax.copy_to_buffer(raw_records, records, "_rr_to_r_led")
 
+    blmask = np.where((records['record_i'] == 0))[0]
     mask = np.where((records['record_i'] == record_i_signal))[0]
+    blrecords = records[blmask]
     records = records[mask]
 
-    bl = records['data'][:, baseline_window[0]:baseline_window[1]].mean(axis=1)
+    bl = blrecords['data'][:, baseline_window[0]:baseline_window[1]].mean(axis=1)
     records['data'][:, :record_length] = -1. * (records['data'][:, :record_length].transpose() - bl[:]).transpose()
 
     return records
