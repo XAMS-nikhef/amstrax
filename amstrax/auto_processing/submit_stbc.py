@@ -64,7 +64,7 @@ def parse_args():
         help="ID of the run to process; usually the run name.")
     parser.add_argument(
         '--target',
-        default='raw_records_v1724',
+        default='raw_records',
         help="Target final data type to produce.")
     parser.add_argument(
         '--context',
