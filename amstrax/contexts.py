@@ -13,7 +13,9 @@ common_opts_xams_little = dict(
     ax.records,
     ax.pulse_processing,
     ax.peak_processing,
-    ax.led_calibration],
+    ax.led_calibration,
+    ax.records_led
+    ],
     
     register=[],
     store_run_fields=(
