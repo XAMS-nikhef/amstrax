@@ -1,5 +1,5 @@
 # File for the requirements of the documentation
-numpy==1.23.3
+numpy==1.24.3
 autodocsumm==0.2.9
 scipy==1.9.1
 commonmark==0.9.1
