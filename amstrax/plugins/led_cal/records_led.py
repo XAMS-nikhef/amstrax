@@ -31,7 +31,7 @@ class RecordsLED(strax.Plugin):
 
     record_length = straxen.URLConfig(
         default=110, track=False, type=int,
-                 help="Number of samples per raw_record"))
+                 help="Number of samples per raw_record")
 
     def infer_dtype(self):
 
