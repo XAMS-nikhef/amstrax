@@ -7,12 +7,6 @@ import numpy as np
 export, __all__ = strax.exporter()
 
 @export
-@strax.takes_config(
-    # All these must have track=False, so the raw_records hash never changes!
-    # DAQ settings -- should match settings given to redax
-    strax.Option('record_length', default=110, track=False, type=int,
-                 help="Number of samples per raw_record"),
-)
 class RecordsLED(strax.Plugin):
     """
     Carlo needs to explain
@@ -35,6 +29,9 @@ class RecordsLED(strax.Plugin):
         default=2, type=int,
         help="how many samples per pulse")
 
+    record_length = straxen.URLConfig(
+        default=110, track=False, type=int,
+                 help="Number of samples per raw_record"))
 
     def infer_dtype(self):
 
