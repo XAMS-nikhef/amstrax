@@ -22,10 +22,11 @@ class RecordsLED(strax.Plugin):
 
     depends_on = ('raw_records',)
     data_kind = 'records_led'
+    provides = 'records_led'
     compressor = 'zstd'
     parallel = 'process'
     rechunk_on_save = False
-
+  
     baseline_window = straxen.URLConfig(
         default=(0, 50), infer_type=False,
         help="Window (samples) for baseline calculation.")

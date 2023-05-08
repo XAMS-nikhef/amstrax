@@ -70,11 +70,14 @@ def xams(*args, **kwargs):
                         )
     st = _xams_xamsl_context(*args, **kwargs, _detector='xams', mongo_kwargs=mongo_kwargs)
     st.set_config(xams_common_config)
-    ps = [ax.raw_records,
+    ps = [
+    ax.raw_records,
     ax.records,
     ax.pulse_processing,
     ax.peak_processing,
-    ax.led_calibration]
+    ax.led_calibration,
+    ax.records_led
+    ]
     for p in ps:
         st.register_all(p)
 
