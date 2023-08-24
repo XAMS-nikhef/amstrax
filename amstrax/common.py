@@ -63,8 +63,6 @@ def select_channels(arr, channel_list):
     sel = np.sum([arr['channel'] == channel for channel in channel_list], axis=0) > 0
     return arr[sel]
 
-
-
 @export
 def print_versions(
         modules=('strax', 'amstrax'),

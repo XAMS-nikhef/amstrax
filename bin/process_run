@@ -7,7 +7,7 @@ from amstrax.auto_processing import amstraxer, amstraxer_easy
 
 if __name__ == '__main__':
 
-    args = amstraxer.parse_args()
+    args = amstraxer_easy.parse_args()
 
     # Do import later to get fast --help
 

@@ -15,7 +15,6 @@ default_mongo_collname = 'runs'
 
 _SECRET_SERVING_PORT = {}
 
-
 def _check_environment_var(key):
     if key not in os.environ:
         raise RuntimeError(
@@ -27,7 +26,6 @@ def link_to_daq(
         daq_host="",
         daq_user=""
 ):
-
 
     """Create an SSH tunnel to the daq machine to get access to the runsdb"""
     _check_environment_var("DAQ_HOST")

@@ -14,6 +14,7 @@ HITFINDER_OPTIONS = tuple([
     )])
 
 
+@export
 @strax.takes_config(
     strax.Option('peak_gap_threshold', default=300,
                  help="No hits for this many ns triggers a new peak"),

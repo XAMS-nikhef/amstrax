@@ -89,6 +89,7 @@ def main(args):
     run_doc = run_col.find_one({'number': int(run_id)})
     live_data = run_doc['daq_config']['strax_output_path']
     output_folder = args.output_folder
+    
     st = amstrax.contexts.xams(output_folder=output_folder, init_rundb=False)
     st.storage += [strax.DataDirectory(live_data,
                                  provide_run_metadata=False,
