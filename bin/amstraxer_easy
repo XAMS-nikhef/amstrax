@@ -5,9 +5,7 @@ import numpy as np
 import pandas as pd
 import datetime
 import argparse
-
-live_data = '/home/xams/data/test_data/'
-output_folder = '/home/xams/data/xams_processed/'
+import json
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -24,7 +22,7 @@ def parse_args():
         help="Name of context to use")
     parser.add_argument(
         '--target',
-        default='raw_records',
+        default=['raw_records'],
         nargs="*",
         help='Target final data type to produce')
     parser.add_argument(
@@ -88,6 +86,8 @@ def main(args):
     client = amstrax.get_mongo_client()
     run_col = amstrax.get_mongo_collection('xams')
     run_doc = run_col.find_one({'number': int(run_id)})
+    live_data = run_doc['daq_config']['strax_output_path']
+    output_folder = args.output_folder
     st = amstrax.contexts.xams(output_folder=output_folder, init_rundb=False)
     st.storage += [strax.DataDirectory(live_data,
                                  provide_run_metadata=False,
@@ -98,12 +98,9 @@ def main(args):
 
     daqst = amstrax.contexts.context_for_daq_reader(st, run_id, 'xams', run_doc=run_doc, check_exists=False)
 
-
-    print('Processing raw_records in amstraxer_easy')
-    daqst.make(run_id, 'raw_records', progress_bar=True)
-    print('Processing records in amstraxer_easy')
-    daqst.make(run_id, 'records', progress_bar=False)
-
+    for t in args.target:
+        print(f'Processing {t} in amstraxer_easy')
+        daqst.make(run_id, t, progress_bar=True)
 
 if __name__ == '__main__':
     args = parse_args()

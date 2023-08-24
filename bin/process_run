@@ -13,14 +13,13 @@ if __name__ == '__main__':
     detector = args.detector
     run_collection = amstrax.get_mongo_collection(detector)
     run_name = args.run_id
-    target = args.target
-    print(f'Start processing {run_name}: {target}')
+    print(f'Start processing {run_name}: {args.target}')
 
     # Now read configuration
     print(f'Update database')
     run_doc = run_collection.find_one({"number": int(run_name)})
     run_collection.find_one_and_update({"number": int(run_name)},
-                                       {"$set": {"processing_status": f"building_{target}"}})
+                                       {"$set": {"processing_status": f"processing"}})
     print(f'Start amstraxer')
     try:
         amstraxer_easy.main(args)

@@ -100,8 +100,6 @@ def main(args):
     import strax
     print(f"\tstrax {strax.__version__} at {osp.dirname(strax.__file__)}")
 
-
-    #Use own version of amstrax, its currently a branch called carlo
     import amstrax
     print(f"\tamstrax {amstrax.__version__} at {osp.dirname(amstrax.__file__)}")
 
