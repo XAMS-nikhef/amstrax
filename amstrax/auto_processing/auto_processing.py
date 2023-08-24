@@ -43,6 +43,7 @@ def parse_args():
 
 
 if __name__ == '__main__':
+
     args = parse_args()
     version = '2.1.0'
     print('Starting autoprocess version %s...' % version)
@@ -92,7 +93,7 @@ if __name__ == '__main__':
             else: #process locally
                 runs_col.find_one_and_update({'number': run_name},
                                             {'$set': {'processing_status': 'processing'}})
-                subprocess.run(f"python3 /home/xams/software/amstrax/amstrax/auto_processing/process_run.py {run_name} --target records --output_folder {output_folder}", shell=True)
+                subprocess.run(f"python3 {amstrax_dir}/amstrax/auto_processing/process_run.py {run_name} --target records --output_folder {output_folder}", shell=True)
             time.sleep(2)
 
         if max_jobs is not None and len(run_docs_to_do) > max_jobs:
