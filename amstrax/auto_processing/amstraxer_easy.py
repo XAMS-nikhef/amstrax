@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import sys, os
 import amstrax
 import strax
@@ -95,7 +96,6 @@ def main(args):
                                  readonly=True)]
 
     st.set_config({'live_data_dir': f'{live_data}'})
-
     daqst = amstrax.contexts.context_for_daq_reader(st, run_id, 'xams', run_doc=run_doc, check_exists=False)
 
     for t in args.target:
