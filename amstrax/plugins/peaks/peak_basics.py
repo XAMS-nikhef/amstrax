@@ -1,6 +1,7 @@
 import numba
 import numpy as np
 import strax
+export, __all__ = strax.exporter()
 
 # For n_competing, which is temporarily added to PeakBasics	
 @export

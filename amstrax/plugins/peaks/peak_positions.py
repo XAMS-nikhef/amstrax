@@ -1,6 +1,8 @@
 import numba
 import numpy as np
 import strax
+export, __all__ = strax.exporter()
+
 # from amstrax.SiPMdata import *
 
 # @export
