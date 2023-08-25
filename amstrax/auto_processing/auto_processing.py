@@ -71,7 +71,9 @@ if __name__ == '__main__':
 
     print('Correctly connected, starting loop')
 
-    while 1:
+    infinite = True
+
+    while infinite:
         # Update task list
         # Probably want to add here some max retry if fail
         run_docs_to_do = list(runs_col.find({
@@ -82,6 +84,7 @@ if __name__ == '__main__':
             }).sort('start', -1))
 
         if args.run_id is not None:
+            infinite = False
             run_docs_to_do = [runs_col.find_one({'number': int(args.run_id)})]
         
         if len(run_docs_to_do) > 0:
@@ -110,6 +113,5 @@ if __name__ == '__main__':
         print("Waiting %d seconds before rechecking, press Ctrl+C to quit..." % nap_time)
         time.sleep(nap_time)
 
-        if args.run_id is not None:
-            break
 
+print('Done!')
