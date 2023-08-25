@@ -56,7 +56,7 @@ if __name__ == '__main__':
 
     import sys, os
 
-    from amstrax import get_mongo_collection
+    import amstrax
     from amstrax import amstrax_dir
 
     # settings
@@ -67,7 +67,7 @@ if __name__ == '__main__':
     process_stomboot = args.process_stomboot
     detector = args.detector
     target = args.target
-    runs_col = get_mongo_collection(detector)
+    runs_col = amstrax.get_mongo_collection(detector)
 
     print('Correctly connected, starting loop')
 
@@ -111,4 +111,4 @@ if __name__ == '__main__':
 
         if args.run_id is not None:
             break
-            
+
