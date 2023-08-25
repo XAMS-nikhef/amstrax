@@ -10,7 +10,7 @@ def parse_args():
     parser.add_argument(
         '--target',
         nargs="*",
-        default='peak_basics',
+        default=['peak_basics'],
         help="Target final data type to produce.")
     parser.add_argument(
         '--output_folder',
@@ -100,7 +100,7 @@ if __name__ == '__main__':
             else: #process locally
                 runs_col.find_one_and_update({'number': run_name},
                                             {'$set': {'processing_status': 'processing'}})
-                subprocess.run(f"process_run {run_name} --target {target} --output_folder {output_folder}", shell=True)
+                subprocess.run(f"process_run {run_name} --target {",".join(target)} --output_folder {output_folder}", shell=True)
             time.sleep(2)
 
         if max_jobs is not None and len(run_docs_to_do) > max_jobs:
