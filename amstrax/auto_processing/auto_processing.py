@@ -57,7 +57,7 @@ if __name__ == '__main__':
     import sys, os
 
     import amstrax
-    from amstrax import amstrax_dir
+    amstrax_dir = amstrax.amstrax_dir
 
     # settings
     nap_time = int(args.timeout)
