@@ -100,7 +100,7 @@ if __name__ == '__main__':
             else: #process locally
                 runs_col.find_one_and_update({'number': run_name},
                                             {'$set': {'processing_status': 'processing'}})
-                target = ",".join(target)
+                target = " ".join(target)
                 subprocess.run(f"process_run {run_name} --target {target} --output_folder {output_folder}", shell=True)
             time.sleep(2)
 
