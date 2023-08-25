@@ -3,7 +3,6 @@ import numpy as np
 import strax
 export, __all__ = strax.exporter()
 
-
 @export
 @strax.takes_config(
     strax.Option('trigger_min_area', default=100,

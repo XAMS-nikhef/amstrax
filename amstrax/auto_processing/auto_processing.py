@@ -39,6 +39,10 @@ def parse_args():
         '--detector',
         default='xams',
         help="xamsl or xams")
+    parser.add_argument(
+        '--run_id', 
+        default=None,
+        help="Single run ID to process")
     return parser.parse_args()
 
 
@@ -76,6 +80,9 @@ if __name__ == '__main__':
             'start':{'$gt': datetime(2023,1,25)},
             'processing_failed':{'$not': {'$gt': 3}},
             }).sort('start', -1))
+
+        if args.run_id is not None:
+            run_docs_to_do = [runs_col.find_one({'number': args.run_id})]
         
         if len(run_docs_to_do) > 0:
             print('I found %d runs to process, time to get to work!' % len(run_docs_to_do))
