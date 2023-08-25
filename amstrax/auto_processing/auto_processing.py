@@ -82,7 +82,7 @@ if __name__ == '__main__':
             }).sort('start', -1))
 
         if args.run_id is not None:
-            run_docs_to_do = [runs_col.find_one({'number': args.run_id})]
+            run_docs_to_do = [runs_col.find_one({'number': int(args.run_id)})]
         
         if len(run_docs_to_do) > 0:
             print('I found %d runs to process, time to get to work!' % len(run_docs_to_do))
