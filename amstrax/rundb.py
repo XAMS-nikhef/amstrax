@@ -15,7 +15,6 @@ default_mongo_collname = 'runs'
 
 _SECRET_SERVING_PORT = {}
 
-
 def _check_environment_var(key):
     if key not in os.environ:
         raise RuntimeError(
@@ -24,10 +23,18 @@ def _check_environment_var(key):
 
 
 def link_to_daq(
-        daq_host="145.102.133.168",
-        daq_user="xams"
+        daq_host="",
+        daq_user=""
 ):
+
     """Create an SSH tunnel to the daq machine to get access to the runsdb"""
+    _check_environment_var("DAQ_HOST")
+    daq_host = os.environ['DAQ_HOST']
+    print(f"Connected to daq_host {daq_host}")
+
+    _check_environment_var("DAQ_PASSWORD")
+    daq_password = os.environ['DAQ_PASSWORD']
+
     port_key = f'{daq_host}_{daq_user}'
     if _SECRET_SERVING_PORT is not None and port_key in _SECRET_SERVING_PORT:
         return _SECRET_SERVING_PORT[port_key]
@@ -37,7 +44,7 @@ def link_to_daq(
         daq_host,
         ssh_username=daq_user,
         ssh_password=daq_password,
-        remote_bind_address=('127.0.0.1', 27017)
+        remote_bind_address=('127.0.0.1', 27017),
     )
     server.start()
     _SECRET_SERVING_PORT[port_key] = server.local_bind_port
@@ -222,7 +229,7 @@ class RunDB(strax.StorageFrontend):
         projection = dq.copy()
         projection.update({
             k: True
-            for k in 'name number data.protocol data.location'.split()})
+            for k in 'name number'.split()})
 
         results_dict = dict()
         for doc in self.collection.find(

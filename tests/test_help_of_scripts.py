@@ -22,8 +22,5 @@ class TestHelpOfScripts(unittest.TestCase):
     def test_autoprocess(self):
         self._test_help_of('auto_processing.py')
 
-    def test_process_run(self):
-        self._test_help_of('process_run.py')
-
     def test_submit_stbc(self):
         self._test_help_of('submit_stbc.py')

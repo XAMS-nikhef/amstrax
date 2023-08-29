@@ -131,7 +131,7 @@ def get_context(name='xams'):
 def build_data_structure_doc():
     pd.set_option('display.max_colwidth', int(1e9))
 
-    for context_name in ['xams', 'xams_little']:
+    for context_name in ['xams']:
         print(f'Make for {context_name}')
         st = get_context(context_name)
 

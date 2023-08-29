@@ -41,7 +41,7 @@ setuptools.setup(name='amstrax',
                  tests_require=tests_requires,
                  python_requires=">=3.6",
                  packages=setuptools.find_packages(),
-                 scripts=[],
+                 scripts=['bin/process_run'],
                  classifiers=[
                      'Development Status :: 4 - Beta',
                      'License :: OSI Approved :: BSD License',

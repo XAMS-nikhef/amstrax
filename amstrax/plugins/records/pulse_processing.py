@@ -74,7 +74,7 @@ class PulseProcessing(strax.Plugin):
         pulse_counts=True)
     compressor = 'zstd'
 
-    depends_on = ('raw_records_v1724','raw_records_v1730')
+    depends_on = ('raw_records')
 
     provides = ('records', 'pulse_counts')
     data_kind = {k: k for k in provides}
@@ -84,7 +84,7 @@ class PulseProcessing(strax.Plugin):
         # The record_length is the same for both raw_records_v1724 and raw_records_v1730
         # therefore, we can just use one of the two
         self.record_length = strax.record_length_from_dtype(
-            self.deps['raw_records_v1724'].dtype_for('raw_records_v1724'))
+            self.deps['raw_records'].dtype_for('raw_records'))
 
         dtype = dict()
         for p in self.provides:
@@ -94,19 +94,7 @@ class PulseProcessing(strax.Plugin):
         ntpc = self.config['n_tpc_pmts']
         return dtype
 
-    def compute(self, raw_records_v1724, raw_records_v1730, start, end):  
-        ####
-        # Get the raw_records having data
-        ####
-        # Case 1: return True -> v1724 measurement
-        if self.choose_records(raw_records_v1724,raw_records_v1730):
-            raw_records = raw_records_v1724
-        # Case 2: return False ->  v1730 measurement
-        elif not self.choose_records(raw_records_v1724,raw_records_v1730):
-            raw_records = raw_records_v1730
-        # For the sake of the if-else statement    
-        else:
-            pass
+    def compute(self, raw_records, start, end):  
 
         if self.config['check_raw_record_overlaps']:
             check_overlaps(raw_records, n_channels=3000)
@@ -115,6 +103,7 @@ class PulseProcessing(strax.Plugin):
         # converted data
         raw_records = raw_records[
             raw_records['channel'] < self.config['n_tpc_pmts']]
+
 
         # Convert everything to the records data type -- adds extra fields.
         r = strax.raw_to_records(raw_records)
@@ -127,87 +116,38 @@ class PulseProcessing(strax.Plugin):
 
         baseline_per_channel(r, baseline_samples=self.config['baseline_samples'],
                            allow_sloppy_chunking=self.config['allow_sloppy_chunking'],
-                            pmt_channel=7, flip=False)
+                             flip=True)
              
         strax.integrate(r)       
-
+        
         pulse_counts = count_pulses(r, self.config['n_tpc_pmts'])
         pulse_counts['time'] = start
         pulse_counts['endtime'] = end
 
-        if len(r):
-            # Find hits
-            # -- before filtering,since this messes with the with the S/N
-            hits = strax.find_hits(
-                r, min_amplitude=amstrax.hit_min_amplitude(
-                    self.config['hit_min_amplitude']))
+        # #For now left out, to look at in the future 
+        #
+        # if len(r):
+        #     # Find hits
+        #     # -- before filtering,since this messes with the with the S/N
+        #     hits = strax.find_hits(
+        #         r, min_amplitude=amstrax.hit_min_amplitude(
+        #             self.config['hit_min_amplitude']))
 
-            if self.config['pmt_pulse_filter']:
-                # Filter to concentrate the PMT pulses
-                strax.filter_records(
-                    r, np.array(self.config['pmt_pulse_filter']))
+        #     if self.config['pmt_pulse_filter']:
+        #         # Filter to concentrate the PMT pulses
+        #         strax.filter_records(
+        #             r, np.array(self.config['pmt_pulse_filter']))
 
-            le, re = self.config['save_outside_hits']
-            r = strax.cut_outside_hits(r, hits,
-                                       left_extension=le,
-                                       right_extension=re)
+        #     le, re = self.config['save_outside_hits']
+        #     r = strax.cut_outside_hits(r, hits,
+        #                                left_extension=le,
+        #                                right_extension=re)
 
-            # Probably overkill, but just to be sure...
-            strax.zero_out_of_bounds(r)
+        #     # Probably overkill, but just to be sure...
+        #     strax.zero_out_of_bounds(r)
 
         return dict(records=r,
                     pulse_counts=pulse_counts)
-
-    ###
-    # Make one records for future processing
-    ###
-
-    @staticmethod
-    def choose_records(raw_records_v1724, raw_records_v1730):
-        """
-        This function implements a decisional loop over which raw_records to keep.
-        There are for possibilities:
-            1. V1724 measurements 
-                    - data only from raw_records_v1724
-                    - return True
-            2. V1730 measurements
-                    - data only from raw_records_v1730
-                    - return False
-            3. We have data in both raw_records_v1724 and raw_records_v1730
-                    - this is not possible in XAMSL data campaign
-                    - raise ValueError
-            4. No data in both raw_records_v1724 and raw_records_v1730
-                    - this is not possible in XAMSL data campaign
-                    - raise ValueError          
-        For XAMSL measurements details, please have a look:
-            https://github.com/XAMS-nikhef/amstrax_files/tree/master/data
-        """
-
-        has_v1724 = np.any(raw_records_v1724['channel'])
-        has_v1730 = np.any(raw_records_v1730['channel'])
-        # Case v1724 measurement: data only in the raw_records_v1724
-        if has_v1724 and not has_v1730:
-            return True
-        # Case v1730 measurement: data only in the raw_records_v1730
-        elif not has_v1724 and has_v1730:
-            return False
-        # Apparently something went wrong
-        
-        # raw_records_v1730 and raw_records_v1724 both returning data
-        if has_v1724 and has_v1730:
-            raise ValueError(
-                f"Bad data! The raw_records are both returning data and"
-                f"this is not possible for a XAMSL measurement."
-                f"Check the raw_records data of this measurement"
-                f"or do not process it.")
-        # no data in both raw_records_v1730 and raw_records_v1724
-        if not has_v1724 and not has_v1730:
-            raise ValueError(
-                f"Bad data! The raw_records are both empty and"
-                f"this is not possible for a XAMSL measurement."
-                f"Check the raw_records data of this measurement"
-                f"or do not process it.")
-        raise ValueError('How did we end up here?')
 
 ##
 # Pulse counting
@@ -344,7 +284,7 @@ def _check_overlaps(records, last_end):
 
 @export
 @numba.jit(nopython=True, nogil=True, cache=True)
-def baseline_per_channel(records, baseline_samples=40, flip=False,pmt_channel=7,
+def baseline_per_channel(records, baseline_samples=40, flip=False,
              allow_sloppy_chunking=False, fallback_baseline=16000):
     """Determine baseline as the average of the first baseline_samples
     of each pulse in each channel. Subtract the pulse data from int(baseline),
@@ -392,12 +332,7 @@ def baseline_per_channel(records, baseline_samples=40, flip=False,pmt_channel=7,
 
         # Subtract baseline from all data samples in the record
         # (any additional zeros should be kept at zero)
-        # DO NOT flip the pulse unless it is the PMT pulse
-        if (d['channel']==pmt_channel):
+        if flip:
             d['data'][:d['length']] = ((-1) * (d['data'][:d['length']] - int(bl)))
-            d['baseline'] = bl
-            d['baseline_rms'] = rms
-        else: # SiPM data
-            d['data'][:d['length']] = ((d['data'][:d['length']] - int(bl)))
-            d['baseline'] = bl
-            d['baseline_rms'] = rms
+        d['baseline'] = bl
+        d['baseline_rms'] = rms

@@ -2,7 +2,6 @@ import datetime
 import os
 import shutil
 import unittest
-
 import strax
 
 import amstrax
@@ -55,9 +54,13 @@ class TestXamsStack(unittest.TestCase):
         self.get_test_data()
         run_id = self.run_id
         for target, plugin_class in self.st._plugin_class_registry.items():
-            self.st.make(run_id, target)
-            if plugin_class.save_when >= strax.SaveWhen.TARGET:
-                assert self.st.is_stored(run_id, target)
+            if target in ['raw_records', 'records', 'pulse_counts', 'peaks',  'peak_classification', 'peak_basics', 'events', 'event_basics']:
+                print('>>>>>>>>>>> Making', target)
+                self.st.make(run_id, target)
+                data = self.st.get_array(run_id, target)
+                print(len(data), 'entries in', target)
+                if plugin_class.save_when >= strax.SaveWhen.TARGET:
+                    assert self.st.is_stored(run_id, target)
         with self.assertRaises(ValueError):
             # Now since we have the 'raw' data, we cannot be allowed to
             # make it again!
@@ -79,14 +82,3 @@ class TestXamsStack(unittest.TestCase):
         path = amstrax_files.get_abspath(f'{self.run_id}.tar')
         amstrax.common.open_test_data(path)
 
-
-class TestXamsLittleStack(TestXamsStack):
-    """Repeat the same trick for the XAMSL context"""
-
-    @classmethod
-    def setUpClass(cls) -> None:
-        st = amstrax.contexts.xams_little(init_rundb=False)
-        st.storage = [strax.DataDirectory('./amstrax_data')]
-        st.set_config({'live_data_dir': cls.live_data_path})
-        cls.st = st
-        cls.run_id = '999999'

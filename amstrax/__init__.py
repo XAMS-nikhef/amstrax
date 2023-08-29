@@ -1,12 +1,15 @@
 __version__ = '1.2.0'
 
-from . import hitfinder_thresholds
 from . import plugins
-from .common import *
-from .hitfinder_thresholds import *
-from .itp_map import *
 from .plugins import *
+
+from .common import *
 from .rundb import *
-from .contexts import *
+
+from . import contexts
+
+from . import hitfinder_thresholds
+from .hitfinder_thresholds import *
 
 from . import auto_processing
+
