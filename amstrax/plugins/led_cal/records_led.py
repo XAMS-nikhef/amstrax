@@ -7,6 +7,23 @@ import numpy as np
 export, __all__ = strax.exporter()
 
 @export
+@strax.takes_config(
+
+    strax.Option('record_length', default=110, track=False, type=int,
+                 help="Number of samples per raw_record"),
+
+    strax.Option('baseline_window',
+        default=(0, 50), infer_type=False,
+        help="Window (samples) for baseline calculation.")
+
+    strax.Option('n_records_per_pulse',
+        default=2, type=int,
+        help="how many samples per pulse")
+
+    strax.Option('record_length',
+        default=110, track=False, type=int,
+                 help="Number of samples per raw_record")
+)
 class RecordsLED(strax.Plugin):
     """
     Carlo needs to explain
@@ -21,17 +38,11 @@ class RecordsLED(strax.Plugin):
     parallel = 'process'
     rechunk_on_save = False
   
-    baseline_window = straxen.URLConfig(
-        default=(0, 50), infer_type=False,
-        help="Window (samples) for baseline calculation.")
-
-    n_records_per_pulse = straxen.URLConfig(
-        default=2, type=int,
-        help="how many samples per pulse")
-
-    record_length = straxen.URLConfig(
-        default=110, track=False, type=int,
-                 help="Number of samples per raw_record")
+    def setup(self):
+        
+        self.record_length = self.config['record_length']
+        self.baseline_window = self.config['baseline_window']
+        self.n_records_per_pulse = self.config['n_records_per_pulse']
 
     def infer_dtype(self):
 
