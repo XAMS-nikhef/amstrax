@@ -1,6 +1,5 @@
 from immutabledict import immutabledict
 import strax
-import straxen
 import numba
 import numpy as np
 
@@ -39,7 +38,7 @@ class RecordsLED(strax.Plugin):
     rechunk_on_save = False
   
     def setup(self):
-        
+
         self.record_length = self.config['record_length']
         self.baseline_window = self.config['baseline_window']
         self.n_records_per_pulse = self.config['n_records_per_pulse']

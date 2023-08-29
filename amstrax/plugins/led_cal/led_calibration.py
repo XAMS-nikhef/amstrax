@@ -1,12 +1,21 @@
 from immutabledict import immutabledict
 import strax
-import straxen
 import numba
 import numpy as np
 
 export, __all__ = strax.exporter()
 
 @export
+@strax.takes_config(
+    strax.Option(
+        'led_window',
+        default=(80, 110),
+        help="Window (samples) where we expect the signal in LED calibration"),
+    strax.Option(
+        'noise_window',
+        default=(0, 10),
+        help="Window (samples) to analysis the noise"),
+)
 class LEDCalibration(strax.Plugin):
     """
     Preliminary version, several parameters to set during commissioning.
@@ -30,18 +39,6 @@ class LEDCalibration(strax.Plugin):
     parallel = 'process'
     rechunk_on_save = False
 
-    # baseline_window = straxen.URLConfig(
-    #     default=(0, 50), infer_type=False,
-    #     help="Window (samples) for baseline calculation.")
-
-    led_window = straxen.URLConfig(
-        default=(80, 110), infer_type=False,
-        help="Window (samples) where we expect the signal in LED calibration")
-
-    noise_window = straxen.URLConfig(
-        default=(0, 10), infer_type=False,
-        help="Window (samples) to analysis the noise")
-
     dtype = [('area', np.float32, 'Area averaged in integration windows'),
              ('amplitude_led', np.float32, 'Amplitude in LED window'),
              ('amplitude_noise', np.float32, 'Amplitude in off LED window'),
@@ -49,6 +46,12 @@ class LEDCalibration(strax.Plugin):
              ('time', np.int64, 'Start time of the interval (ns since unix epoch)'),
              ('dt', np.int16, 'Time resolution in ns'),
              ('length', np.int32, 'Length of the interval in samples')]
+
+
+    def setup(self):
+
+        self.led_window = self.config['led_window']
+        self.noise_window = self.config['noise_window']
 
     def compute(self, records_led):
         '''
