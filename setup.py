@@ -37,7 +37,6 @@ setuptools.setup(name='amstrax',
                  install_requires=requires,
                  extras_require={
                      'docs': doc_requires,
-                     'test': tests_requires,
                  },
                  tests_require=tests_requires,
                  python_requires=">=3.6",
