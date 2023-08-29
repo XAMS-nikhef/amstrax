@@ -284,7 +284,7 @@ def _check_overlaps(records, last_end):
 
 @export
 @numba.jit(nopython=True, nogil=True, cache=True)
-def baseline_per_channel(records, baseline_samples=40, flip=False,pmt_channel=7,
+def baseline_per_channel(records, baseline_samples=40, flip=False,
              allow_sloppy_chunking=False, fallback_baseline=16000):
     """Determine baseline as the average of the first baseline_samples
     of each pulse in each channel. Subtract the pulse data from int(baseline),

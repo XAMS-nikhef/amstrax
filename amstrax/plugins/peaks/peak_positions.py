@@ -4,6 +4,7 @@ import strax
 export, __all__ = strax.exporter()
 
 # from amstrax.SiPMdata import *
+# move this to legacy once you have the new peak_positions.py in amstrax
 
 # @export
 # class PeakPositions(strax.Plugin):

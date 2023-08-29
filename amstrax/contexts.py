@@ -30,10 +30,10 @@ common_opts_xams = dict(
 )
 
 xams_common_config = dict(
-    n_tpc_pmts=16,
+    n_tpc_pmts=5,
     channel_map=immutabledict(
-        v1724=(0, 7),
-        v1730=(8, 15),
+        bottom=(0, 0),
+        top=(1, 4),
         aqmon=(40, 40),  # register strax deadtime
     ))
 
