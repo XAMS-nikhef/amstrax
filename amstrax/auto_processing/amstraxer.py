@@ -166,7 +166,7 @@ def main(args):
     def get_results():
         kwargs = dict(
             run_id=args.run_id,
-            targets=t,
+            targets=args.target,
             max_workers=int(args.workers))
         yield from st.get_iter(**kwargs)
 

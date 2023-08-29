@@ -2,7 +2,6 @@ import datetime
 import os
 import shutil
 import unittest
-
 import strax
 
 import amstrax
@@ -79,14 +78,3 @@ class TestXamsStack(unittest.TestCase):
         path = amstrax_files.get_abspath(f'{self.run_id}.tar')
         amstrax.common.open_test_data(path)
 
-
-class TestXamsLittleStack(TestXamsStack):
-    """Repeat the same trick for the XAMSL context"""
-
-    @classmethod
-    def setUpClass(cls) -> None:
-        st = amstrax.contexts.xams_little(init_rundb=False)
-        st.storage = [strax.DataDirectory('./amstrax_data')]
-        st.set_config({'live_data_dir': cls.live_data_path})
-        cls.st = st
-        cls.run_id = '999999'
