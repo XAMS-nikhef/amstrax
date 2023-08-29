@@ -7,3 +7,4 @@ sshtunnel
 iminuit
 matplotlib
 packaging
+git
