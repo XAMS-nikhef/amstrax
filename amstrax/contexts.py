@@ -38,7 +38,7 @@ xams_common_config = dict(
     ))
 
 
-def xams(output_folder='./strax_data', *args, **kwargs):
+def xams(output_folder='./strax_data', init_rundb=True, *args, **kwargs):
 
     mongo_kwargs = dict(mongo_collname='runs',
                         mongo_dbname='run',
@@ -49,8 +49,6 @@ def xams(output_folder='./strax_data', *args, **kwargs):
 
     st.set_config(xams_common_config)
     
-    init_rundb=True,
-
     processed_data_folder = 'home/xams/data/processed'
           
     st.storage = []
