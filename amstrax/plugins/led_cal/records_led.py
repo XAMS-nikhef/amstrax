@@ -13,11 +13,11 @@ export, __all__ = strax.exporter()
 
     strax.Option('baseline_window',
         default=(0, 50), infer_type=False,
-        help="Window (samples) for baseline calculation.")
+        help="Window (samples) for baseline calculation."),
 
     strax.Option('n_records_per_pulse',
         default=2, type=int,
-        help="how many samples per pulse")
+        help="how many samples per pulse"),
 
     strax.Option('record_length',
         default=110, track=False, type=int,
