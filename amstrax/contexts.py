@@ -15,7 +15,7 @@ common_opts_xams = dict(
         ax.PeakClassification,
         ax.PeakBasics,
         ax.Events,
-        ax.EventBasics,
+        # ax.EventBasics,
         # ax.EventPositions,
         # ax.CorrectedAreas,
         # ax.EnergyEstimates,

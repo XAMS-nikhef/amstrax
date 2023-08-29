@@ -5,6 +5,13 @@ export, __all__ = strax.exporter()
 
 @export
 class EventBasics(strax.LoopPlugin):
+
+
+    """
+    TODO 
+    """
+
+
     rechunk_on_save = False
     __version__ = '0.0.21'
     # Peak Positions temporarily taken out
@@ -13,6 +20,9 @@ class EventBasics(strax.LoopPlugin):
                   'peak_basics', 'peak_classification',)
 
     # 'peak_positions') #n_competing
+
+    provides = 'event_basics'
+
 
     def infer_dtype(self):
         dtype = [(('Number of peaks in the event',
