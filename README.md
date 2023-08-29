@@ -33,3 +33,5 @@ First you'll need to get some data. For this you'll need to either run somewhere
 /data/xenon/xams is available or have data downloaded. Either strax processed data or pax raw data
 is fine. Once you have data you can try running the Tutorial notebook (although it's in Dutch), just
 make sure to change the output_folder to where you have data
+
+Test
