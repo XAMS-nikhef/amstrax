@@ -91,4 +91,3 @@ class PeakBasics(strax.Plugin):
             results[i] = np.sum(a[left_i:right_i + 1] > a[i] * fraction)
 
         return results
-

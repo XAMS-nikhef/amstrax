@@ -71,7 +71,6 @@ because changing any of those options affect this data indirectly.
 """
 
 titles = {'xams': 'XAMS - amstrax datastructure',
-          'xams_little': 'XAMSL - amstrax datastructure',
           }
 
 kind_colors = dict(

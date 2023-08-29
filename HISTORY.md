@@ -1,3 +1,28 @@
+2.0.0 / 2023-08-29
+------------------
+New release, major changes.
+
+General:
+
+- Adjust imports
+- Add arguments to amstraxer for auto processing
+- New amstraxer_easy for easier autoprocessing (removed unnecessary options..) -> TODO replace amstraxer
+- autoprocessing/autoprocessing.py : add local processing option (for now preferred?)
+- autoprocessing/process_run.py : add number of failures handling
+- make amstrax straxen independent (to be discussed, for me is just source of problems, straxen changes quickly)
+- contexts.py : adjusted some contexts options, TODO: clean all contexts
+- rundb interface more structured
+- added process_run as script
+
+Processing plugins:
+
+- refactored structure
+- make plugins straxen free (at the cost of copy pasting few functions from straxen)
+- unified raw records in one type only
+- simplified pulse processing
+- two new useful plugins for LED calibrations, see the full pulses
+- workflow up to peaks tested, need events to tune things
+
 1.2.0 / 2022-01-14
 ------------------
 Major changes:
