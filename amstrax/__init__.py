@@ -1,4 +1,4 @@
-__version__ = '1.2.0'
+__version__ = "1.2.1"
 
 from . import plugins
 from .plugins import *
@@ -13,3 +13,6 @@ from .hitfinder_thresholds import *
 
 from . import auto_processing
 
+from .mini_analysis import *
+
+from .plotting import *
