@@ -1,10 +1,10 @@
 __version__ = "1.2.1"
 
-from . import plugins
-from .plugins import *
-
 from .common import *
 from .rundb import *
+
+from . import plugins
+from .plugins import *
 
 from . import contexts
 
@@ -15,4 +15,6 @@ from . import auto_processing
 
 from .mini_analysis import *
 
-from .plotting import *
+from .matplotlib_utils import *
+
+from . import analyses

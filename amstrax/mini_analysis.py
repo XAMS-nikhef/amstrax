@@ -4,6 +4,8 @@ import strax
 import amstrax  # Import your amstrax module
 import pandas as pd
 
+import warnings
+
 export, __all__ = strax.exporter()
 
 ma_doc = (
@@ -52,9 +54,13 @@ def mini_analysis(
                 kwargs["config"] = context.config
 
             if "to_pe" in parameters and "to_pe" not in kwargs:
+
+                # give a warning
+                warnings.warn("Amstrax gain model needs to be set one day")
+
                 to_pe = context.config["gain_model"]
                 if isinstance(to_pe, str):
-                    to_pe = amstrax.URLConfig.evaluate_dry(to_pe, run_id=run_id)
+                    to_pe = strax.Config.evaluate_dry(to_pe, run_id=run_id)
                 kwargs["to_pe"] = to_pe
 
             # Prepare selection arguments
@@ -105,7 +111,8 @@ def mini_analysis(
                             time_selection=kwargs["time_selection"],
                         )
                     else:
-                        print(f"Loading {dkind} data")
+                        print(f"Loading {dkind} data: {dtypes}")
+
                         kwargs[dkind] = context.get_array(
                             run_id,
                             dtypes,

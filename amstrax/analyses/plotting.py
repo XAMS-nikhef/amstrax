@@ -13,9 +13,8 @@ import warnings
 
 export, __all__ = strax.exporter()
 
-
-@amstrax.mini_analysis(requires=("raw_records",))
-def plot_records(context, run_id, raw_records, **kwargs):
+@amstrax.mini_analysis(requires=("raw_records","records"))
+def plot_records(context, run_id, raw_records, records, raw=True, logy=False, **kwargs):
     """
     Plot raw records
 
@@ -25,7 +24,10 @@ def plot_records(context, run_id, raw_records, **kwargs):
     :return: None
     """
 
-    records = raw_records
+    if raw:
+        records = raw_records
+    else:
+        records = records
 
     # Create subplots for each channel
     n_channels = max(records["channel"]) + 1
@@ -43,10 +45,17 @@ def plot_records(context, run_id, raw_records, **kwargs):
             # and add a full lenght*dt for every record_i
             time = np.linspace(0, record["length"] - 1, record["length"]) * record["dt"]
             time += record["time"] - records[0]["time"]
-            data = -record["data"][: record["length"]]
+            if raw:
+                data = -record["data"][: record["length"]]
+            else:
+                data = record["data"][: record["length"]]
+
 
             # Plot the data
             ax.plot(time, data)
+            # if logy, set the yscale to log
+            if logy:
+                ax.set_yscale("log")
 
         ax.set_ylabel("ADC Counts")
 
@@ -73,7 +82,7 @@ def plot_records(context, run_id, raw_records, **kwargs):
     # Set the title
     # Put the title above the subplots, not inside the frame
     plt.subplots_adjust(top=0.95)
-    plt.suptitle(f"raw_records from Run ID: {run_id}")
+    plt.suptitle(f"raw_records {records[0]['time']} from Run ID: {run_id}")
 
     # Show the plot
     plt.show()

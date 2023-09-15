@@ -17,12 +17,21 @@ import numpy as np
 import strax
 
 export, __all__ = strax.exporter()
-__all__ += ['amstrax_dir', 'to_pe']
+__all__ += ['amstrax_dir', 
+            'to_pe',
+            'n_tpc_pmts',
+            'n_xamsl_channel',
+            'tpc_r',
+            'tpc_z',
+            ]
 
 # Current values 
 n_tpc_pmts = 8
 n_xamsl_channel = 4
 to_pe = 1
+
+tpc_r = 6 # TODO check this value
+tpc_z = 10 # TODO check this value
 
 _is_jupyter = any('jupyter' in arg for arg in sys.argv)
 

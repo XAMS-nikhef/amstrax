@@ -19,7 +19,9 @@ export, __all__ = strax.exporter()
                       'triggering peak'),
 )
 class Events(strax.OverlapWindowPlugin):
-    depends_on = ['peaks', 'peak_basics']  # peak_basics instead of n_competing
+    depends_on = ['peaks', 
+                  'peak_basics',
+                  'peak_proximity']  # peak_basics instead of n_competing
     rechunk_on_save = False
     data_kind = 'events'
     parallel = False
