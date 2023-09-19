@@ -10,7 +10,7 @@ def parse_args():
     parser.add_argument(
         '--target',
         nargs="*",
-        default=['peak_basics'],
+        default=['raw_records',],
         help="Target final data type to produce.")
     parser.add_argument(
         '--output_folder',
@@ -66,7 +66,10 @@ if __name__ == '__main__':
     output_folder = args.output_folder
     process_stomboot = args.process_stomboot
     detector = args.detector
-    target = args.target
+    
+    targets = args.target
+    targets = " ".join(targets)
+
     runs_col = amstrax.get_mongo_collection(detector)
 
     print('Correctly connected, starting loop')
@@ -79,7 +82,7 @@ if __name__ == '__main__':
         run_docs_to_do = list(runs_col.find({
             'processing_status':{'$ne': 'done'},
             'end':{"$ne":None},
-            'start':{'$gt': datetime(2023,1,25)},
+            'start':{'$gt': datetime.today() - datetime.timedelta(days=5)},
             'processing_failed':{'$not': {'$gt': 3}},
             }).sort('start', -1))
 
@@ -96,15 +99,14 @@ if __name__ == '__main__':
             run_name = f'{int(run_doc["number"]):06}'
 
             if process_stomboot:
-                submit_stbc.submit_job(run_name, target=target, context=context, detector=detector,script='process_run')
-                runs_col.find_one_and_update({'number': run_name},
-                                            {'$set': {'processing_status': 'submitted_job' }})
+                # submit_stbc.submit_job(run_name, target=target, context=context, detector=detector,script='process_run')
+                # runs_col.find_one_and_update({'number': run_name},
+                #                             {'$set': {'processing_status': 'submitted_job' }})
+                pass
 
             else: #process locally
-                runs_col.find_one_and_update({'number': run_name},
-                                            {'$set': {'processing_status': 'processing'}})
-                target = " ".join(target)
-                subprocess.run(f"process_run {run_name} --target {target} --output_folder {output_folder}", shell=True)
+                print(f'Processing run {run_name}, target [{targets}]')
+                subprocess.run(f"process_run {run_name} --target {targets} --output_folder {output_folder}", shell=True)
             time.sleep(2)
 
         if max_jobs is not None and len(run_docs_to_do) > max_jobs:
