@@ -1,6 +1,6 @@
 import argparse
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 import subprocess 
 
 def parse_args():
@@ -82,7 +82,7 @@ if __name__ == '__main__':
         run_docs_to_do = list(runs_col.find({
             'processing_status':{'$ne': 'done'},
             'end':{"$ne":None},
-            'start':{'$gt': datetime.today() - datetime.timedelta(days=5)},
+            'start':{'$gt': datetime.today() - timedelta(days=5)},
             'processing_failed':{'$not': {'$gt': 3}},
             }).sort('start', -1))
 
