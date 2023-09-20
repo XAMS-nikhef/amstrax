@@ -147,6 +147,20 @@ def context_for_daq_reader(st: strax.Context,
     UserWarning(f'You changed the context for {run_id}. Do not process any other run!')
     return st
 
+def xams_led(**kwargs):
+    st = xams(**kwargs)
+    st.set_context_config(
+        {'check_available': ('raw_records', 'records_led', 'led_calibration')})
+    # Return a new context with only raw_records and led_calibration registered
+    st = st.new_context(
+        replace=True,
+        config=st.config,
+        storage=st.storage,
+        **st.context_config)
+    st.register([ax.DAQReader,
+                 ax.RecordsLED,
+                 ax.LEDCalibration])
+    return st
 
 def _check_raw_records_exists(st: strax.Context, run_id: str) -> bool:
     for plugin_name in st._plugin_class_registry.keys():
