@@ -7,7 +7,16 @@ from immutabledict import immutabledict
 import sys
 import amstrax as ax
 
-common_opts_xams = dict(
+# Configuration
+CONFIG = {
+    'DEFAULT_DETECTOR': 'xams',
+    'DEFAULT_RUNCOLNAME': 'run',
+    'DEFAULT_COLLECTION': 'runs_gas'
+}
+
+PROCESSED_DATA_FOLDER = 'home/xams/data/processed'
+
+COMMON_OPT_XAMS = dict(
     register_all=[],
     register=[ax.DAQReader, 
         ax.PulseProcessing,
@@ -15,6 +24,8 @@ common_opts_xams = dict(
         ax.PeakClassification,
         ax.PeakBasics,
         ax.Events,
+        ax.RecordsLED,
+        ax.LEDCalibration,
         # ax.EventBasics,
         # ax.EventPositions,
         # ax.CorrectedAreas,
@@ -29,7 +40,7 @@ common_opts_xams = dict(
     free_options=('live_data_dir',),
 )
 
-xams_common_config = dict(
+XAMS_COMMON_CONFIG = dict(
     n_tpc_pmts=5,
     channel_map=immutabledict(
         bottom=(0, 0),
@@ -38,19 +49,18 @@ xams_common_config = dict(
     ))
 
 
-def xams(output_folder='./strax_data', init_rundb=True, *args, **kwargs):
+def xams(output_folder='./strax_data', 
+         init_rundb=True,
+         mongo_kwargs=dict(mongo_collname=CONFIG['DEFAULT_COLLECTION'],
+                        mongo_dbname=CONFIG['DEFAULT_RUNCOLNAME'],
+                        runid_field='number'), 
+         *args,
+         **kwargs):
 
-    mongo_kwargs = dict(mongo_collname='runs',
-                        mongo_dbname='run',
-                        runid_field='number',
-                        )
+    st = strax.Context(**COMMON_OPT_XAMS, forbid_creation_of=ax.DAQReader.provides)
 
-    st = strax.Context(**common_opts_xams, forbid_creation_of=ax.DAQReader.provides)
-
-    st.set_config(xams_common_config)
-    
-    processed_data_folder = 'home/xams/data/processed'
-          
+    st.set_config(XAMS_COMMON_CONFIG)
+              
     st.storage = []
     if init_rundb:
         if mongo_kwargs is None:
@@ -61,18 +71,18 @@ def xams(output_folder='./strax_data', init_rundb=True, *args, **kwargs):
         )]
 
     st.storage += [
-        strax.DataDirectory(processed_data_folder,
+        strax.DataDirectory(PROCESSED_DATA_FOLDER,
                             provide_run_metadata=False,
                             deep_scan=False,
                             readonly=True),
         strax.DataDirectory(output_folder),
     ]
-    print(st.storage)
+    
     return st
 
 def context_for_daq_reader(st: strax.Context,
                            run_id: str,
-                           detector: str,
+                           detector: str = 'xams',
                            runs_col_kwargs: dict = None,
                            run_doc: dict = None,
                            check_exists=True,
@@ -108,8 +118,12 @@ def context_for_daq_reader(st: strax.Context,
 
     live_dir = daq_config['strax_output_path']
 
-    if st.config['live_data_dir'] != live_dir:
+    # Check if live dir is set in the config, in case it is, set it
+    # to the live dir in the config
+    if 'live_data_dir' in st.config:
         live_dir = st.config['live_data_dir']
+        # Print a UserWarning that the live_data_dir is overwritten
+        UserWarning(f'live_data_dir is overwritten to {live_dir}')
 
     input_dir = os.path.join(live_dir, run_id)
     if not os.path.exists(input_dir):
