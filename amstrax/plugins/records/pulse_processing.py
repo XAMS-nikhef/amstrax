@@ -78,7 +78,10 @@ class PulseProcessing(strax.Plugin):
 
     provides = ('records', 'pulse_counts')
     data_kind = {k: k for k in provides}
-    save_when = strax.SaveWhen.TARGET
+    
+    # I think in amstrax we can save everything
+    # default is ALWAYS
+    # save_when = strax.SaveWhen.TARGET
        
     def infer_dtype(self,):
         # The record_length is the same for both raw_records_v1724 and raw_records_v1730

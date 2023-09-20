@@ -54,13 +54,12 @@ class TestXamsStack(unittest.TestCase):
         self.get_test_data()
         run_id = self.run_id
         for target, plugin_class in self.st._plugin_class_registry.items():
-            if target in ['raw_records', 'records', 'pulse_counts', 'peaks',  'peak_classification', 'peak_basics', 'events', 'event_basics']:
-                print('>>>>>>>>>>> Making', target)
-                self.st.make(run_id, target)
-                data = self.st.get_array(run_id, target)
-                print(len(data), 'entries in', target)
-                if plugin_class.save_when >= strax.SaveWhen.TARGET:
-                    assert self.st.is_stored(run_id, target)
+            print('>>>>>>>>>>> Making', target)
+            self.st.make(run_id, target)
+            data = self.st.get_array(run_id, target)
+            print(len(data), 'entries in', target)
+            if plugin_class.save_when >= strax.SaveWhen.TARGET:
+                assert self.st.is_stored(run_id, target)
         with self.assertRaises(ValueError):
             # Now since we have the 'raw' data, we cannot be allowed to
             # make it again!
