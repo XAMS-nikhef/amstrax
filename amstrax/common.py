@@ -33,6 +33,11 @@ to_pe = 1
 tpc_r = 6 # TODO check this value
 tpc_z = 10 # TODO check this value
 
+# Current values 
+n_tpc_pmts = 8
+n_xamsl_channel = 4
+to_pe = 1
+
 _is_jupyter = any('jupyter' in arg for arg in sys.argv)
 
 amstrax_dir = os.path.dirname(os.path.abspath(

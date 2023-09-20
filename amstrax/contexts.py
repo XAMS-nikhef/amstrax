@@ -33,9 +33,6 @@ COMMON_OPT_XAMS = dict(
         ax.EventPositions,
         ax.EventBasics,
         ax.EventInfo,
-        # ax.EventBasics,
-        # ax.EventPositions,
-        # ax.CorrectedAreas,
         # ax.EnergyEstimates,
         ],
     store_run_fields=(
