@@ -74,36 +74,6 @@ class LEDCalibration(strax.Plugin):
         return temp
 
 
-# def get_records(raw_records, baseline_window, record_i_signal):
-#     """
-#     Determine baseline as the average of the first baseline_samples
-#     of each pulse. Subtract the pulse float(data) from baseline.
-#     """
-
-#     record_length = np.shape(raw_records.dtype['data'])[0]
-
-#     _dtype = [(('Start time since unix epoch [ns]', 'time'), '<i8'),
-#               (('Length of the interval in samples', 'length'), '<i4'),
-#               (('Width of one sample [ns]', 'dt'), '<i2'),
-#               (('Channel/PMT number', 'channel'), '<i2'),
-#               (('Length of pulse to which the record belongs (without zero-padding)', 'pulse_length'), '<i4'),
-#               (('Fragment number in the pulse', 'record_i'), '<i2'),
-#               (('Waveform data in raw ADC counts', 'data'), 'f4', (record_length,))]
-
-#     records = np.zeros(len(raw_records), dtype=_dtype)
-#     strax.copy_to_buffer(raw_records, records, "_rr_to_r_led")
-
-#     blmask = np.where((records['record_i'] == 0))[0]
-#     mask = np.where((records['record_i'] == record_i_signal))[0]
-#     blrecords = records[blmask]
-#     records = records[mask]
-
-#     bl = blrecords['data'][:, baseline_window[0]:baseline_window[1]].mean(axis=1)
-#     records['data'][:, :record_length] = -1. * (records['data'][:, :record_length].transpose() - bl[:]).transpose()
-
-#     return records
-
-
 _on_off_dtype = np.dtype([("channel", "int16"), ("amplitude", "float32")])
 
 
@@ -142,7 +112,5 @@ def get_area(records, led_window):
         Area["area"] += records["data"][:, left:right].sum(axis=1)
     Area["channel"] = records["channel"]
     Area["area"] = Area["area"] / float(len(end_pos))
-
-    return Area
 
     return Area

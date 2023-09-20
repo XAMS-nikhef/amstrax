@@ -28,4 +28,3 @@ class PeakPositions(strax.Plugin):
         result['endtime'] = peaks['endtime']
 
         return result
-

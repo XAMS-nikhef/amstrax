@@ -113,40 +113,6 @@ class PeakBasics(strax.Plugin):
         r['center_time'][m] += self.compute_center_times(peaks[m])
         return r
 
-
-        p = peaks
-        p = strax.sort_by_time(p)
-        r = np.zeros(len(p), self.dtype)
-        for q in "time length dt area".split():
-            r[q] = p[q]
-        r["endtime"] = p["time"] + p["dt"] * p["length"]
-        r["n_channels"] = (p["area_per_channel"] > 0).sum(axis=1)
-        r["range_50p_area"] = p["width"][:, 5]
-        r["max_pmt"] = np.argmax(p["area_per_channel"], axis=1)
-        r["max_pmt_area"] = np.max(p["area_per_channel"], axis=1)
-
-        # area_top = p['area_per_channel'][:, :8].sum(axis=1)
-        area_top = p["area_per_channel"][:, 1:2].sum(axis=1)  # top pmt in ch 1
-        # Negative-area peaks get 0 AFT - TODO why not NaN?
-        m = p["area"] > 0
-        r["area_fraction_top"][m] = area_top[m] / p["area"][m]
-        # n_competing temporarily due to chunking issues
-        r["n_competing"] = self.find_n_competing(
-            peaks,
-            window=self.config["nearby_window"],
-            fraction=self.config["min_area_fraction"],
-        )
-
-        area_total = p['area_per_channel'].sum(axis=1)
-        check_peak_sum_area_rtol = 1e-4
-        if check_peak_sum_area_rtol is not None:
-            self.check_area(area_total, p, self.check_peak_sum_area_rtol)
-        # Negative or zero-area peaks have centertime at startime
-        r["center_time"] = p["time"]
-        r["center_time"][m] += self.compute_center_times(peaks[m])
-
-        return r
-
     # n_competing
     def get_window_size(self):
         return 2 * self.config["nearby_window"]

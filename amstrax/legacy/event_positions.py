@@ -63,4 +63,3 @@ class EventPositions(strax.LoopPlugin):
         for key in ['xr', 'yr']:
             result[key] = pos[key]
         return result
-
