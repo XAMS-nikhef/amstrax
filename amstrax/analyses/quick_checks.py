@@ -81,6 +81,63 @@ def plot_peaks_aft_histogram(
     std_axes()
     plt.tight_layout()
 
+
+
+@amstrax.mini_analysis(requires=('peak_basics',))
+def plot_peaks_area_aft_histogram(
+        context, run_id, peaks,
+        pe_bins=np.logspace(0, 7, 120),
+        rt_bins=np.geomspace(2, 1e5, 120),
+        extra_labels=tuple(),
+        rate_range=(1e-4, 1),
+        aft_range=(0, .85),
+        figsize=(14, 5)):
+    """Plot side-by-side (area, width) histograms of the peak rate
+    and mean area fraction top.
+
+    :param pe_bins: Array of bin edges for the peak area dimension [PE]
+    :param rt_bins: array of bin edges for the rise time dimension [ns]
+    :param extra_labels: List of (area, risetime, text, color) extra labels
+    to put on the plot
+    :param rate_range: Range of rates to show [peaks/(bin*s)]
+    :param aft_range: Range of mean S1 area fraction top / bin to show
+    :param figsize: Figure size to use
+    """
+    livetime_sec = get_livetime_sec(context, run_id, peaks)
+
+    mh = Histdd(peaks,
+                dimensions=(
+                    ('area', pe_bins),
+                    ('area_fraction_top', np.linspace(0, 1, 100)),
+                    ('range_50p_area', rt_bins),
+                ))
+
+    f, axes = plt.subplots(1, 2, figsize=figsize)
+
+    def std_axes():
+        plt.gca().set_facecolor('k')
+        plt.xscale('log')
+        plt.xlabel("Area [PE]")
+        plt.ylabel("Area Fraction Top")
+        # plt.ylabel("Range 50% area [ns]")
+
+    plt.sca(axes[0])
+    (mh / livetime_sec).sum(axis=2).plot(
+        norm=LogNorm(vmin=rate_range[0], vmax=rate_range[1]),
+        colorbar_kwargs=dict(extend='both'),
+        cblabel='Peaks / (bin * s)')
+    std_axes()
+
+    plt.sca(axes[1])
+    mh.average(axis=2).plot(
+        norm=LogNorm(vmin=rt_bins[0], vmax=rt_bins[-1]),
+        colorbar_kwargs=dict(extend='max'),
+        cmap=plt.cm.jet,
+        cblabel='Range 50% area [ns]')
+
+    std_axes()
+    plt.tight_layout()
+
 @amstrax.mini_analysis(requires=['event_info'])
 def event_scatter(context, run_id, events,
                   show_single=True,
