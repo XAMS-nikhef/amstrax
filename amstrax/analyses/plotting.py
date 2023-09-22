@@ -222,6 +222,9 @@ def plot_area_per_channel(context, run_id, peaks, **kwargs):
     # Get the peaks
     area_per_channel = peak["area_per_channel"]
 
+    vmin = min(area_per_channel)
+    vmax = max(area_per_channel)
+
     # Plot the area per channel
     # Four quadrants for channels 1 2 3 4
     # imshow with 4 quadrants
@@ -236,6 +239,8 @@ def plot_area_per_channel(context, run_id, peaks, **kwargs):
             top_quadrant_length,
         ],
         origin="lower",
+        vmin=vmin,
+        vmax=vmax,
     )
     axes[1].imshow(
         area_per_channel[0].reshape(1, 1),
@@ -246,6 +251,8 @@ def plot_area_per_channel(context, run_id, peaks, **kwargs):
             -bottom_quadrant_length,
             bottom_quadrant_length,
         ],
+        vmin=vmin,
+        vmax=vmax,
     )
 
     # Write the number of the channel in every element of imshow of axes[0]
