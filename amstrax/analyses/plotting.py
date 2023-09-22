@@ -235,7 +235,7 @@ def plot_area_per_channel(context, run_id, peaks, **kwargs):
             -top_quadrant_length,
             top_quadrant_length,
         ],
-        origin="upper",
+        origin="lower",
     )
     axes[1].imshow(
         area_per_channel[0].reshape(1, 1),
