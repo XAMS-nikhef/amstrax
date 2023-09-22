@@ -97,7 +97,7 @@ class PeakBasics(strax.Plugin):
         r['n_saturated_channels'] = p['n_saturated_channels']
 
         n_top = self.config["n_top_pmts"]
-        area_top = p['area_per_channel'][:, :n_top].sum(axis=1)
+        area_top = p['area_per_channel'][:, n_top:].sum(axis=1)
         # Recalculate to prevent numerical inaccuracy #442
         area_total = p['area_per_channel'].sum(axis=1)
         # Negative-area peaks get NaN AFT

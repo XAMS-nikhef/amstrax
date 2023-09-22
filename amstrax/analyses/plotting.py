@@ -222,6 +222,9 @@ def plot_area_per_channel(context, run_id, peaks, **kwargs):
     # Get the peaks
     area_per_channel = peak["area_per_channel"]
 
+    vmin = min(area_per_channel)
+    vmax = max(area_per_channel)
+
     # Plot the area per channel
     # Four quadrants for channels 1 2 3 4
     # imshow with 4 quadrants
@@ -235,7 +238,9 @@ def plot_area_per_channel(context, run_id, peaks, **kwargs):
             -top_quadrant_length,
             top_quadrant_length,
         ],
-        origin="upper",
+        origin="lower",
+        vmin=vmin,
+        vmax=vmax,
     )
     axes[1].imshow(
         area_per_channel[0].reshape(1, 1),
@@ -246,6 +251,8 @@ def plot_area_per_channel(context, run_id, peaks, **kwargs):
             -bottom_quadrant_length,
             bottom_quadrant_length,
         ],
+        vmin=vmin,
+        vmax=vmax,
     )
 
     # Write the number of the channel in every element of imshow of axes[0]
@@ -305,6 +312,22 @@ export(plot_area_per_channel)
 
 @amstrax.mini_analysis(requires=("records_led",))
 def plot_led_records(context, run_id, records_led, n_records=100, **kwargs):
+    """
+    Plots the LED records for a given run ID.
+
+    Args:
+        context (unknown): Unknown.
+        run_id (int): The ID of the run to plot.
+        records_led (unknown): Unknown.
+        n_records (int, optional): The number of records to plot. Defaults to 100.
+        **kwargs: Unknown.
+
+    Raises:
+        ValueError: If the run ID is not found in the database or if the run is not an external trigger run.
+
+    Returns:
+        None
+    """
     db = amstrax.get_mongo_collection()
 
     rd = db.find_one({"number": int(run_id)})
