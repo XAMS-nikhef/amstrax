@@ -305,6 +305,22 @@ export(plot_area_per_channel)
 
 @amstrax.mini_analysis(requires=("records_led",))
 def plot_led_records(context, run_id, records_led, n_records=100, **kwargs):
+    """
+    Plots the LED records for a given run ID.
+
+    Args:
+        context (unknown): Unknown.
+        run_id (int): The ID of the run to plot.
+        records_led (unknown): Unknown.
+        n_records (int, optional): The number of records to plot. Defaults to 100.
+        **kwargs: Unknown.
+
+    Raises:
+        ValueError: If the run ID is not found in the database or if the run is not an external trigger run.
+
+    Returns:
+        None
+    """
     db = amstrax.get_mongo_collection()
 
     rd = db.find_one({"number": int(run_id)})

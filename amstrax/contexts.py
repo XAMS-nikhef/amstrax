@@ -14,7 +14,7 @@ CONFIG = {
     'DEFAULT_COLLECTION': 'runs_gas'
 }
 
-PROCESSED_DATA_FOLDER = 'home/xams/data/processed'
+PROCESSED_DATA_FOLDER = '/home/xams/data/xams_processed'
 
 COMMON_OPT_XAMS = dict(
     register_all=[],
