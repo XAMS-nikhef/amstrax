@@ -14,4 +14,4 @@ sphinxcontrib_devhelp==1.0.2
 sphinxcontrib_htmlhelp==2.0.0
 sphinxcontrib_jsmath==1.0.1
 sphinxcontrib_qthelp==1.0.3
-typing-extensions==4.3.0
+typing-extensions==4.8.0
