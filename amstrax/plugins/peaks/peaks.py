@@ -37,7 +37,9 @@ HITFINDER_OPTIONS = tuple([
     strax.Option('diagnose_sorting', track=False, default=False,
                  help="Enable runtime checks for sorting and disjointness"),
     strax.Option('n_tpc_pmts', track=False, default=False,
-                 help="Number of channels"), )
+                 help="Number of channels"), 
+    strax.Option('exclude_bottom_pmt', track=False, default=False,))
+                 
 class Peaks(strax.Plugin):
     depends_on = ('records',)
     data_kind = 'peaks'
@@ -54,9 +56,13 @@ class Peaks(strax.Plugin):
     def compute(self, records, start, end):
 
         r = records
-  
+        
         self.to_pe = np.ones(self.config['n_tpc_pmts'])
-
+  
+        if self.config['exclude_bottom_pmt']:
+            r = r[r['channel'] != 0]
+            self.to_pe = np.ones(self.config['n_tpc_pmts'] - 1)
+  
         hits = strax.find_hits(r)
         hits = strax.sort_by_time(hits)
 
