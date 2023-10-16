@@ -38,7 +38,8 @@ HITFINDER_OPTIONS = tuple([
                  help="Enable runtime checks for sorting and disjointness"),
     strax.Option('n_tpc_pmts', track=False, default=False,
                  help="Number of channels"), 
-    strax.Option('exclude_bottom_pmt', track=False, default=False,))
+    strax.Option('exclude_pmt', track=False, default=None,
+                 help="Exclude PMT from peak reconstruction"),)
                  
 class Peaks(strax.Plugin):
     depends_on = ('records',)
@@ -59,8 +60,10 @@ class Peaks(strax.Plugin):
         
         self.to_pe = np.ones(self.config['n_tpc_pmts'])
   
-        if self.config['exclude_bottom_pmt']:
-            r = r[r['channel'] != 0]
+        if self.config['exclude_bottom_pmt'] is not None:
+            if len(self.config['exclude_bottom_pmt']) != 1:
+                raise RuntimeError("For now, only one PMT can be excluded")
+            r = r[r['channel'] != self.config['exclude_bottom_pmt']]
             self.to_pe = np.ones(self.config['n_tpc_pmts'] - 1)
   
         hits = strax.find_hits(r)
