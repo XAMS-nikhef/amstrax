@@ -60,10 +60,10 @@ class Peaks(strax.Plugin):
         
         self.to_pe = np.ones(self.config['n_tpc_pmts'])
   
-        if self.config['exclude_bottom_pmt'] is not None:
-            if len(self.config['exclude_bottom_pmt']) != 1:
+        if self.config['exclude_pmt'] is not None:
+            if len(self.config['exclude_pmt']) != 1:
                 raise RuntimeError("For now, only one PMT can be excluded")
-            r = r[r['channel'] != self.config['exclude_bottom_pmt']]
+            r = r[r['channel'] != self.config['exclude_pmt']]
             self.to_pe = np.ones(self.config['n_tpc_pmts'] - 1)
   
         hits = strax.find_hits(r)
