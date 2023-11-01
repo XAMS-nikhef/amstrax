@@ -12,7 +12,7 @@ export, __all__ = strax.exporter()
 @export
 @strax.takes_config(
     strax.Option('electron_drift_velocity',
-                 default=0.00016,
+                 default=0.0000016,
                  help='Vertical electron drift velocity in cm/ns (1e4 m/ms)'),
 
     strax.Option('electron_drift_time_gate',
