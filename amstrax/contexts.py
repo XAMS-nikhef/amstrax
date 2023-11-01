@@ -31,7 +31,7 @@ COMMON_OPT_XAMS = dict(
         ax.Events,
         # ax.CorrectedAreas,
         # ax.EventPositions,
-        # ax.EventBasics,
+    ax.EventBasics,
         # ax.EventInfo,
         # ax.EnergyEstimates,
         ],
