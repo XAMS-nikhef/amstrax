@@ -120,7 +120,7 @@ def get_rundocs(runsdb: pymongo.collection.Collection, args: argparse.Namespace)
     projection = {'number': 1, 'end': 1, 'data': 1}
 
     # sort by number, so that we get the oldest runs first
-    sort = [('number', pymongo.ASCENDING)]
+    sort = [('number', pymongo.DESCENDING)]
 
     # get the runs
     runs = runsdb.find(query, projection=projection, sort=sort).limit(args.max_runs)
