@@ -156,7 +156,7 @@ def handle_runs(rundocs: list, args: argparse.Namespace):
                 location=args.dest_location, 
                 hostname='stoomboot', 
                 run_id=run_id, 
-                production=args.production
+                production=args.production,
                 ssh_host=args.ssh_host
             )
 
