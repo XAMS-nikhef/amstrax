@@ -99,16 +99,37 @@ def get_rundocs(runsdb: pymongo.collection.Collection, args: argparse.Namespace)
 
     query = {
         'end': {'$exists': True},
-        # elem match check in the data array if there is an entry with type=live_data and host=daq
-        # and elem match that there is not an entry with type=live_data and host==stomboot 
-        # or elem match that there is not an entry with type=live_data and host==dcache
-        'data': {'$elemMatch': {'type': 'live_data', 'host': 'daq'},
-                    '$or': [{'data': {'$elemMatch': {'type': 'live_data', 'host': 'stoomboot'}}},
-                            {'data': {'$elemMatch': {'type': 'live_data', 'host': 'dcache'}}}
-                            ]
-                },
-        'number': {'$gt': 2000},                
+        'data': {
+            '$elemMatch': {
+                'type': 'live_data',
+                'host': 'daq'
+            }
+        },
+        '$or': [
+            {
+                'data': {
+                    '$not': {
+                        '$elemMatch': {
+                            'type': 'live_data',
+                            'host': 'stoomboot'
+                        }
+                    }
+                }
+            },
+            {
+                'data': {
+                    '$not': {
+                        '$elemMatch': {
+                            'type': 'live_data',
+                            'host': 'dcache'
+                        }
+                    }
+                }
+            }
+        ],
+        'number': {'$gt': 2000}
     }
+
 
     projection = {'number': 1, 'end': 1, 'data': 1}
 
