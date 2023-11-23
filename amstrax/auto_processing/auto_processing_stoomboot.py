@@ -101,7 +101,7 @@ if __name__ == '__main__':
             print('These runs I will do:')
             print([run_doc['number'] for run_doc in run_docs_to_do])
             for rd in run_docs_to_do[:500]:
-                print(f"Run {rd['number']} has status {rd['processing_status']}")
+                print(f"Run {rd['number']} has status {rd.get('processing_status', '')}")
 
         else:
             print('I found no runs to process, time to take a nap for %d seconds' % nap_time)
