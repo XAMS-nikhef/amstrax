@@ -40,7 +40,7 @@ class PeakBasics(strax.Plugin):
 
     parallel = "False"
     rechunk_on_save = False
-    __version__ = "1.0.3"
+    __version__ = "1.0"
     dtype = [
         (('Start time of the peak (ns since unix epoch)',
           'time'), np.int64),
@@ -82,7 +82,7 @@ class PeakBasics(strax.Plugin):
     def compute(self, peaks):
         p = peaks
         r = np.zeros(len(p), self.dtype)
-        needed_fields = 'time length dt area type center_time'
+        needed_fields = 'time length dt area type'
         for q in needed_fields.split():
             r[q] = p[q]
         r['endtime'] = p['time'] + p['dt'] * p['length']
@@ -107,6 +107,9 @@ class PeakBasics(strax.Plugin):
 
         if self.config['check_peak_sum_area_rtol'] is not None:
             self.check_area(area_total, p, self.config['check_peak_sum_area_rtol'])
+        # Negative or zero-area peaks have centertime at startime
+        r['center_time'] = p['time']
+        r['center_time'][m] += self.compute_center_times(peaks[m])
         return r
 
     # n_competing
