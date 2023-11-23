@@ -139,6 +139,10 @@ def handle_runs(rundocs: list, args: argparse.Namespace):
         # we want to copy the data to stoomboot, a remote called stbc
         # find in the data array the entry with type=live_data and host=daq
         # and get the path, if there are missing entries raise an error
+
+        print(rd['number'])
+        print(rd['data'])
+
         try:
             path = [d['location'] for d in rd['data'] if d['type'] == 'live_data' and d['host'] == 'daq'][0]
         except IndexError:
