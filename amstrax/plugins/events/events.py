@@ -11,10 +11,10 @@ export, __all__ = strax.exporter()
     strax.Option('trigger_min_competing', default=3, # not used
                  help='Peaks must have More nearby larger or slightly smaller'
                       ' peaks to cause events'),
-    strax.Option('left_event_extension', default=int(5e5),
+    strax.Option('left_event_extension', default=int(0),
                  help='Extend events this many ns to the left from each '
                       'triggering peak'),
-    strax.Option('right_event_extension', default=int(1e5),
+    strax.Option('right_event_extension', default=int(5e4),
                  help='Extend events this many ns to the right from each '
                       'triggering peak'),
 )
@@ -31,7 +31,7 @@ class Events(strax.OverlapWindowPlugin):
         ('time', np.int64, 'Event start time in ns since the unix epoch'),
         ('endtime', np.int64, 'Event end time in ns since the unix epoch')]
     events_seen = 0
-    __version__ = '1.0'
+    __version__ = '1.0.1'
 
     def get_window_size(self):
         return (2 * self.config['left_event_extension'] +
@@ -42,7 +42,7 @@ class Events(strax.OverlapWindowPlugin):
         re = self.config['right_event_extension']
 
         triggers = peaks[
-            (peaks['type'] == 2) &
+            (peaks['type'] == 1) &
             (peaks['area'] > self.config['trigger_min_area'])
             ]
 
