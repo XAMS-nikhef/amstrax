@@ -140,11 +140,8 @@ def handle_runs(rundocs: list, args: argparse.Namespace):
         # find in the data array the entry with type=live_data and host=daq
         # and get the path, if there are missing entries raise an error
 
-        print(rd['number'])
-        print(rd['data'])
-
         try:
-            path = [d['location'] for d in rd['data'] if d['type'] == 'live_data' and d['host'] == 'daq'][0]
+            path = [d['location'] for d in rd['data'] if d['type'] == 'live' and d['host'] == 'daq'][0]
         except IndexError:
             logs.error(f"Could not find the DB entry for live data of run {rd['number']}")
             continue
@@ -161,7 +158,7 @@ def handle_runs(rundocs: list, args: argparse.Namespace):
         # let's use subprocess run and check if the copy goes well, in case, update the database
 
         # if no data entry exists for stoomboot, create one
-        if not any([d['type'] == 'live_data' and d['host'] == 'stoomboot' for d in rd['data']]):
+        if not any([d['type'] == 'live' and d['host'] == 'stoomboot' for d in rd['data']]):
             copy_data(
                 live_data_path=live_data_path,
                 location=args.dest_location, 
@@ -172,7 +169,7 @@ def handle_runs(rundocs: list, args: argparse.Namespace):
             )
 
         # if no data entry exists for dcache, create one
-        if not any([d['type'] == 'live_data' and d['host'] == 'dcache' for d in rd['data']]):
+        if not any([d['type'] == 'live' and d['host'] == 'dcache' for d in rd['data']]):
             copy_data(
                 live_data_path=live_data_path,
                 location=args.dest_backup_location, 
@@ -212,7 +209,7 @@ def copy_data(rundsb: pymongo.collection.Collection,
                 {'number': int(run_id)},
                 {'$push': 
                     {'data': 
-                        {'type': 'live_data', 
+                        {'type': 'live', 
                         'host': hostname, 
                         'path': location,
                         'by': 'copy_live',
