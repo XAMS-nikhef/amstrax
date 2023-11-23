@@ -9,7 +9,7 @@ conda activate /data/xenon/xams_v2/anaconda/xams
 cd /data/xenon/xams_v2/which_dir
 echo "starting script!"
 which python
-python {amstrax_dir}/auto_processing/{script}.py {arguments} --detector {detector}
+python {amstrax_dir}/auto_processing/{script}.py
 echo "Script complete, bye!"
 """
 
@@ -19,11 +19,10 @@ def submit_job(run_id,
                detector,
                job_folder='jobs', 
                log_folder='logs',
-               script = 'amstraxer'
+               script = 'amstraxer_easy'
               ):
     """
     This script will save data to
-    /data/xenon/{detector}/processing_staged_run/amstrax_data
     """
     for folder in (job_folder, log_folder):
         if not os.path.exists(folder):

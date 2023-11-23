@@ -2,6 +2,7 @@ import argparse
 import time
 from datetime import datetime, timedelta
 import subprocess 
+import logging
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -99,9 +100,19 @@ if __name__ == '__main__':
             run_name = f'{int(run_doc["number"]):06}'
 
             if process_stomboot:
-                # submit_stbc.submit_job(run_name, target=target, context=context, detector=detector,script='process_run')
-                # runs_col.find_one_and_update({'number': run_name},
-                #                             {'$set': {'processing_status': 'submitted_job' }})
+                
+                # import the file batch_stbc.py in the same folder as the current script
+                from batch_stbc import submit_job
+
+                jobstring = """
+                export PATH=/data/xenon/miniconda3/bin:$PATH
+                conda activate /data/xenon/xams_v2/anaconda/xams
+                cd /data/xenon/xams_v2/software/amstrax/amstrax/auto_processing/
+                
+
+                """
+
+
                 pass
 
             else: #process locally

@@ -230,9 +230,6 @@ def copy_data(live_data_path: str, location: str, hostname: str, run_id: str, pr
 
 
 
-    
-
-
 def main(args):
 
     logs.info('I am ready to start copying data for!')
@@ -246,10 +243,6 @@ def main(args):
     logs.info('I am done copying data for now!')
 
     return
-
-
-
-
 
 
 if __name__ == '__main__':
