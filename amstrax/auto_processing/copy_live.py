@@ -64,6 +64,7 @@ def parse_args():
     )
 
 
+
     return parser.parse_args()
 
 
@@ -189,42 +190,43 @@ def copy_data(live_data_path: str, location: str, hostname: str, run_id: str, pr
         return
 
     logs.info(f"Copying run {run_id} to {location}")
-    if production:
-        copy = subprocess.run(
-            ['rsync', '-av', f'{live_data_path}/', f'{ssh_host}:{location}/'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
-        )
-        if copy.returncode != 0:
-            logs.error(f"Something went wrong copying run {run_id} to {location}")
-            logs.error(copy.stderr)
-            return
-        else:
-            logs.info(f"Successfully copied run {run_id} to {location}")
-            logs.info(copy.stdout)
 
-            # add one entry to the data array
-            rundb.update_one(
-                {'number': int(run_id)},
-                {'$push': 
-                    {'data': 
-                        {'type': 'live', 
-                        'host': hostname, 
-                        'path': location,
-                        'by': 'copy_live',
-                        'time': datetime.now()
-                        }
+    copy = subprocess.run(
+        ['rsync', '-av', f'{live_data_path}/', f'{ssh_host}:{location}/'],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    )
+    if copy.returncode != 0:
+        logs.error(f"Something went wrong copying run {run_id} to {location}")
+        logs.error(copy.stderr)
+        return
+    else:
+        logs.info(f"Successfully copied run {run_id} to {location}")
+        logs.info(copy.stdout)
+
+    if production:
+
+        # add one entry to the data array
+        rundb.update_one(
+            {'number': int(run_id)},
+            {'$push': 
+                {'data': 
+                    {'type': 'live', 
+                    'host': hostname, 
+                    'path': location,
+                    'by': 'copy_live',
+                    'time': datetime.now()
                     }
                 }
-            )
+            }
+        )
 
-            logs.info(f"Successfully updated the database for run {run_id}")
+        logs.info(f"Successfully updated the database for run {run_id}")
             
-            return
     else:
-        logs.info(f"Would have copied run {run_id} to {location}")
+        logs.info(f"Not updating the database for run {run_id}")
 
-        return
+    return
 
 
 
