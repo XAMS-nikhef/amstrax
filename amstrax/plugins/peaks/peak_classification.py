@@ -47,7 +47,7 @@ class PeakClassification(strax.Plugin):
         # is_s2 &= both_pmts_filter
         r['type'][is_s2] = 2
 
-        # print(f"We found {np.sum(is_s1)} S1s and {np.sum(is_s2)} S2s.")
+        print(f"We found {np.sum(is_s1)} S1s and {np.sum(is_s2)} S2s.")
 
         for q in ['time']:
             r[q] = p[q]
