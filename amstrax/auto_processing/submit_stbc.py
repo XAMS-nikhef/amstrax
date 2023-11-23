@@ -4,9 +4,9 @@ import os
 from amstrax import amstrax_dir
 
 script_template = """#!/bin/bash
-export PATH=/project/xenon/jorana/software/miniconda3/bin:$PATH
-source activate /data/xenon/joranang/anaconda/envs/amstrax_2021
-cd /data/xenon/{detector}/processing_staged_run
+export PATH=/data/xenon/miniconda3/bin:$PATH
+conda activate /data/xenon/xams_v2/anaconda/xams
+cd /data/xenon/xams_v2/which_dir
 echo "starting script!"
 which python
 python {amstrax_dir}/auto_processing/{script}.py {arguments} --detector {detector}
