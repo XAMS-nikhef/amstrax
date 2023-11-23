@@ -140,9 +140,9 @@ def handle_runs(rundocs: list, args: argparse.Namespace):
         # find in the data array the entry with type=live_data and host=daq
         # and get the path, if there are missing entries raise an error
         try:
-            path = [d['path'] for d in rd['data'] if d['type'] == 'live_data' and d['host'] == 'daq'][0]
+            path = [d['location'] for d in rd['data'] if d['type'] == 'live_data' and d['host'] == 'daq'][0]
         except IndexError:
-            logs.error(f"Could not find the path for run {rd['number']}")
+            logs.error(f"Could not find the DB entry for live data of run {rd['number']}")
             continue
 
         live_data_path = os.path.join(path, run_id)
