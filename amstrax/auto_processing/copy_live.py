@@ -192,7 +192,7 @@ def copy_data(live_data_path: str, location: str, hostname: str, run_id: str, pr
     logs.info(f"Copying run {run_id} to {location}")
 
     copy = subprocess.run(
-        ['rsync', '-av', f'{live_data_path}/', f'{ssh_host}:{location}/'],
+        ['rsync', '-av', f'{live_data_path}', f'{ssh_host}:{location}'],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
     )
