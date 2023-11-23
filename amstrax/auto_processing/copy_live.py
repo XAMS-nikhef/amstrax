@@ -99,35 +99,21 @@ def get_rundocs(runsdb: pymongo.collection.Collection, args: argparse.Namespace)
 
     query = {
         'end': {'$exists': True},
+        'number': {'$gt': 2000},
         'data': {
             '$elemMatch': {
                 'type': 'live_data',
                 'host': 'daq'
             }
         },
-        '$or': [
-            {
-                'data': {
-                    '$not': {
-                        '$elemMatch': {
-                            'type': 'live_data',
-                            'host': 'stoomboot'
-                        }
-                    }
-                }
-            },
-            {
-                'data': {
-                    '$not': {
-                        '$elemMatch': {
-                            'type': 'live_data',
-                            'host': 'dcache'
-                        }
-                    }
-                }
+        'data': {
+            '$not': {
+                '$all': [
+                    {'$elemMatch': {'type': 'live_data', 'host': 'stoomboot'}},
+                    {'$elemMatch': {'type': 'live_data', 'host': 'dcache'}}
+                ]
             }
-        ],
-        'number': {'$gt': 2000}
+        }
     }
 
 
