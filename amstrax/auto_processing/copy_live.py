@@ -207,7 +207,7 @@ def copy_data(live_data_path: str, location: str, hostname: str, run_id: str, pr
     if production:
 
         # add one entry to the data array
-        rundb.update_one(
+        runsdb.update_one(
             {'number': int(run_id)},
             {'$push': 
                 {'data': 
