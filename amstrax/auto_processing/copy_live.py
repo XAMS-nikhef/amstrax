@@ -49,7 +49,7 @@ def parse_args():
         '--logs_path',
         type=str,
         help='The location where the logs should be stored',
-        default='/home/xams/logs'
+        default='/home/xams/daq/logs'
     )
     parser.add_argument(
         '--production',
