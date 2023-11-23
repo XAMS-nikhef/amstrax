@@ -226,8 +226,6 @@ def copy_data(rundsb: pymongo.collection.Collection,
 
 def main(args):
 
-    config = parse_config(args)
-
     logs.info('I am ready to start copying data for!')
 
     # Initialize runsdatabase collection
