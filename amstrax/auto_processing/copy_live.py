@@ -181,8 +181,7 @@ def handle_runs(rundocs: list, args: argparse.Namespace):
 
 
     
-def copy_data(rundsb: pymongo.collection.Collection,
-    live_data_path: str, location: str, hostname: str, run_id: str, production=False, ssh_host='stbc'):
+def copy_data(live_data_path: str, location: str, hostname: str, run_id: str, production=False, ssh_host='stbc'):
 
     # check if the data exists at the location
     if not os.path.exists(live_data_path):
@@ -236,9 +235,6 @@ def main(args):
 
     logs.info('I am ready to start copying data for!')
 
-    # Initialize runsdatabase collection
-    runsdb = amstrax.get_mongo_collection()
-
     # get the runs that we want to copy
     rundocs = get_rundocs(runsdb, args)
 
@@ -259,6 +255,9 @@ if __name__ == '__main__':
     logs = logfile()
     today = datetime.today()
     tomorrow = datetime.today() + timedelta(days=1)
+
+    # Initialize runsdatabase collection
+    runsdb = amstrax.get_mongo_collection()
 
     if not args.loop_infinite:
         main(args)
