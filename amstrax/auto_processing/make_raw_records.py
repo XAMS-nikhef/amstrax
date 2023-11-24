@@ -3,6 +3,7 @@ import argparse
 import datetime
 import os
 import sys
+import strax
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -76,7 +77,7 @@ def process_run(args):
     live_data = args.live_data_dir
 
     st = amstrax.contexts.xams(output_folder=output_folder, init_rundb=False)
-    st.storage += [strax.DataDirectory(live_data, provide_run_metadata=False, deep_scan=False, readonly=True)]
+    st.storage += [strax.DataDirectory(live_data, readonly=True)]
     st.set_config({'live_data_dir': live_data})
 
     run_col = amstrax.get_mongo_collection()

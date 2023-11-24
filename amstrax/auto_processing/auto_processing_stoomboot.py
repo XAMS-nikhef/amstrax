@@ -236,13 +236,15 @@ def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
         job_name = f'xams_{run_id}_production'
         log_file = os.path.join(args.logs_path, f'{job_name}.log')
 
+        production_flag = '--production' if args.production else ''
+
         jobstring = f"""
         echo `date`
         echo "Starting job for run {run_id}"
         export PATH=/data/xenon/cfuselli/miniconda-install/bin:$PATH
         source activate /data/xenon/xams_v2/anaconda/xams
         cd {amstrax_dir}/auto_processing/
-        python make_raw_records.py --run_id {run_id} --output_folder {args.output_folder}
+        python make_raw_records.py --run_id {run_id} --output_folder {args.output_folder} --target {targets} {production_flag}
         echo "Done!"
         echo `date`
         """
@@ -273,4 +275,4 @@ if __name__ == '__main__':
     args = parse_args()
     setup_logging(args.logs_path)
     main(args)
-    
+
