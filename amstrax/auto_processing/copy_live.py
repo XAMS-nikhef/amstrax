@@ -1,15 +1,15 @@
+#!/usr/bin/env python
+import argparse
+import datetime
+import logging
+import os
 import subprocess
+import time
 import pymongo
 import amstrax
-import os
-import argparse
-import configparser
-import shutil
 import logging
-import time
-from datetime import datetime, timedelta
-import typing as ty
-
+from logging.handlers import TimedRotatingFileHandler
+import os
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -43,8 +43,7 @@ def parse_args():
         '--dest_backup_location',
         type=str,
         help='The location where the data should be copied to',
-        default='/dcache/archive/xenon/xams/xams_v2/live_data'
-    )
+        default='/dcache/archive/xenon/xams/xams_v2/live_data')
     parser.add_argument(
         '--logs_path',
         type=str,
@@ -52,52 +51,52 @@ def parse_args():
         default='/home/xams/daq/logs'
     )
     parser.add_argument(
-        '--production',
-        action='store_true',
-        help='If you want to run the script in production mode',
-        default=False)
-    parser.add_argument(
         '--ssh_host',
         type=str,
         help='The host that you want to copy the data to',
         default='stbc'
     )
-
+    parser.add_argument(
+        '--production',
+        action='store_true',
+        help='If you want to run the script in production mode',
+        default=False)
 
 
     return parser.parse_args()
 
 
 
-def logfile():
-    today = datetime.today()
-    fileName = f"{today.year:04d}{today.month:02d}{today.day:02d}_copying"
+def setup_logging(logs_path):
+    """
+    Setup logging configuration with daily log rotation.
+    """
+    if not os.path.exists(logs_path):
+        os.makedirs(logs_path)
 
-    args = parse_args()
+    log_file = os.path.join(logs_path, 'copying.log')
 
-    logFormatter = logging.Formatter(
-        f"{today.isoformat(sep=' ')} | %(levelname)-5.5s | %(message)s")
-    logfile = logging.getLogger()
+    log_formatter = logging.Formatter("%(asctime)s | %(levelname)-5.5s | %(message)s")
+    logger = logging.getLogger()
 
-    logfile.setLevel(logging.INFO)
+    logger.setLevel(logging.INFO)
 
-    fileHandler = logging.FileHandler("{0}/{1}.log".format(args.logs_path, fileName))
-    fileHandler.setFormatter(logFormatter)
-    logfile.addHandler(fileHandler)
+    # Setup file handler with daily rotation
+    file_handler = TimedRotatingFileHandler(log_file, when="midnight", interval=1, backupCount=7)
+    file_handler.setFormatter(log_formatter)
+    file_handler.suffix = "%Y%m%d"
+    logger.addHandler(file_handler)
 
-    consoleHandler = logging.StreamHandler()
-    consoleHandler.setFormatter(logFormatter)
-    logfile.addHandler(consoleHandler)
-
-    return logfile
-
+    # Setup console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(log_formatter)
+    logger.addHandler(console_handler)
 
 
-def get_rundocs(runsdb: pymongo.collection.Collection, args: argparse.Namespace):
-    
-    # query runsdb for new runs
-    # we need to find all the runs that have and end, and that have live_data only on this host (daq)
-
+def get_rundocs(runsdb, args):
+    """
+    Retrieve run documents from MongoDB collection based on specific criteria.
+    """
     query = {
         'end': {'$exists': True},
         'number': {'$gt': 2000},
@@ -105,9 +104,7 @@ def get_rundocs(runsdb: pymongo.collection.Collection, args: argparse.Namespace)
             '$elemMatch': {
                 'type': 'live_data',
                 'host': 'daq'
-            }
-        },
-        'data': {
+            },
             '$not': {
                 '$all': [
                     {'$elemMatch': {'type': 'live_data', 'host': 'stoomboot'}},
@@ -116,156 +113,76 @@ def get_rundocs(runsdb: pymongo.collection.Collection, args: argparse.Namespace)
             }
         }
     }
-
-
     projection = {'number': 1, 'end': 1, 'data': 1}
-
-    # sort by number, so that we get the oldest runs first
     sort = [('number', pymongo.DESCENDING)]
-
-    # get the runs
     runs = runsdb.find(query, projection=projection, sort=sort).limit(args.max_runs)
+    return list(runs)
 
-    # this is only a cursor, so we need to loop over it
-    rundocs = list(runs)
+def copy_data(run_id, live_data_path, location, hostname, production, ssh_host):
+    """
+    Copy data to the specified location using rsync.
+    """
+    if not os.path.exists(live_data_path):
+        logging.error(f"Could not find the data for run {run_id} at {live_data_path}")
+        return
 
-    return rundocs
+    logging.info(f"Copying run {run_id} to {location}")
+    copy_cmd = ['rsync', '-av', live_data_path, f'{ssh_host}:{location}']
+    copy = subprocess.run(copy_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-def handle_runs(rundocs: list, args: argparse.Namespace):
+    if copy.returncode != 0:
+        logging.error(f"Something went wrong copying run {run_id} to {location}")
+        logging.error(copy.stderr.decode())
+    else:
+        logging.info(f"Successfully copied run {run_id} to {location}")
+        logging.info(copy.stdout.decode())
 
+        if production:
+            runsdb.update_one(
+                {'number': int(run_id)},
+                {'$push': {'data': {'type': 'live', 'host': hostname, 'path': location,
+                                    'by': 'copy_live', 'time': datetime.datetime.now()}}}
+            )
+            logging.info(f"Successfully updated the database for run {run_id}")
+
+def handle_runs(rundocs, args):
+    """
+    Handle the copying process for each run document.
+    """
     for rd in rundocs:
-
-        
         run_id = f"{rd['number']:06}"
-        # we want to copy the data to stoomboot, a remote called stbc
-        # find in the data array the entry with type=live_data and host=daq
-        # and get the path, if there are missing entries raise an error
-
         try:
-            path = [d['location'] for d in rd['data'] if d['type'] == 'live' and d['host'] == 'daq'][0]
-        except IndexError:
-            logs.error(f"Could not find the DB entry for live data of run {rd['number']}")
+            path = next(d['location'] for d in rd['data'] if d['type'] == 'live' and d['host'] == 'daq')
+        except StopIteration:
+            logging.error(f"Could not find the DB entry for live data of run {rd['number']}")
             continue
 
         live_data_path = os.path.join(path, run_id)
 
-        # check if the data exists at the location
-        if not os.path.exists(live_data_path):
-            logs.error(f"Could not find the data for run {rd['number']} at {live_data_path}")
-            continue
+        if not any(d['type'] == 'live' and d['host'] == 'stoomboot' for d in rd['data']):
+            copy_data(run_id, live_data_path, args.dest_location, 'stoomboot', args.production, args.ssh_host)
 
-        # if production mode is on, copy the data to stoomboot, and update the database
-        # stomboot and dcache are mounted on stbc, so we can use the same command, let's do an rsync stbc:..
-        # let's use subprocess run and check if the copy goes well, in case, update the database
-
-        # if no data entry exists for stoomboot, create one
-        if not any([d['type'] == 'live' and d['host'] == 'stoomboot' for d in rd['data']]):
-            copy_data(
-                live_data_path=live_data_path,
-                location=args.dest_location, 
-                hostname='stoomboot', 
-                run_id=run_id, 
-                production=args.production,
-                ssh_host=args.ssh_host
-            )
-
-        # if no data entry exists for dcache, create one
-        if not any([d['type'] == 'live' and d['host'] == 'dcache' for d in rd['data']]):
-            copy_data(
-                live_data_path=live_data_path,
-                location=args.dest_backup_location, 
-                hostname='dcache', 
-                run_id=run_id, 
-                production=args.production,
-                ssh_host=args.ssh_host
-            )
-
-
-    
-def copy_data(live_data_path: str, location: str, hostname: str, run_id: str, production=False, ssh_host='stbc'):
-
-    # check if the data exists at the location
-    if not os.path.exists(live_data_path):
-        logs.error(f"Could not find the data for run {run_id} at {live_data_path}")
-        return
-
-    logs.info(f"Copying run {run_id} to {location}")
-
-    copy = subprocess.run(
-        ['rsync', '-av', f'{live_data_path}', f'{ssh_host}:{location}'],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
-    )
-    if copy.returncode != 0:
-        logs.error(f"Something went wrong copying run {run_id} to {location}")
-        logs.error(copy.stderr)
-        return
-    else:
-        logs.info(f"Successfully copied run {run_id} to {location}")
-        logs.info(copy.stdout)
-
-    if production:
-
-        # add one entry to the data array
-        runsdb.update_one(
-            {'number': int(run_id)},
-            {'$push': 
-                {'data': 
-                    {'type': 'live', 
-                    'host': hostname, 
-                    'path': location,
-                    'by': 'copy_live',
-                    'time': datetime.now()
-                    }
-                }
-            }
-        )
-
-        logs.info(f"Successfully updated the database for run {run_id}")
-            
-    else:
-        logs.info(f"Not updating the database for run {run_id}")
-
-    return
-
-
+        if not any(d['type'] == 'live' and d['host'] == 'dcache' for d in rd['data']):
+            copy_data(run_id, live_data_path, args.dest_backup_location, 'dcache', args.production, args.ssh_host)
 
 def main(args):
-
-    logs.info('I am ready to start copying data for!')
-
-    # get the runs that we want to copy
+    """
+    Main function to automate copying of new runs.
+    """
+    logging.info('Starting to copy new runs...')
     rundocs = get_rundocs(runsdb, args)
-
-    # handle the runs
     handle_runs(rundocs, args)
-
-    logs.info('I am done copying data for now!')
-
-    return
-
+    logging.info('Finished copying new runs.')
 
 if __name__ == '__main__':
     args = parse_args()
-    logs = logfile()
-    today = datetime.today()
-    tomorrow = datetime.today() + timedelta(days=1)
-
-    # Initialize runsdatabase collection
+    setup_logging(args.logs_path)
     runsdb = amstrax.get_mongo_collection()
 
-    if not args.loop_infinite:
+    if args.loop_infinite:
+        while True:
+            main(args)
+            logging.info(f"Sleeping for {args.sleep_time} seconds...")
+            time.sleep(args.sleep_time)
+    else:
         main(args)
-        exit()
-
-    while True:
-        if today < tomorrow:
-            logs.info("I woke up! Let me check for new runs.")
-            main(args)
-            logs.info("I go to sleep for %d seconds. Cheers!" % args.sleep_time)
-        else:
-            logs = logfile()
-            logs.info("I woke up! Let me check for new runs.")
-            main(args)
-            logs.info("I go to sleep for %d seconds. Cheers!" % args.sleep_time)
-        time.sleep(args.sleep_time)
