@@ -93,34 +93,38 @@ def get_rundocs(runsdb, args):
     Retrieve run documents from MongoDB collection based on specific criteria.
     """
 
-    # do two separate queries, to give priority to stoomboot over dcache
-    query_not_on_stoomboot = {
+    base_query = {
         'end': {'$exists': True},
         'number': {'$gt': 2000},
         'data': {
             '$elemMatch': {
                 'type': 'live',
                 'host': 'daq'
-            },
+            }
+        },
+        'tags': {
             '$not': {
-                '$elemMatch': {'type': 'live', 'host': 'stoomboot'}
+                '$elemMatch': {'name': 'abandon'}
             }
         }
     }
 
-    query_not_on_dcache = {
-        'end': {'$exists': True},
-        'number': {'$gt': 2000},
+    # do two separate queries, to give priority to stoomboot over dcache
+    query_not_on_stoomboot = dict(base_query, **{
         'data': {
-            '$elemMatch': {
-                'type': 'live',
-                'host': 'daq'
-            },
+            '$not': {
+                '$elemMatch': {'type': 'live', 'host': 'stoomboot'}
+            }
+        }
+    })
+
+    query_not_on_dcache = dict(base_query, **{
+        'data': {
             '$not': {
                 '$elemMatch': {'type': 'live', 'host': 'dcache'}
             }
         }
-    }
+    })
 
 
     projection = {'number': 1, 'end': 1, 'data': 1}
