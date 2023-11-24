@@ -15,11 +15,6 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description='Script that automatically copies new runs to stoomboot')
     parser.add_argument(
-        '--detector',
-        type=str,
-        help='The detector that you are using',
-        default='xams')
-    parser.add_argument(
         '--max_runs',
         type=int,
         help='How many runs you want to copy every time',
@@ -131,9 +126,20 @@ def get_rundocs(runsdb, args):
     projection = {'number': 1, 'end': 1, 'data': 1}
     sort = [('number', pymongo.DESCENDING)]
 
-    # Perform queries and get results
-    runs_not_on_stoomboot = list(runsdb.find(query_not_on_stoomboot, projection=projection, sort=sort))
-    runs_not_on_dcache = list(runsdb.find(query_not_on_dcache, projection=projection, sort=sort))
+    # Use a set to keep track of unique run numbers
+    unique_run_numbers = set()
+
+    # Function to process query and add unique runs
+    def process_query(query):
+        runs = runsdb.find(query, projection=projection, sort=sort)
+        for run in runs:
+            if run['number'] not in unique_run_numbers:
+                unique_run_numbers.add(run['number'])
+                yield run
+
+    # Process both queries
+    runs_not_on_stoomboot = list(process_query(query_not_on_stoomboot))
+    runs_not_on_dcache = list(process_query(query_not_on_dcache))
 
     # combine the two lists
     rundocs = runs_not_on_stoomboot + runs_not_on_dcache
