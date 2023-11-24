@@ -229,7 +229,7 @@ if __name__ == '__main__':
     if args.loop_infinite:
         while True:
             runs_copied = main(args)
-            sleep_time = 1 if runs_processed else args.sleep_time
+            sleep_time = 1 if runs_copied else args.sleep_time
             logging.info(f"Sleeping for {args.sleep_time} seconds...")
             time.sleep(args.sleep_time)
     else:
