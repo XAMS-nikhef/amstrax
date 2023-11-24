@@ -184,6 +184,8 @@ def copy_data(run_id, live_data_path, location, hostname, production, ssh_host):
             )
             logging.info(f"Successfully updated the database for run {run_id}")
 
+    return copy.returncode
+
 def handle_runs(rundocs, args):
     """
     Handle the copying process for each run document.
@@ -199,10 +201,11 @@ def handle_runs(rundocs, args):
         live_data_path = os.path.join(path, run_id)
 
         if not any(d['type'] == 'live' and d['host'] == 'stoomboot' for d in rd['data']):
-            copy_data(run_id, live_data_path, args.dest_location, 'stoomboot', args.production, args.ssh_host)
+            copied_stomboot = copy_data(run_id, live_data_path, args.dest_location, 'stoomboot', args.production, args.ssh_host)
 
-        if not any(d['type'] == 'live' and d['host'] == 'dcache' for d in rd['data']):
-            copy_data(run_id, live_data_path, args.dest_backup_location, 'dcache', args.production, args.ssh_host)
+        if copied_stomboot == 0:
+            if not any(d['type'] == 'live' and d['host'] == 'dcache' for d in rd['data']):
+                copy_data(run_id, live_data_path, args.dest_backup_location, 'dcache', args.production, args.ssh_host)
 
 def main(args):
     """
