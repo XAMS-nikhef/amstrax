@@ -4,6 +4,8 @@ import os
 import subprocess
 from datetime import datetime, timedelta
 import logging
+from logging.handlers import TimedRotatingFileHandler
+
 import sys
 
 from batch_stbc import submit_job
@@ -55,7 +57,34 @@ def parse_args():
 
     return parser.parse_args()
 
-def main():
+
+def setup_logging(logs_path):
+    """
+    Setup logging configuration with daily log rotation.
+    """
+    if not os.path.exists(logs_path):
+        os.makedirs(logs_path)
+
+    log_file = os.path.join(logs_path, 'auto_processing_stomboot.log')
+
+    log_formatter = logging.Formatter("%(asctime)s | %(levelname)-5.5s | %(message)s")
+    logger = logging.getLogger()
+
+    logger.setLevel(logging.INFO)
+
+    # Setup file handler with daily rotation
+    file_handler = TimedRotatingFileHandler(log_file, when="midnight", interval=1, backupCount=7)
+    file_handler.setFormatter(log_formatter)
+    file_handler.suffix = "%Y%m%d"
+    logger.addHandler(file_handler)
+
+    # Setup console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(log_formatter)
+    logger.addHandler(console_handler)
+
+
+def main(args):
     """
     Main function to handle auto-processing of xams data.
     """
@@ -63,7 +92,6 @@ def main():
     # Import custom modules
     import amstrax
     
-    args = parse_args()
     version = '2.1.0'
     logger.info(f'Starting autoprocess version {version}...')
 
@@ -242,4 +270,7 @@ def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
 
 # Ensure the script is run as the main program
 if __name__ == '__main__':
-    main()
+    args = parse_args()
+    setup_logging(args.logs_path)
+    main(args)
+    

@@ -190,6 +190,7 @@ def handle_runs(rundocs, args):
     """
     Handle the copying process for each run document.
     """
+    runs_copied = False
     for rd in rundocs:
         run_id = f"{rd['number']:06}"
         try:
@@ -200,12 +201,16 @@ def handle_runs(rundocs, args):
 
         live_data_path = os.path.join(path, run_id)
 
+        copied_stomboot = False
         if not any(d['type'] == 'live' and d['host'] == 'stoomboot' for d in rd['data']):
             copied_stomboot = copy_data(run_id, live_data_path, args.dest_location, 'stoomboot', args.production, args.ssh_host)
 
-        if copied_stomboot == 0:
+        if copied_stomboot:
             if not any(d['type'] == 'live' and d['host'] == 'dcache' for d in rd['data']):
                 copy_data(run_id, live_data_path, args.dest_backup_location, 'dcache', args.production, args.ssh_host)
+                runs_copied = True
+    
+    return runs_copied
 
 def main(args):
     """
@@ -213,7 +218,7 @@ def main(args):
     """
     logging.info('Starting to copy new runs...')
     rundocs = get_rundocs(runsdb, args)
-    handle_runs(rundocs, args)
+    runs_copied = handle_runs(rundocs, args)
     logging.info('Finished copying new runs.')
 
 if __name__ == '__main__':
@@ -223,7 +228,8 @@ if __name__ == '__main__':
 
     if args.loop_infinite:
         while True:
-            main(args)
+            runs_copied = main(args)
+            sleep_time = 1 if runs_processed else args.sleep_time
             logging.info(f"Sleeping for {args.sleep_time} seconds...")
             time.sleep(args.sleep_time)
     else:
