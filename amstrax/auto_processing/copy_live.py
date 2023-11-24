@@ -97,7 +97,9 @@ def get_rundocs(runsdb, args):
     """
     Retrieve run documents from MongoDB collection based on specific criteria.
     """
-    query = {
+
+    # do two separate queries, to give priority to stoomboot over dcache
+    query_not_on_stoomboot = {
         'end': {'$exists': True},
         'number': {'$gt': 2000},
         'data': {
@@ -106,17 +108,38 @@ def get_rundocs(runsdb, args):
                 'host': 'daq'
             },
             '$not': {
-                '$all': [
-                    {'$elemMatch': {'type': 'live', 'host': 'stoomboot'}},
-                    {'$elemMatch': {'type': 'live', 'host': 'dcache'}}
-                ]
+                '$elemMatch': {'type': 'live', 'host': 'stoomboot'}
             }
         }
     }
+
+    query_not_on_dcache = {
+        'end': {'$exists': True},
+        'number': {'$gt': 2000},
+        'data': {
+            '$elemMatch': {
+                'type': 'live',
+                'host': 'daq'
+            },
+            '$not': {
+                '$elemMatch': {'type': 'live', 'host': 'dcache'}
+            }
+        }
+    }
+
+
     projection = {'number': 1, 'end': 1, 'data': 1}
     sort = [('number', pymongo.DESCENDING)]
-    runs = runsdb.find(query, projection=projection, sort=sort).limit(args.max_runs)
-    return list(runs)
+
+    # Perform queries and get results
+    runs_not_on_stoomboot = list(runsdb.find(query_not_on_stoomboot, projection=projection, sort=sort))
+    runs_not_on_dcache = list(runsdb.find(query_not_on_dcache, projection=projection, sort=sort))
+
+    # combine the two lists
+    rundocs = runs_not_on_stoomboot + runs_not_on_dcache
+    rundocs = rundocs[:args.max_runs]
+
+    return list(rundocs)
 
 def copy_data(run_id, live_data_path, location, hostname, production, ssh_host):
     """
