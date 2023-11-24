@@ -102,13 +102,13 @@ def get_rundocs(runsdb, args):
         'number': {'$gt': 2000},
         'data': {
             '$elemMatch': {
-                'type': 'live_data',
+                'type': 'live',
                 'host': 'daq'
             },
             '$not': {
                 '$all': [
-                    {'$elemMatch': {'type': 'live_data', 'host': 'stoomboot'}},
-                    {'$elemMatch': {'type': 'live_data', 'host': 'dcache'}}
+                    {'$elemMatch': {'type': 'live', 'host': 'stoomboot'}},
+                    {'$elemMatch': {'type': 'live', 'host': 'dcache'}}
                 ]
             }
         }
