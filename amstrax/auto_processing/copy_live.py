@@ -156,8 +156,7 @@ def copy_data(run_id, live_data_path, location, hostname, production, ssh_host):
     Copy data to the specified location using rsync.
     """
     if not os.path.exists(live_data_path):
-        logging.error(f"Could not find the data for run {run_id} at {live_data_path}")
-
+        logging.error(f"Could not find the data for run {run_id} at {live_data_path}, marking run as abandon")
         # add a tag to the tags array in the database, marking the run as abandon
         runsdb.update_one(
             {'number': int(run_id)},
