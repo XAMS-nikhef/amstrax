@@ -100,19 +100,6 @@ if __name__ == '__main__':
             run_name = f'{int(run_doc["number"]):06}'
 
             if process_stomboot:
-                
-                # import the file batch_stbc.py in the same folder as the current script
-                from batch_stbc import submit_job
-
-                jobstring = """
-                export PATH=/data/xenon/miniconda3/bin:$PATH
-                conda activate /data/xenon/xams_v2/anaconda/xams
-                cd /data/xenon/xams_v2/software/amstrax/amstrax/auto_processing/
-                
-
-                """
-
-
                 pass
 
             else: #process locally

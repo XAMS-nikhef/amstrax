@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 import sys, os
-import numpy as np
-import pandas as pd
 import datetime
 import argparse
 import json
@@ -65,7 +63,8 @@ def main(args):
                             'type': 'raw_records',
                             'location': args.output_folder,
                             'host': 'stoomboot',
-                            'by': 'make_raw_records.py'
+                            'by': 'make_raw_records.py',
+                            'user': os.environ['USER']
                             }}})
 
         except Exception as e:
