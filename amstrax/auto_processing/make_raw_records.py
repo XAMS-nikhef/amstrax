@@ -118,7 +118,7 @@ def main(args):
                            run_id=args.run_id,
                            data_type='raw_records',
                            location=args.output_folder,
-                           host=os.uname()[1],
+                           host='stoomboot',
                            by='make_raw_records.py',
                            user=os.environ['USER'],
                            production=args.production)
@@ -132,8 +132,10 @@ def main(args):
         print(f"Run {rd['number']} has status {rd['processing_status']}")
     else:
         status = rd["processing_status"]["status"]
-        print(f'Run {args.run_id} is not in submitted mode, but in {status}')
-        raise ValueError(f'Run {args.run_id} is not in submitted mode, but in {status}')
+        e = f'Run {args.run_id} is not in submitted mode, but in {status}'
+        update_processing_status(runsdb, args.run_id, 'failed', reason=e)
+
+
 
 if __name__ == '__main__':
     args = parse_args()

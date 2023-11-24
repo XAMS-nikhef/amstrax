@@ -92,19 +92,15 @@ def submit_job(
         print(sbatch_script)
         return
 
-    if sbatch_file is None:
-        remove_file = True
-        _, sbatch_file = tempfile.mkstemp(suffix=".sh")
-    else:
-        remove_file = False
+    with tempfile.NamedTemporaryFile(mode='w', suffix=".sh", delete=False) as tmp_file:
+        tmp_file.write(sbatch_script)
+        sbatch_file = tmp_file.name
 
-    with open(sbatch_file, "w") as f:
-        f.write(sbatch_script)
-
-    command = "qsub %s" % sbatch_file
-    if not sbatch_file:
-        print("Executing: %s" % command)
-    subprocess.Popen(shlex.split(command)).communicate()
-
-    if remove_file:
-        os.remove(sbatch_file)
+    try:
+        command = "qsub %s" % sbatch_file
+        subprocess.run(shlex.split(command), check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"An error occurred while submitting the job: {e}")
+    finally:
+        if os.path.exists(sbatch_file):
+            os.remove(sbatch_file)

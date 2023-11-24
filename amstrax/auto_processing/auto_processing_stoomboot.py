@@ -10,11 +10,6 @@ import sys
 
 from batch_stbc import submit_job
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-
 def parse_args():
     parser = argparse.ArgumentParser(
         description='Autoprocess xams data',
@@ -65,7 +60,7 @@ def setup_logging(logs_path):
     if not os.path.exists(logs_path):
         os.makedirs(logs_path)
 
-    log_file = os.path.join(logs_path, 'auto_processing_stomboot.log')
+    log_file = os.path.join(logs_path, 'copying.log')
 
     log_formatter = logging.Formatter("%(asctime)s | %(levelname)-5.5s | %(message)s")
     logger = logging.getLogger()
@@ -83,7 +78,6 @@ def setup_logging(logs_path):
     console_handler.setFormatter(log_formatter)
     logger.addHandler(console_handler)
 
-
 def main(args):
     """
     Main function to handle auto-processing of xams data.
@@ -93,7 +87,7 @@ def main(args):
     import amstrax
     
     version = '2.1.0'
-    logger.info(f'Starting autoprocess version {version}...')
+    logging.info(f'Starting autoprocess version {version}...')
 
     # Get configuration and setup
     amstrax_dir = amstrax.amstrax_dir
@@ -101,7 +95,7 @@ def main(args):
     output_folder = args.output_folder
     targets = " ".join(args.target)
     runs_col = amstrax.get_mongo_collection()
-    logger.info('Correctly connected, starting loop')
+    logging.info('Correctly connected, starting loop')
     amstrax_dir = amstrax.amstrax_dir
 
     infinite = True
@@ -111,7 +105,7 @@ def main(args):
         run_docs_to_do = update_task_list(args, runs_col)
         
         if not run_docs_to_do:
-            logger.info(f'I found no runs to process, time to take a nap for {nap_time} seconds')
+            logging.info(f'I found no runs to process, time to take a nap for {nap_time} seconds')
             time.sleep(nap_time)
             continue
 
@@ -121,10 +115,10 @@ def main(args):
         # Submit new jobs if under max limit
         submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir=amstrax_dir)
 
-        logger.info(f"Waiting {nap_time} seconds before rechecking, press Ctrl+C to quit...")
+        logging.info(f"Waiting {nap_time} seconds before rechecking, press Ctrl+C to quit...")
         time.sleep(nap_time)
 
-    logger.info('Done!')
+    logging.info('Done!')
 
 # Define additional functions to modularize the script
 
@@ -166,8 +160,7 @@ def update_task_list(args, runs_col):
 
     # Log the found runs
     if run_docs_to_do:
-        logger.info(f'I found {len(run_docs_to_do)} runs to process, time to get to work!')
-        logger.info(f'These runs I will do: {[run_doc["number"] for run_doc in run_docs_to_do]}')
+        logging.info(f'I found {len(run_docs_to_do)} runs to process, time to get to work!')
     return run_docs_to_do
 
 
@@ -194,7 +187,7 @@ def handle_running_jobs(runs_col, production=False):
         if processing_status['status'] in ['running', 'submitted']:
             if processing_status['time'] < datetime.now() - timedelta(hours=1, minutes=5):
                 new_status = 'failed'
-                logger.info(f'Run {run_number} has a job {processing_status["status"]} for more than 1 hour, marking as {new_status}')
+                logging.info(f'Run {run_number} has a job {processing_status["status"]} for more than 1 hour, marking as {new_status}')
 
                 if production:
                     runs_col.update_one(
@@ -203,7 +196,7 @@ def handle_running_jobs(runs_col, production=False):
                         {'$inc': {'processing_failed': 1}}
                     )
                 else:
-                    logger.info(f'Would have updated run {run_number} to {new_status} in the database')
+                    logging.info(f'Would have updated run {run_number} to {new_status} in the database')
 
 
 def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
@@ -218,18 +211,20 @@ def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
     run_docs_running = list(runs_col.find(query, projection).sort(sort))
     num_running_jobs = len(run_docs_running)
 
-    logger.info(f'Found {num_running_jobs} runs that are running or submitted')
+    logging.info(f'Found {num_running_jobs} runs that are running or submitted')
+
+    for run_doc in run_docs_running:
+        logging.info(f'Run {run_doc["number"]} is in ststus {run_doc["processing_status"]["status"]}')
 
     if num_running_jobs >= args.max_jobs:
-        logger.info(f'Waiting 20 sec, as the number of running jobs ({num_running_jobs}) reached the limit ({args.max_jobs})')
-        time.sleep(20)
+        logging.info(f'The number of running jobs ({num_running_jobs}) reached the limit ({args.max_jobs})')
         return
 
     # Submit new jobs
     max_jobs_to_submit = args.max_jobs - num_running_jobs
 
     will_do_run_ids = [int(run_doc['number']) for run_doc in run_docs_to_do[:max_jobs_to_submit]]
-    logger.info(f'Will submit jobs for runs: {will_do_run_ids}')
+    logging.info(f'Will submit jobs for runs: {will_do_run_ids}')
 
     for run_doc in run_docs_to_do[:max_jobs_to_submit]:
         run_id = f'{int(run_doc["number"]):06}'
@@ -237,6 +232,7 @@ def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
         log_file = os.path.join(args.logs_path, f'{job_name}.log')
 
         production_flag = '--production' if args.production else ''
+        targets = " ".join(args.target)
 
         jobstring = f"""
         echo `date`
@@ -266,8 +262,8 @@ def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
                 {'$set': {'processing_status': {'status': 'submitted', 'time': datetime.now()}}}
             )
         else:
-            logger.info(f'Would have submitted job for run {run_id}')
-            logger.info(f'Would have updated run {run_doc["number"]} to submitted in the database')
+            logging.info(f'Would have submitted job for run {run_id}')
+            logging.info(f'Would have updated run {run_doc["number"]} to submitted in the database')
 
 
 # Ensure the script is run as the main program
