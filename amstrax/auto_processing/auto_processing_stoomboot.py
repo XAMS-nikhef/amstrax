@@ -104,13 +104,13 @@ def main(args):
         # Update task list
         run_docs_to_do = update_task_list(args, runs_col)
         
+        # Check and handle running jobs
+        handle_running_jobs(runs_col, production=args.production)
+
         if not run_docs_to_do:
             logging.info(f'I found no runs to process, time to take a nap for {nap_time} seconds')
             time.sleep(nap_time)
             continue
-
-        # Check and handle running jobs
-        handle_running_jobs(runs_col)
 
         # Submit new jobs if under max limit
         submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir=amstrax_dir)
@@ -132,9 +132,14 @@ def update_task_list(args, runs_col):
             '$elemMatch': {'type': 'live', 'host': 'stoomboot'}, 
             '$not': {'$elemMatch': {'host': 'stoomboot', 'type': 'raw_records'}},
         },
-        'processing_failed': {'$not': {'$gt': 3}},
+        '$or': [
+            {'processing_failed': {'$not': {'$gt': 3}}},
+            {'tags': {'$elemMatch': {'name': 'process'}}}
+        ],
         'processing_status': {'$not': {'$elemMatch': {'status': {'$in': ['submitted', 'running', 'done', 'testing']}}}},
-        'start': {'$gt': datetime.today() - timedelta(days=30)},
+        # there is not an abandon tag
+        'tags': {'$not': {'$elemMatch': {'name': 'abandon'}}},
+        'start': {'$gt': datetime.today() - timedelta(days=90)},
     }
 
     # Projection for MongoDB query
@@ -171,9 +176,8 @@ def handle_running_jobs(runs_col, production=False):
     Mark jobs as failed if they've been running or submitted for over an hour.
     """
     query = {
-        'processing_status': {
-            '$elemMatch': {'status': {'$in': ['submitted', 'running']}}
-        }
+        'processing_status.status': 
+            {'$in': ['submitted', 'running']}
     }
 
     projection = {'number': 1, 'processing_status': 1}
@@ -192,9 +196,10 @@ def handle_running_jobs(runs_col, production=False):
                 if production:
                     runs_col.update_one(
                         {'number': run_number},
-                        {'$set': {'processing_status': {'status': new_status, 'time': datetime.now()}}},
-                        {'$inc': {'processing_failed': 1}}
+                        {'$set': {'processing_status': {'status': new_status, 'time': datetime.now()}},
+                        '$inc': {'processing_failed': 1}}
                     )
+
                 else:
                     logging.info(f'Would have updated run {run_number} to {new_status} in the database')
 
@@ -259,7 +264,10 @@ def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
             # Update the database with the submitted job info
             runs_col.update_one(
                 {'number': run_doc['number']},
-                {'$set': {'processing_status': {'status': 'submitted', 'time': datetime.now()}}}
+                {'$set': {'processing_status': {'status': 'submitted', 'time': datetime.now()}},
+                # remove tag process if it exists
+                '$pull': {'tags': {'name': 'process'}}
+                }
             )
         else:
             logging.info(f'Would have submitted job for run {run_id}')
