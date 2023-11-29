@@ -105,7 +105,7 @@ def count_files_in_directory(path, run_id, is_remote=False, ssh_host=None):
         if result.returncode != 0:
             logging.error(f"SSH command failed: {result.stderr}")
             return 0
-        return int(result.stdout.strip())
+        result =  int(result.stdout.strip())
     else:        
         # get the number of files with ls | wc -l
         cmd = f"ls -1 {full_path}/* | wc -l"
@@ -113,7 +113,9 @@ def count_files_in_directory(path, run_id, is_remote=False, ssh_host=None):
         if result.returncode != 0:
             logging.error(f"Command failed: {result.stderr}")
             return 0
-        return int(result.stdout.strip())
+        result = int(result.stdout.strip())
+    print(f"Found {result} files in {full_path} on {ssh_host} for run {run_id}")
+    return result
 
 
 
