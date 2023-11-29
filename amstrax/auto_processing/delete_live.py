@@ -108,7 +108,8 @@ def count_files_in_directory(path, run_id, is_remote=False, ssh_host=None):
         return int(result.stdout.strip())
     else:
         try:
-            return len([name for name in os.listdir(full_path) if os.path.isfile(os.path.join(full_path, name))])
+            # get the number of files with ls | wc -l
+            return len(os.listdir(full_path))
         except Exception as e:
             logging.error(f"Error counting files in directory {full_path}: {e}")
             return 0
