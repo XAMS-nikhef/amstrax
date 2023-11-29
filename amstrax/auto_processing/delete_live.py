@@ -90,6 +90,12 @@ def check_data_safety(run_doc, ssh_host):
         logging.warning(f"Mismatch in file count for run {run_id}")
         return False
 
+    # Check if the file counts are zero
+    if num_files_daq == 0:
+        logging.warning(f"File count is zero for run {run_id}")
+
+    logging.info(f"File count is {num_files_daq} for run {run_id} on all hosts, safe to delete")
+
     return True
 
 
