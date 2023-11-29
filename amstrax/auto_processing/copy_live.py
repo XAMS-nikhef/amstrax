@@ -11,55 +11,30 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 import os
 
+# Define a dictionary for storage locations
+STORAGE_PATHS = {
+    'stoomboot': '/data/xenon/xams_v2/live_data',
+    'dcache': '/dcache/archive/xenon/xams/xams_v2/live_data'
+}
+
 def parse_args():
     parser = argparse.ArgumentParser(
-        description='Script that automatically copies new runs to stoomboot')
-    parser.add_argument(
-        '--max_runs',
-        type=int,
-        help='How many runs you want to copy every time',
-        default=1)
-    parser.add_argument(
-        '--sleep_time',
-        type=int,
-        help='After how many seconds you want the script to check the database again',
-        default=60)
-    parser.add_argument(
-        '--loop_infinite',
-        action='store_true',
-        help='If you want to run the script in an infinite loop',
-        default=False)
-    parser.add_argument(
-        '--dest_location',
-        type=str,
-        help='The location where the data should be copied to',
-        default='/data/xenon/xams_v2/live_data')
-    parser.add_argument(
-        '--dest_backup_location',
-        type=str,
-        help='The location where the data should be copied to',
-        default='/dcache/archive/xenon/xams/xams_v2/live_data')
-    parser.add_argument(
-        '--logs_path',
-        type=str,
-        help='The location where the logs should be stored',
-        default='/home/xams/daq/logs'
-    )
-    parser.add_argument(
-        '--ssh_host',
-        type=str,
-        help='The host that you want to copy the data to',
-        default='stbc'
-    )
-    parser.add_argument(
-        '--production',
-        action='store_true',
-        help='If you want to run the script in production mode',
-        default=False)
-
-
+        description='Script that automatically copies new runs to stoomboot and optionally to dcache')
+    parser.add_argument('--max_runs', type=int, default=1,
+                        help='How many runs you want to copy every time')
+    parser.add_argument('--sleep_time', type=int, default=60,
+                        help='After how many seconds you want the script to check the database again')
+    parser.add_argument('--loop_infinite', action='store_true', default=False,
+                        help='If you want to run the script in an infinite loop')
+    parser.add_argument('--only_stoomboot', action='store_true', default=False,
+                        help='Only copy to stoomboot, skip dcache')
+    parser.add_argument('--logs_path', type=str, default='/home/xams/daq/logs',
+                        help='The location where the logs should be stored')
+    parser.add_argument('--ssh_host', type=str, default='stbc',
+                        help='The host that you want to copy the data to')
+    parser.add_argument('--production', action='store_true', default=False,
+                        help='If you want to run the script in production mode')
     return parser.parse_args()
-
 
 
 def setup_logging(logs_path):
@@ -94,7 +69,8 @@ def get_rundocs(runsdb, args):
     """
 
     base_query = {
-        'end': {'$exists': True},
+        # end is at least 1 second ago
+        'end': {'$gt': datetime.datetime.now() - datetime.timedelta(seconds=1)},
         'number': {'$gt': 2000},
         'data': {
             '$elemMatch': {
@@ -143,7 +119,11 @@ def get_rundocs(runsdb, args):
 
     # Process both queries
     runs_not_on_stoomboot = list(process_query(query_not_on_stoomboot))
-    runs_not_on_dcache = list(process_query(query_not_on_dcache))
+
+    if args.only_stoomboot:
+        runs_not_on_dcache = []
+    else:
+        runs_not_on_dcache = list(process_query(query_not_on_dcache))
 
     # combine the two lists
     rundocs = runs_not_on_stoomboot + runs_not_on_dcache
@@ -186,10 +166,8 @@ def copy_data(run_id, live_data_path, location, hostname, production, ssh_host):
 
     return copy.returncode
 
+
 def handle_runs(rundocs, args):
-    """
-    Handle the copying process for each run document.
-    """
     runs_copied = False
     for rd in rundocs:
         run_id = f"{rd['number']:06}"
@@ -201,13 +179,13 @@ def handle_runs(rundocs, args):
 
         live_data_path = os.path.join(path, run_id)
 
-        copied_stomboot = False
-        if not any(d['type'] == 'live' and d['host'] == 'stoomboot' for d in rd['data']):
-            copied_stomboot = copy_data(run_id, live_data_path, args.dest_location, 'stoomboot', args.production, args.ssh_host)
+        # Copy to stoomboot
+        copied_stomboot = copy_data(run_id, live_data_path, storage_paths['stoomboot'], 'stoomboot', args.production, args.ssh_host)
 
-        if copied_stomboot:
+        # Optionally copy to dcache
+        if copied_stomboot and not args.only_stoomboot:
             if not any(d['type'] == 'live' and d['host'] == 'dcache' for d in rd['data']):
-                copy_data(run_id, live_data_path, args.dest_backup_location, 'dcache', args.production, args.ssh_host)
+                copy_data(run_id, live_data_path, storage_paths['dcache'], 'dcache', args.production, args.ssh_host)
                 runs_copied = True
     
     return runs_copied
