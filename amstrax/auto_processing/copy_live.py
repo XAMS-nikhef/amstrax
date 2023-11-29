@@ -159,7 +159,7 @@ def copy_data(run_id, live_data_path, location, hostname, production, ssh_host):
         if production:
             runsdb.update_one(
                 {'number': int(run_id)},
-                {'$push': {'data': {'type': 'live', 'host': hostname, 'path': location,
+                {'$push': {'data': {'type': 'live', 'host': hostname, 'location': location,
                                     'by': 'copy_live', 'time': datetime.datetime.now()}}}
             )
             logging.info(f"Successfully updated the database for run {run_id}")
