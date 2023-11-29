@@ -91,22 +91,18 @@ def check_data_safety(run_doc, ssh_host, args):
             logging.warning(f"Missing data path for run {run_id} on host {host}")
             return False
 
-        # Check if the path exists
-        if not os.path.exists(path):
-            logging.warning(f"Path {path} does not exist for run {run_id} on host {host}")
-            return False
-
         # Get number of files in the directory
         num_files = count_files_in_directory(path, run_id, is_remote=(host != 'daq'), ssh_host=ssh_host)
         logging.info(f"Found {num_files} files in {path} on {host} for run {run_id}")
         result[host] = num_files
 
     # Check if the file counts match
-    if result['stoomboot'] != result['dcache'] or result['daq'] != result['stoomboot']:
+    if (result['stoomboot'] != result.get('dcache', -9) and not args.only_stoomboot) or result['daq'] != result['stoomboot']:
         logging.warning(f"Mismatch in file count for run {run_id}")
         return False
 
 
+    num_files_daq = result['daq']
     logging.info(f"File count is {num_files_daq} for run {run_id} on all hosts, safe to delete")
 
     return True
@@ -133,7 +129,6 @@ def count_files_in_directory(path, run_id, is_remote=False, ssh_host=None):
             logging.error(f"Command failed: {result.stderr}")
             return 0
         result = int(result.stdout.strip())
-    print(f"Found {result} files in {full_path} on {ssh_host} for run {run_id}")
     return result
 
 
