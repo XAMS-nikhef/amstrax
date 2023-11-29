@@ -164,7 +164,9 @@ def delete_data(runsdb, run_doc, production, we_are_really_sure):
 def main(args):
     runsdb = amstrax.get_mongo_collection()
     old_runs = get_old_runs(runsdb, args.older_than)
+    logging.info(f"Found {len(old_runs)} runs with data older than {args.older_than} days")
     for run_doc in old_runs:
+        logging.info(f"Checking safety for run {run_doc['number']}")
         if check_data_safety(run_doc, args.ssh_host):
             delete_data(runsdb, run_doc, args.production, args.we_are_really_sure)
         else:
