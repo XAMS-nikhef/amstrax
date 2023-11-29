@@ -100,19 +100,21 @@ def count_files_in_directory(path, run_id, is_remote=False, ssh_host=None):
     full_path = os.path.join(path, run_id)
     
     if is_remote:
-        ssh_cmd = ["ssh", ssh_host, f"ls -1 {full_path} | wc -l"]
+        ssh_cmd = ["ssh", ssh_host, f"ls -1 {full_path}/* | wc -l"]
         result = subprocess.run(ssh_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         if result.returncode != 0:
             logging.error(f"SSH command failed: {result.stderr}")
             return 0
         return int(result.stdout.strip())
-    else:
-        try:
-            # get the number of files with ls | wc -l
-            return len(os.listdir(full_path))
-        except Exception as e:
-            logging.error(f"Error counting files in directory {full_path}: {e}")
+    else:        
+        # get the number of files with ls | wc -l
+        cmd = f"ls -1 {full_path}/* | wc -l"
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, text=True)
+        if result.returncode != 0:
+            logging.error(f"Command failed: {result.stderr}")
             return 0
+        return int(result.stdout.strip())
+
 
 
 def delete_data(runsdb, run_doc, production, we_are_really_sure):
