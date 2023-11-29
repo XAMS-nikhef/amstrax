@@ -20,6 +20,10 @@ def parse_args():
     parser.add_argument('--ssh_host', type=str,
                         help='SSH host to use for remote file count. If not specified, will use local file count.',
                         default='stbc')
+    parser.add_argument('--only_stoomboot', action='store_true', help='Only check stoomboot')
+    parser.add_argument('--loop_infinite', action='store_true', help='Loop infinitely')
+    parser.add_argument('--max_runs', type=int, default=10, help='Max number of runs to process')
+    parser.add_argument('--sleep_time', type=int, default=60, help='Sleep time between runs')
     return parser.parse_args()
 
 def setup_logging(logs_path):
@@ -47,7 +51,7 @@ def setup_logging(logs_path):
     console_handler.setFormatter(log_formatter)
     logger.addHandler(console_handler)
 
-def get_old_runs(runsdb, days):
+def get_old_runs(runsdb, days, args):
     """
     Retrieve run documents where the data is older than specified days and exists in three locations.
     """
@@ -60,8 +64,12 @@ def get_old_runs(runsdb, days):
             {'$elemMatch': {'type': 'live', 'host': 'dcache'}}
         ]}
     }
+
+    if args.only_stoomboot and not args.production:
+        query['data']['$all'].pop()
+
     projection = {'number': 1, 'end': 1, 'data': 1}
-    return list(runsdb.find(query, projection=projection))
+    return list(runsdb.find(query, projection=projection))[0:args.max_runs]
 
 
 def check_data_safety(run_doc, ssh_host):
@@ -163,7 +171,7 @@ def delete_data(runsdb, run_doc, production, we_are_really_sure):
 
 def main(args):
     runsdb = amstrax.get_mongo_collection()
-    old_runs = get_old_runs(runsdb, args.older_than)
+    old_runs = get_old_runs(runsdb, args.older_than, args)
     logging.info(f"Found {len(old_runs)} runs with data older than {args.older_than} days")
     for run_doc in old_runs:
         logging.info(f"Checking safety for run {run_doc['number']}")
@@ -171,10 +179,23 @@ def main(args):
             delete_data(runsdb, run_doc, args.production, args.we_are_really_sure)
         else:
             logging.warning(f"Skipping deletion for run {run_doc['number']} due to safety check failure")
+    
+    return len(old_runs)
 
 if __name__ == '__main__':
     args = parse_args()
     setup_logging(args.logs_path)
     if not args.production:
         logging.info("Performing a dry run. No data will be deleted.")
-    main(args)
+
+    if not args.we_are_really_sure:
+        logging.info("We are not really sure. No data will be deleted.")
+
+    if args.loop_infinite:
+        while True:
+            runs_deleted = main(args)
+            sleep_time = 1 if runs_deleted else args.sleep_time
+            logging.info(f"Sleeping for {args.sleep_time} seconds...")
+            time.sleep(args.sleep_time)
+    else:
+        main(args)
