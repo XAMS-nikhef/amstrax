@@ -196,6 +196,7 @@ def main(args):
     """
     logging.info('Starting to copy new runs...')
     rundocs = get_rundocs(runsdb, args)
+    print(f"Found {len(rundocs)} runs to copy")
     runs_copied = handle_runs(rundocs, args)
     logging.info('Finished copying new runs.')
 
