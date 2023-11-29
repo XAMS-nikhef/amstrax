@@ -127,19 +127,20 @@ def update_task_list(args, runs_col):
     Update and return the list of tasks to be processed based on MongoDB queries.
     """
     # Your existing MongoDB query
+
     query = {
-        'data': {
-            '$elemMatch': {'type': 'live', 'host': 'stoomboot'}, 
-            '$not': {'$elemMatch': {'host': 'stoomboot', 'type': 'raw_records'}},
-        },
+        'data': { '$elemMatch': {'type': 'live', 'host': 'stoomboot'}},
+        # this or is just to allow a force process of a run, by adding the tag process
         '$or': [
-            {'processing_failed': {'$not': {'$gt': 3}}},
-            {'tags': {'$elemMatch': {'name': 'process'}}}
-        ],
-        'processing_status': {'$not': {'$elemMatch': {'status': {'$in': ['submitted', 'running', 'done', 'testing']}}}},
-        # there is not an abandon tag
-        'tags': {'$not': {'$elemMatch': {'name': 'abandon'}}},
-        'start': {'$gt': datetime.today() - timedelta(days=90)},
+                    {
+                        'data': {'$not': {'$elemMatch': {'host': 'stoomboot', 'type': 'raw_records'}}},
+                        'processing_failed': {'$not': {'$gt': 3}},
+                        'processing_status.status': {'$not': {'$in': ['running', 'submitted']}},
+                        'tags': {'$not': {'$elemMatch': {'name': 'abandon'}}},
+                        'start': {'$gt': datetime.today() - timedelta(days=100)},            
+                    },
+                    {'tags': {'$elemMatch': {'name': 'process'}}}
+        ]
     }
 
     # Projection for MongoDB query
@@ -166,6 +167,7 @@ def update_task_list(args, runs_col):
     # Log the found runs
     if run_docs_to_do:
         logging.info(f'I found {len(run_docs_to_do)} runs to process, time to get to work!')
+        logging.info(f'Run numbers: {[run_doc["number"] for run_doc in run_docs_to_do]}')
     return run_docs_to_do
 
 
