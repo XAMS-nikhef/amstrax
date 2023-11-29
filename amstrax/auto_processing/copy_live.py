@@ -70,7 +70,7 @@ def get_rundocs(runsdb, args):
 
     base_query = {
         # end is at least 1 second ago
-        'end': {'$gt': datetime.datetime.now() - datetime.timedelta(seconds=1)},
+        'end': {'$lt': datetime.datetime.now() - datetime.timedelta(seconds=1)},
         'number': {'$gt': 2000},
         'data': {
             '$elemMatch': {
