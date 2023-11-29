@@ -72,9 +72,9 @@ def check_data_safety(run_doc, ssh_host):
     run_id = str(run_doc['number']).zfill(6)
 
     # Retrieve file paths from the run document
-    daq_path = next((d['location'] for d in run_doc['data'] if d['host'] == 'daq'), None)
-    stoomboot_path = next((d['location'] for d in run_doc['data'] if d['host'] == 'stoomboot'), None)
-    dcache_path = next((d['location'] for d in run_doc['data'] if d['host'] == 'dcache'), None)
+    daq_path = next((d['path'] for d in run_doc['data'] if d['host'] == 'daq'), None)
+    stoomboot_path = next((d['path'] for d in run_doc['data'] if d['host'] == 'stoomboot'), None)
+    dcache_path = next((d['path'] for d in run_doc['data'] if d['host'] == 'dcache'), None)
 
     if not daq_path or not stoomboot_path or not dcache_path:
         logging.warning(f"Missing data paths for run {run_id}")
@@ -120,7 +120,7 @@ def delete_data(runsdb, run_doc, production, we_are_really_sure):
     """
     run_id = str(run_doc['number']).zfill(6)
     try:
-        daq_path = next(d['location'] for d in run_doc['data'] if d['host'] == 'daq')
+        daq_path = next(d['path'] for d in run_doc['data'] if d['host'] == 'daq')
         if not production:
             logging.info(f"[Dry Run] Would delete data for run {run_id} at {daq_path}")
         else:
