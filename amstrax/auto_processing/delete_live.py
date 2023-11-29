@@ -72,35 +72,40 @@ def get_old_runs(runsdb, days, args):
     return list(runsdb.find(query, projection=projection))[0:args.max_runs]
 
 
-def check_data_safety(run_doc, ssh_host):
+def check_data_safety(run_doc, ssh_host, args):
     """
     Perform checks to ensure that data can be safely deleted from DAQ.
     Returns True if safe to delete, False otherwise.
     """
     run_id = str(run_doc['number']).zfill(6)
 
-    # Retrieve file paths from the run document
-    daq_path = next((d['location'] for d in run_doc['data'] if d['host'] == 'daq'), None)
-    stoomboot_path = next((d['location'] for d in run_doc['data'] if d['host'] == 'stoomboot'), None)
-    dcache_path = next((d['location'] for d in run_doc['data'] if d['host'] == 'dcache'), None)
+    result = {}
+    hosts_to_check = ['daq', 'stoomboot', 'dcache']
 
-    if not daq_path or not stoomboot_path or not dcache_path:
-        logging.warning(f"Missing data paths for run {run_id}")
-        return False
+    if args.only_stoomboot and not args.production:
+        hosts_to_check = ['daq', 'stoomboot']
 
-    # Count files in each directory
-    num_files_daq = count_files_in_directory(daq_path, run_id, is_remote=False)
-    num_files_stoomboot = count_files_in_directory(stoomboot_path, run_id, is_remote=True, ssh_host=ssh_host)
-    num_files_dcache = count_files_in_directory(dcache_path, run_id, is_remote=True, ssh_host=ssh_host)
+    for host in hosts_to_check:
+        path = next((d['location'] for d in run_doc['data'] if d['host'] == host), None)
+        if not path:
+            logging.warning(f"Missing data path for run {run_id} on host {host}")
+            return False
+
+        # Check if the path exists
+        if not os.path.exists(path):
+            logging.warning(f"Path {path} does not exist for run {run_id} on host {host}")
+            return False
+
+        # Get number of files in the directory
+        num_files = count_files_in_directory(path, run_id, is_remote=(host != 'daq'), ssh_host=ssh_host)
+        logging.info(f"Found {num_files} files in {path} on {host} for run {run_id}")
+        result[host] = num_files
 
     # Check if the file counts match
-    if num_files_stoomboot != num_files_dcache or num_files_daq != num_files_stoomboot:
+    if result['stoomboot'] != result['dcache'] or result['daq'] != result['stoomboot']:
         logging.warning(f"Mismatch in file count for run {run_id}")
         return False
 
-    # Check if the file counts are zero
-    if num_files_daq == 0:
-        logging.warning(f"File count is zero for run {run_id}")
 
     logging.info(f"File count is {num_files_daq} for run {run_id} on all hosts, safe to delete")
 
@@ -175,7 +180,7 @@ def main(args):
     logging.info(f"Found {len(old_runs)} runs with data older than {args.older_than} days")
     for run_doc in old_runs:
         logging.info(f"Checking safety for run {run_doc['number']}")
-        if check_data_safety(run_doc, args.ssh_host):
+        if check_data_safety(run_doc, args.ssh_host, args):
             delete_data(runsdb, run_doc, args.production, args.we_are_really_sure)
         else:
             logging.warning(f"Skipping deletion for run {run_doc['number']} due to safety check failure")
