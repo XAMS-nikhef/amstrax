@@ -127,42 +127,47 @@ def main(args):
     runsdb = amstrax.get_mongo_collection()
     rd = runsdb.find_one({'number': int(args.run_id)})
 
-    if rd.get('processing_status', dict()).get('status', None) == 'submitted':
-        print(f'Run {args.run_id} was submitted for processing, lets process it.')
+    processing_status = rd.get('processing_status', dict())
+    # if procesing status is not a dict, we have a problem
 
-        # Update processing status to running
-        update_processing_status(runsdb, args.run_id, 'running', production=args.production)
-
-        try:
-            process_run(args, runsdb)  # Process the run
-
-            update_processing_status(runsdb=runsdb,
-                                     run_id=args.run_id,
-                                     status='done',
-                                     production=args.production)  # Update the processing status to done
-
-            # Add the processed data to the run document
-            add_data_entry(runsdb=runsdb,
-                           run_id=args.run_id,
-                           data_type='raw_records',
-                           location=args.output_folder,
-                           host=get_host(),
-                           by='make_raw_records.py',
-                           user=os.environ['USER'],
-                           production=args.production)
-
-        except Exception as e:
-            print(f'Processing of run {args.run_id} failed with error {e}')
+    if args.production:
+        status = processing_status.get('status', None)
+        if status != 'submitted':
+            e = f'Run {args.run_id} is not in submitted mode, but in {status}'
             update_processing_status(runsdb, args.run_id, 'failed', reason=e, production=args.production)
-            runsdb.update_one({'number': int(args.run_id)}, {'$inc': {'processing_failed': 1}})
+            return 
 
-        rd = runsdb.find_one({'number': int(args.run_id)})
-        print(f"Run {rd['number']} has status {rd['processing_status']}")
-    else:
-        status = rd["processing_status"]["status"]
-        e = f'Run {args.run_id} is not in submitted mode, but in {status}'
+    print(f'Lets process run {args.run_id}')
+
+    # Update processing status to running
+    update_processing_status(runsdb, args.run_id, 'running', production=args.production)
+
+    try:
+        process_run(args, runsdb)  # Process the run
+
+        update_processing_status(runsdb=runsdb,
+                                    run_id=args.run_id,
+                                    status='done',
+                                    production=args.production)  # Update the processing status to done
+
+        # Add the processed data to the run document
+        add_data_entry(runsdb=runsdb,
+                        run_id=args.run_id,
+                        data_type='raw_records',
+                        location=args.output_folder,
+                        host=get_host(),
+                        by='make_raw_records.py',
+                        user=os.environ['USER'],
+                        production=args.production)
+
+    except Exception as e:
+        print(f'Processing of run {args.run_id} failed with error {e}')
         update_processing_status(runsdb, args.run_id, 'failed', reason=e, production=args.production)
+        runsdb.update_one({'number': int(args.run_id)}, {'$inc': {'processing_failed': 1}})
 
+    rd = runsdb.find_one({'number': int(args.run_id)})
+    print(f"Run {rd['number']} has status {rd['processing_status']}")
+    
 
 if __name__ == '__main__':
     args = parse_args()
