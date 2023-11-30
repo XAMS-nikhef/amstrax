@@ -70,9 +70,20 @@ def get_old_runs(runsdb, days, args):
     }
 
     if args.only_stoomboot and not args.production:
-        query['data']['$all'].pop()
+        query = {
+        '$or': [
+            {'end': {'$lte': cutoff_date},
+            'data': {'$all': [
+                {'$elemMatch': {'type': 'live', 'host': 'daq'}},
+                {'$elemMatch': {'type': 'live', 'host': 'stbc'}},
+            ]}},
+            {'tags': {'$elemMatch': {'name': 'abandon'}}}
+        ]
+    }
 
-    projection = {'number': 1, 'end': 1, 'data': 1}
+        
+
+    projection = {'number': 1, 'end': 1, 'data': 1, 'tags': 1}
     return list(runsdb.find(query, projection=projection))[0:args.max_runs]
 
 def check_data_safety(run_doc, ssh_host, args):
