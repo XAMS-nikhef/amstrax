@@ -167,7 +167,12 @@ def delete_data(runsdb, run_doc, production, we_are_really_sure):
                     logging.error(f"Path {daq_path} does not end with run number {run_id}")
                     return
 
-                os.remove(daq_path)  # Uncomment after thorough testing
+                # check that the path exists
+                if not os.path.exists(daq_path):
+                    logging.error(f"Path {daq_path} does not exist, eliminating it from database")
+                else:
+                    logging.info(f"Deleting {daq_path}")
+                    os.remove(daq_path)
 
                 # Move the DAQ data entry from 'data' array to 'deleted_data' array in MongoDB
                 daq_data_entry = next((d for d in run_doc['data'] if d['host'] == 'daq'), None)
