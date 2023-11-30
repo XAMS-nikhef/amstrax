@@ -154,6 +154,7 @@ def delete_data(runsdb, run_doc, production, we_are_really_sure):
     run_id = str(run_doc['number']).zfill(6)
     try:
         daq_path = next(d['location'] for d in run_doc['data'] if d['host'] == 'daq')
+        daq_path = os.path.join(daq_path, run_id)
         if not production:
             logging.info(f"[Dry Run] Would delete data for run {run_id} at {daq_path}")
         else:
@@ -161,6 +162,11 @@ def delete_data(runsdb, run_doc, production, we_are_really_sure):
             logging.info(f"Deleting data for run {run_id} at {daq_path}")
 
             if we_are_really_sure:
+                # check that the path ends with the run number
+                if not daq_path.endswith(run_id):
+                    logging.error(f"Path {daq_path} does not end with run number {run_id}")
+                    return
+
                 os.remove(daq_path)  # Uncomment after thorough testing
 
                 # Move the DAQ data entry from 'data' array to 'deleted_data' array in MongoDB
