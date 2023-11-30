@@ -27,6 +27,7 @@ def parse_args():
         '--run_id',
         metavar='RUN_ID',
         type=str,
+        required=True,
         help="ID of the run to process; usually the run name.")
     parser.add_argument(
         '--target',
@@ -126,7 +127,7 @@ def main(args):
     runsdb = amstrax.get_mongo_collection()
     rd = runsdb.find_one({'number': int(args.run_id)})
 
-    if rd['processing_status'].get('status', None) == 'submitted':
+    if rd.get('processing_status', dict()).get('status', None) == 'submitted':
         print(f'Run {args.run_id} was submitted for processing, lets process it.')
 
         # Update processing status to running
