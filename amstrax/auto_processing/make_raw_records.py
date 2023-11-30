@@ -123,6 +123,7 @@ def process_run(args, runsdb, output_folder):
     
     st = amstrax.contexts.xams(output_folder=output_folder, init_rundb=False)
     st.storage += [strax.DataDirectory(live_data, readonly=True)]
+    st.set_config({'live_data_dir': f'{live_data}'})
 
     daqst = amstrax.contexts.context_for_daq_reader(st, run_id, run_doc=run_doc, check_exists=False)
 

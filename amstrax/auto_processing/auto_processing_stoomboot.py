@@ -49,6 +49,10 @@ def parse_args():
         '--production',
         action='store_true',
         help="Set to production mode")
+    parser.add_argument(
+        '--only_manual',
+        action='store_true',
+        help="Set to only process runs with tag process")
 
     return parser.parse_args()
 
@@ -143,6 +147,12 @@ def update_task_list(args, runs_col):
         ]
     }
 
+    if args.only_manual:
+        query = {
+            'data': { '$elemMatch': {'type': 'live', 'host': 'stbc'}},
+            'tags': {'$elemMatch': {'name': 'process'}}
+        }
+
     # Projection for MongoDB query
     projection = {
         'number': 1, 
@@ -189,9 +199,9 @@ def handle_running_jobs(runs_col, production=False):
         processing_status = run_doc['processing_status']
         run_number = run_doc['number']
 
-        # Check for jobs running or submitted for more than 1 hour
+        # Check for jobs running or submitted for more than 30 min
         if processing_status['status'] in ['running', 'submitted']:
-            if processing_status['time'] < datetime.now() - timedelta(hours=1, minutes=5):
+            if processing_status['time'] < datetime.now() - timedelta(hours=0, minutes=30):
                 new_status = 'failed'
                 logging.info(f'Run {run_number} has a job {processing_status["status"]} for more than 1 hour, marking as {new_status}')
 
@@ -247,7 +257,7 @@ def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
         export PATH=/data/xenon/cfuselli/miniconda-install/bin:$PATH
         source activate /data/xenon/xams_v2/anaconda/xams
         cd {amstrax_dir}/auto_processing/
-        python make_raw_records.py --run_id {run_id} --output_folder {args.output_folder} --target {targets} {production_flag}
+        python make_raw_records.py --run_id {run_id} --target {targets} {production_flag}
         echo "Done!"
         echo `date`
         """
