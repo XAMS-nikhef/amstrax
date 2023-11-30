@@ -46,9 +46,11 @@ def get_host():
     """
     Get the host name.
     """
-    hostname = os.environ.get('HOSTNAME', None)
-    print(f'Host name is {hostname}')
+    import socket
+    hostname = socket.gethostname()
     
+    print(f'Host name is {hostname}')
+
     if hostname is None:
         raise ValueError('Could not determine host name')
 
