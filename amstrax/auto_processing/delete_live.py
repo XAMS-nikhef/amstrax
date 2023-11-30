@@ -13,7 +13,7 @@ import os
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Script to safely delete old data from DAQ')
-    parser.add_argument('--older_than', type=int, default=30, help='Delete data older than this many days')
+    parser.add_argument('--days_old', type=int, default=30, help='Delete data older than this many days')
     parser.add_argument('--logs_path', type=str, default='/home/xams/daq/logs', help='Logs storage location')
     parser.add_argument('--production', action='store_true', help='Perform deletion on production database')
     parser.add_argument('--we_are_really_sure', action='store_true', help='Perform deletion on production database')
@@ -174,8 +174,8 @@ def delete_data(runsdb, run_doc, production, we_are_really_sure):
 
 def main(args):
     runsdb = amstrax.get_mongo_collection()
-    old_runs = get_old_runs(runsdb, args.older_than, args)
-    logging.info(f"Found {len(old_runs)} runs with data older than {args.older_than} days")
+    old_runs = get_old_runs(runsdb, args.days_old, args)
+    logging.info(f"Found {len(old_runs)} runs with data older than {args.days_old} days")
     for run_doc in old_runs:
         # if abandoned, delete immediately (tags.name == 'abandon')
         if 'abandon' in [tag['name'] for tag in run_doc.get('tags', [])]:
