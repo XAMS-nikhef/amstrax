@@ -153,6 +153,8 @@ def main(args):
             if status != 'submitted':
                 e = f'Run {args.run_id} is not in submitted mode, but in {status}'
                 update_processing_status(runsdb, args.run_id, 'failed', reason=e, production=args.production)
+                print(e)
+                print('If you did not submit a job but want to process locally, use the --local option')
                 return 
 
     print(f'Lets process run {args.run_id}')
