@@ -47,6 +47,8 @@ def get_host():
     Get the host name.
     """
     hostname = os.environ.get('HOSTNAME', None)
+    print(f'Host name is {hostname}')
+    
     if hostname is None:
         raise ValueError('Could not determine host name')
 
@@ -167,7 +169,7 @@ def main(args):
 
     rd = runsdb.find_one({'number': int(args.run_id)})
     print(f"Run {rd['number']} has status {rd['processing_status']}")
-    
+
 
 if __name__ == '__main__':
     args = parse_args()
