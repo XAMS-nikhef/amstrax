@@ -87,6 +87,14 @@ def add_data_entry(runsdb, run_id, data_type, location, host, by, user, producti
     Add a data entry to the run document.
     """
     if production:
+
+        # check if the entry already exists
+        run_doc = runsdb.find_one({'number': int(run_id)})
+        for entry in run_doc['data']:
+            if entry['type'] == data_type and entry['location'] == location:
+                print(f'Entry for run {run_id} of type {data_type} with location {location} already exists')
+                return
+
         runsdb.update_one({'number': int(run_id)},
                         {'$push': {'data': {'time': datetime.datetime.now(),
                                             'type': data_type,
