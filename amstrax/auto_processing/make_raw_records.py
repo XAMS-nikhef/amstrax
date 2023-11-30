@@ -38,6 +38,10 @@ def parse_args():
         '--production',
         action='store_true',
         help='Update the production database')
+    parser.add_argument(
+        '--local',
+        action='store_true',
+        help='Not submitting jobs, but running locally')
 
     return parser.parse_args()
 
@@ -132,11 +136,16 @@ def main(args):
     # if procesing status is not a dict, we have a problem
 
     if args.production:
-        status = processing_status.get('status', None)
-        if status != 'submitted':
-            e = f'Run {args.run_id} is not in submitted mode, but in {status}'
-            update_processing_status(runsdb, args.run_id, 'failed', reason=e, production=args.production)
-            return 
+
+        if not args.local:
+            # we need to make sure the run is in submitted mode
+            # otherwise it means that the run is already being processed
+            # and weird things can happen
+            status = processing_status.get('status', None)
+            if status != 'submitted':
+                e = f'Run {args.run_id} is not in submitted mode, but in {status}'
+                update_processing_status(runsdb, args.run_id, 'failed', reason=e, production=args.production)
+                return 
 
     print(f'Lets process run {args.run_id}')
 
