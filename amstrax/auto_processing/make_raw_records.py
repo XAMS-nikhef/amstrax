@@ -92,7 +92,7 @@ def add_data_entry(runsdb, run_id, data_type, location, host, by, user, producti
     else:
         print(f'Would add data entry to run {run_id} of type {data_type} with location {location}')
 
-def process_run(args, runsdb):
+def process_run(args, runsdb, output_folder):
     """
     Process a single run based on provided arguments.
     """
@@ -102,8 +102,6 @@ def process_run(args, runsdb):
     run_id = args.run_id
 
     run_doc = runsdb.find_one({'number': int(run_id)})
-
-    output_folder = HOST_DEFINITIONS[hostname]['output_folder']
 
     if hostname == 'daq':
         live_data = run_doc['daq_config']['strax_output_path']
@@ -144,8 +142,10 @@ def main(args):
     # Update processing status to running
     update_processing_status(runsdb, args.run_id, 'running', production=args.production)
 
+    output_folder = HOST_DEFINITIONS[hostname]['output_folder']
+
     try:
-        process_run(args, runsdb)  # Process the run
+        process_run(args, runsdb, output_folder)  # Process the run
 
         update_processing_status(runsdb=runsdb,
                                     run_id=args.run_id,
@@ -156,7 +156,7 @@ def main(args):
         add_data_entry(runsdb=runsdb,
                         run_id=args.run_id,
                         data_type='raw_records',
-                        location=args.output_folder,
+                        location=output_folder,
                         host=hostname,
                         by='make_raw_records.py',
                         user=os.environ['USER'],
