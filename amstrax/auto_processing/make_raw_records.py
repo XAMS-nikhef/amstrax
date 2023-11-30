@@ -74,7 +74,8 @@ def update_processing_status(runsdb, run_id, status, reason=None, production=Fal
         runsdb.update_one({'number': int(run_id)},
                         {'$set': {'processing_status': update}})
     else:
-        print(f'Would update run {run_id} to status {status} with reason {reason}')
+        reason_str = f' with reason {reason}' if reason else ''
+        print(f'Would update run {run_id} to status {status} {reason_str}')
 
 
 def add_data_entry(runsdb, run_id, data_type, location, host, by, user, production=False):
@@ -168,7 +169,9 @@ def main(args):
         runsdb.update_one({'number': int(args.run_id)}, {'$inc': {'processing_failed': 1}})
 
     rd = runsdb.find_one({'number': int(args.run_id)})
-    print(f"Run {rd['number']} has status {rd['processing_status']}")
+    if not args.production:
+        comment = "(unchanged because not in production mode)"
+    print(f"Run {rd['number']} has status {rd['processing_status']} {comment}")
 
 
 if __name__ == '__main__':
