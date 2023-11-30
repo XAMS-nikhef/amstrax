@@ -12,7 +12,7 @@ HOST_DEFINITIONS = {
         'live_data_dir': 'from_db',
         'hostname_regex': 'xams'
     },
-    'stoomboot': {
+    'stbc': {
         'output_folder': '/data/xenon/xams_v2/xams_raw_records',
         'live_data_dir': '/data/xenon/xams_v2/live_data',
         'hostname_regex': 'nikhef.nl'

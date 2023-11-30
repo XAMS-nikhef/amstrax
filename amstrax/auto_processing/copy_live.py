@@ -13,7 +13,7 @@ import os
 
 # Define a dictionary for storage locations
 STORAGE_PATHS = {
-    'stoomboot': '/data/xenon/xams_v2/live_data',
+    'stbc': '/data/xenon/xams_v2/live_data',
     'dcache': '/dcache/archive/xenon/xams/xams_v2/live_data'
 }
 
@@ -89,7 +89,7 @@ def get_rundocs(runsdb, args):
     query_not_on_stoomboot = dict(base_query, **{
         'data': {
             '$not': {
-                '$elemMatch': {'type': 'live', 'host': 'stoomboot'}
+                '$elemMatch': {'type': 'live', 'host': 'stbc'}
             }
         }
     })
@@ -180,7 +180,7 @@ def handle_runs(rundocs, args):
         live_data_path = os.path.join(path, run_id)
 
         # Copy to stoomboot
-        copied_stomboot = copy_data(run_id, live_data_path, STORAGE_PATHS['stoomboot'], 'stoomboot', args.production, args.ssh_host)
+        copied_stomboot = copy_data(run_id, live_data_path, STORAGE_PATHS['stbc'], 'stbc', args.production, args.ssh_host)
 
         # Optionally copy to dcache
         if copied_stomboot and not args.only_stoomboot:

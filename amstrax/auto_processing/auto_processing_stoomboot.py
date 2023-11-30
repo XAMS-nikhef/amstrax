@@ -129,11 +129,11 @@ def update_task_list(args, runs_col):
     # Your existing MongoDB query
 
     query = {
-        'data': { '$elemMatch': {'type': 'live', 'host': 'stoomboot'}},
+        'data': { '$elemMatch': {'type': 'live', 'host': 'stbc'}},
         # this or is just to allow a force process of a run, by adding the tag process
         '$or': [
                     {
-                        'data': {'$not': {'$elemMatch': {'host': 'stoomboot', 'type': 'raw_records'}}},
+                        'data': {'$not': {'$elemMatch': {'host': 'stbc', 'type': 'raw_records'}}},
                         'processing_failed': {'$not': {'$gt': 3}},
                         'processing_status.status': {'$not': {'$in': ['running', 'submitted']}},
                         'tags': {'$not': {'$elemMatch': {'name': 'abandon'}}},

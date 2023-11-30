@@ -60,7 +60,7 @@ def get_old_runs(runsdb, days, args):
         'end': {'$lte': cutoff_date},
         'data': {'$all': [
             {'$elemMatch': {'type': 'live', 'host': 'daq'}},
-            {'$elemMatch': {'type': 'live', 'host': 'stoomboot'}},
+            {'$elemMatch': {'type': 'live', 'host': 'stbc'}},
             {'$elemMatch': {'type': 'live', 'host': 'dcache'}}
         ]}
     }
@@ -80,10 +80,10 @@ def check_data_safety(run_doc, ssh_host, args):
     run_id = str(run_doc['number']).zfill(6)
 
     result = {}
-    hosts_to_check = ['daq', 'stoomboot', 'dcache']
+    hosts_to_check = ['daq', 'stbc', 'dcache']
 
     if args.only_stoomboot and not args.production:
-        hosts_to_check = ['daq', 'stoomboot']
+        hosts_to_check = ['daq', 'stbc']
 
     for host in hosts_to_check:
         path = next((d['location'] for d in run_doc['data'] if d['host'] == host), None)
@@ -97,7 +97,7 @@ def check_data_safety(run_doc, ssh_host, args):
         result[host] = num_files
 
     # Check if the file counts match
-    if (result['stoomboot'] != result.get('dcache', -9) and not args.only_stoomboot) or result['daq'] != result['stoomboot']:
+    if (result['stbc'] != result.get('dcache', -9) and not args.only_stoomboot) or result['daq'] != result['stbc']:
         logging.warning(f"Mismatch in file count for run {run_id}")
         return False
 
