@@ -48,7 +48,7 @@ def get_host():
     """
     import socket
     hostname = socket.gethostname()
-    
+
     print(f'Host name is {hostname}')
 
     if hostname is None:
@@ -66,7 +66,7 @@ def update_processing_status(runsdb, run_id, status, reason=None, production=Fal
     """
     Update the processing status of a run in the database.
     """
-    update = {'status': status, 'time': datetime.datetime.now(), 'host': get_host()}
+    update = {'status': status, 'time': datetime.datetime.now(), 'host': hostname}
     if reason:
         update['reason'] = str(reason)
 
@@ -98,8 +98,6 @@ def process_run(args, runsdb):
     """
 
     import amstrax
-
-    hostname = get_host()
 
     run_id = args.run_id
 
@@ -159,7 +157,7 @@ def main(args):
                         run_id=args.run_id,
                         data_type='raw_records',
                         location=args.output_folder,
-                        host=get_host(),
+                        host=hostname,
                         by='make_raw_records.py',
                         user=os.environ['USER'],
                         production=args.production)
@@ -175,4 +173,5 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_args()
+    hostname = get_host()
     sys.exit(main(args))
