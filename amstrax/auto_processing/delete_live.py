@@ -53,16 +53,20 @@ def setup_logging(logs_path):
 
 def get_old_runs(runsdb, days, args):
     """
-    Retrieve run documents where the data is older than specified days and exists in three locations.
+    Retrieve run documents where the data is older than specified days and exists in three locations
+    or runs with an abandon tag. Returns a list of run documents.
     """
     cutoff_date = datetime.datetime.now() - datetime.timedelta(days=days)
     query = {
-        'end': {'$lte': cutoff_date},
-        'data': {'$all': [
-            {'$elemMatch': {'type': 'live', 'host': 'daq'}},
-            {'$elemMatch': {'type': 'live', 'host': 'stbc'}},
-            {'$elemMatch': {'type': 'live', 'host': 'dcache'}}
-        ]}
+        '$or': [
+            {'end': {'$lte': cutoff_date},
+            'data': {'$all': [
+                {'$elemMatch': {'type': 'live', 'host': 'daq'}},
+                {'$elemMatch': {'type': 'live', 'host': 'stbc'}},
+                {'$elemMatch': {'type': 'live', 'host': 'dcache'}}
+            ]}},
+            {'tags': {'$elemMatch': {'name': 'abandon'}}}
+        ]
     }
 
     if args.only_stoomboot and not args.production:
@@ -70,7 +74,6 @@ def get_old_runs(runsdb, days, args):
 
     projection = {'number': 1, 'end': 1, 'data': 1}
     return list(runsdb.find(query, projection=projection))[0:args.max_runs]
-
 
 def check_data_safety(run_doc, ssh_host, args):
     """
@@ -147,7 +150,7 @@ def delete_data(runsdb, run_doc, production, we_are_really_sure):
             logging.info(f"Deleting data for run {run_id} at {daq_path}")
 
             if we_are_really_sure:
-                # os.remove(daq_path)  # Uncomment after thorough testing
+                os.remove(daq_path)  # Uncomment after thorough testing
 
                 # Move the DAQ data entry from 'data' array to 'deleted_data' array in MongoDB
                 daq_data_entry = next((d for d in run_doc['data'] if d['host'] == 'daq'), None)
@@ -174,12 +177,20 @@ def main(args):
     old_runs = get_old_runs(runsdb, args.older_than, args)
     logging.info(f"Found {len(old_runs)} runs with data older than {args.older_than} days")
     for run_doc in old_runs:
-        logging.info(f"Checking safety for run {run_doc['number']}")
-        if check_data_safety(run_doc, args.ssh_host, args):
+        # if abandoned, delete immediately (tags.name == 'abandon')
+        if 'abandon' in [tag['name'] for tag in run_doc.get('tags', [])]:
+            logging.info(f"Deleting abandoned run {run_doc['number']}")
             delete_data(runsdb, run_doc, args.production, args.we_are_really_sure)
+            continue
+
         else:
-            logging.warning(f"Skipping deletion for run {run_doc['number']} due to safety check failure")
-    
+            # do some checks
+            logging.info(f"Checking safety for run {run_doc['number']}")
+            if check_data_safety(run_doc, args.ssh_host, args):
+                delete_data(runsdb, run_doc, args.production, args.we_are_really_sure)
+            else:
+                logging.warning(f"Skipping deletion for run {run_doc['number']} due to safety check failure")
+        
     return len(old_runs)
 
 if __name__ == '__main__':
