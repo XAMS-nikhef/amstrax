@@ -185,6 +185,8 @@ def delete_data(runsdb, run_doc, production, we_are_really_sure):
                         }
                     )
                     logging.info(f"Moved DAQ data entry for run {run_id} to 'deleted_data'")
+            else:
+                logging.info(f"[Not Really Sure] Would delete data for run {run_id} at {daq_path}")
 
     except Exception as e:
         logging.error(f"Error in deleting data for run {run_id}: {e}")
