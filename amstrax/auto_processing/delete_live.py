@@ -174,7 +174,9 @@ def delete_data(runsdb, run_doc, production, we_are_really_sure):
                     logging.error(f"Path {daq_path} does not exist, eliminating it from database")
                 else:
                     logging.info(f"Deleting {daq_path}")
-                    os.remove(daq_path)
+                    # delete the directory daq_path
+                    os.system(f"rm -rf {daq_path}")
+            
 
                 # Move the DAQ data entry from 'data' array to 'deleted_data' array in MongoDB
                 daq_data_entry = next((d for d in run_doc['data'] if d['host'] == 'daq'), None)
@@ -201,7 +203,7 @@ def delete_data(runsdb, run_doc, production, we_are_really_sure):
 def main(args):
     runsdb = amstrax.get_mongo_collection()
     old_runs = get_old_runs(runsdb, args.days_old, args)
-    logging.info(f"Found {len(old_runs)} runs with data older than {args.days_old} days")
+    logging.info(f"Found {len(old_runs)} runs with data older than {args.days_old} days or with abandon tag")
     for run_doc in old_runs:
         # if abandoned, delete immediately (tags.name == 'abandon')
         if 'abandon' in [tag['name'] for tag in run_doc.get('tags', [])]:
