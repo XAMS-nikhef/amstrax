@@ -180,6 +180,7 @@ def main(args):
         runsdb.update_one({'number': int(args.run_id)}, {'$inc': {'processing_failed': 1}})
 
     rd = runsdb.find_one({'number': int(args.run_id)})
+    comment = ""
     if not args.production:
         comment = "(unchanged because not in production mode)"
     print(f"Run {rd['number']} has status {rd.get('processing_status', None)} {comment}")
