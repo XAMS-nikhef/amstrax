@@ -101,12 +101,17 @@ def main(args):
     runs_col = amstrax.get_mongo_collection()
     logging.info('Correctly connected, starting loop')
     amstrax_dir = amstrax.amstrax_dir
-
+    
+    client = amstrax.get_mongo_client()
+    processing_db = client['daq']['processing']
+        
     infinite = True
     while infinite:
 
+        auto_processing_on = processing_db.find_one({'name': 'auto_processing'})['status'] == 'on'
+
         # Update task list
-        run_docs_to_do = update_task_list(args, runs_col)
+        run_docs_to_do = update_task_list(args, runs_col, auto_processing_on)
         
         # Check and handle running jobs
         handle_running_jobs(runs_col, production=args.production)
@@ -126,7 +131,7 @@ def main(args):
 
 # Define additional functions to modularize the script
 
-def update_task_list(args, runs_col):
+def update_task_list(args, runs_col, auto_processing_on):
     """
     Update and return the list of tasks to be processed based on MongoDB queries.
     """
@@ -147,7 +152,7 @@ def update_task_list(args, runs_col):
         ]
     }
 
-    if args.only_manual:
+    if args.only_manual or not auto_processing_on:
         query = {
             'data': { '$elemMatch': {'type': 'live', 'host': 'stbc'}},
             'tags': {'$elemMatch': {'name': 'process'}}
@@ -276,7 +281,7 @@ def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
             # Update the database with the submitted job info
             runs_col.update_one(
                 {'number': run_doc['number']},
-                {'$set': {'processing_status': {'status': 'submitted', 'time': datetime.now()}},
+                {'$set': {'processing_status': {'status': 'submitted', 'time': datetime.now(), 'host': 'stbc'}},
                 # remove tag process if it exists
                 '$pull': {'tags': {'name': 'process'}}
                 }
