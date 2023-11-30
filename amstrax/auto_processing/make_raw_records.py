@@ -173,7 +173,7 @@ def main(args):
     rd = runsdb.find_one({'number': int(args.run_id)})
     if not args.production:
         comment = "(unchanged because not in production mode)"
-    print(f"Run {rd['number']} has status {rd['processing_status']} {comment}")
+    print(f"Run {rd['number']} has status {rd.get('processing_status', None)} {comment}")
 
 
 if __name__ == '__main__':
