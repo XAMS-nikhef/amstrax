@@ -148,6 +148,8 @@ def main(args):
     try:
         process_run(args, runsdb, output_folder)  # Process the run
 
+        print(f'Processing of run {args.run_id} succeeded')
+
         update_processing_status(runsdb=runsdb,
                                     run_id=args.run_id,
                                     status='done',
