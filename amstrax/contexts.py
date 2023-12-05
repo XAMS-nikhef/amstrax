@@ -4,115 +4,71 @@ from datetime import timezone
 import strax
 from immutabledict import immutabledict
 
+import sys
 import amstrax as ax
 
-common_opts_xams_little = dict(
-    register_all=[ax.radon_pulse_processing,
-                  ax.radon_peaks,
-                  ax.radon_peak_basics,
-#                   ax.event_processing
-                 ],
-    register=[ax.DAQReader],
+# Configuration
+CONFIG = {
+    'DEFAULT_DETECTOR': 'xams',
+    'DEFAULT_RUNCOLNAME': 'run',
+    'DEFAULT_COLLECTION': 'runs_gas'
+}
+
+PATHS_TO_REGISTER = [
+    '/data/xenon/xams_v2/xams_raw_records',
+    '/home/xams/data/xams_processed',
+]
+
+
+COMMON_OPT_XAMS = dict(
+    register_all=[],
+    register=[ax.DAQReader, 
+        ax.PulseProcessing,
+        ax.Peaks,
+        ax.PeakClassification,
+        ax.PeakBasics,
+        # ax.RecordsLED,
+        # ax.LEDCalibration,
+        ax.PeakClassification,
+        ax.PeakProximity,
+        ax.PeakPositions,
+        ax.Events,
+        # ax.CorrectedAreas,
+        # ax.EventPositions,
+    ax.EventBasics,
+        # ax.EventInfo,
+        # ax.EnergyEstimates,
+        ],
     store_run_fields=(
         'name', 'number',
         'start', 'end', 'livetime',
         'processing_status',
         'tags'),
-    check_available=('raw_records_v1730',
-                     'raw_records_v1724',
-                     ),
+    check_available=(),
     free_options=('live_data_dir',),
 )
 
-
-common_opts_xams = dict(
-    register_all=[ax.pulse_processing,
-                  ax.peak_processing,
-                  ax.peak_basics,
-#                   ax.event_processing                  
-                 ],
-    register=[ax.DAQReader],
-    store_run_fields=(
-        'name', 'number',
-        'start', 'end', 'livetime',
-        'processing_status',
-        'tags'),
-    check_available=('raw_records_v1730',
-                     'raw_records_v1724',
-                     ),
-    free_options=('live_data_dir',),
-)
-
-# xamsl and xams are too similar
-xams_little_common_config = dict(
-    live_data_dir='/data/xenon/xamsl/live_data',
-    n_tpc_pmts=4,
+XAMS_COMMON_CONFIG = dict(
+    n_tpc_pmts=5,
     channel_map=immutabledict(
-        v1730=(0, 1),
-        v1724=(2, 3),
-        aqmon=(40, 40),  # register strax deadtime
-    ))
-
-xams_common_config = dict(
-    live_data_dir='/data/xenon/xams/live_data',  # doesn't work yet
-    n_tpc_pmts=16,
-    channel_map=immutabledict(
-        # NB! Not the same as XAMSL
-        v1724=(0, 7),
-        v1730=(8, 15),
+        bottom=(0, 0),
+        top=(1, 4),
         aqmon=(40, 40),  # register strax deadtime
     ))
 
 
-def xams(*args, **kwargs):
-    if '_detector' in kwargs:
-        raise ValueError('Don\'t specifify _detector!')
-    mongo_kwargs = dict(mongo_collname='runs_gas', #IF YOU CHANGE THIS, ALSO CHANGE IN GET_MONGO_COLLECTION (RUNSDB.PY)!
-                        runid_field='number',
-                        mongo_dbname='run',
-                        )
-    st = _xams_xamsl_context(*args, **kwargs, _detector='xams', mongo_kwargs=mongo_kwargs)
-    st.set_config(xams_common_config)
-    return st
+def xams(output_folder='./strax_data', 
+         init_rundb=True,
+         mongo_kwargs=dict(mongo_collname=CONFIG['DEFAULT_COLLECTION'],
+                        mongo_dbname=CONFIG['DEFAULT_RUNCOLNAME'],
+                        runid_field='number'), 
+         *args,
+         **kwargs):
 
+    st = strax.Context(**COMMON_OPT_XAMS, forbid_creation_of=ax.DAQReader.provides)
 
-def xams_little(*args, **kwargs):
-    if '_detector' in kwargs:
-        raise ValueError('Don\'t specifify _detector!')
-    mongo_kwargs = dict(mongo_collname='runs_new',
-                        runid_field='number',
-                        mongo_dbname='run',
-                        )
-
-    st = _xams_xamsl_context(*args, **kwargs, _detector='xamsl', mongo_kwargs=mongo_kwargs)
-    st.set_config(xams_little_common_config)
-    return st
-
-
-def _xams_xamsl_context(
-        output_folder='./amstrax_data',
-        raw_data_folder='/data/xenon/{detector}/raw/',
-        processed_data_folder='/data/xenon/{detector}/processed/',
-        _detector='xams',
-        init_rundb=True,
-        mongo_kwargs: dict = None
-):
-    if _detector=='xams':
-        st = strax.Context(**common_opts_xams,
-                       forbid_creation_of=ax.DAQReader.provides,
-                       )
-    elif _detector=='xamsl':
-        st = strax.Context(**common_opts_xams_little,
-                       forbid_creation_of=ax.DAQReader.provides,
-                       )        
-        
-    raw_data_folder = raw_data_folder.format(detector=_detector)
-    processed_data_folder = processed_data_folder.format(detector=_detector)
-
-    for p in [raw_data_folder, processed_data_folder]:
-        if not os.path.exists(p):
-            UserWarning(f'Context for {_detector}, folder {p} does not exist?!')
-
+    st.set_config(XAMS_COMMON_CONFIG)
+              
     st.storage = []
     if init_rundb:
         if mongo_kwargs is None:
@@ -121,88 +77,26 @@ def _xams_xamsl_context(
             **mongo_kwargs,
             provide_run_metadata=True,
         )]
+
+    for path in PATHS_TO_REGISTER:
+        if os.path.exists(path):
+            st.storage += [strax.DataDirectory(path,
+                                               provide_run_metadata=False,
+                                               deep_scan=False,
+                                               readonly=True)]
+        else:
+            # just means we are in another ho
+            pass
+
     st.storage += [
-        strax.DataDirectory(raw_data_folder,
-                            provide_run_metadata=False,
-                            take_only=ax.DAQReader.provides,
-                            deep_scan=False,
-                            readonly=True),
-        strax.DataDirectory(processed_data_folder,
-                            provide_run_metadata=False,
-                            deep_scan=False,
-                            readonly=True),
         strax.DataDirectory(output_folder),
     ]
-    print(st.storage)
+    
     return st
-
-
-def amstrax_gas_test_analysis():
-    """Return strax test for analysis of Xams gas test data"""
-    UserWarning("Unsure if this context is complete and/or working")
-    return strax.Context(
-        storage=[
-            ax.RunDB(
-                mongo_url=f'mongodb://{os.environ["user"]}:{os.environ["password"]}@127.0.0.1:27017/admin',
-                mongo_collname='runs_gas',
-                runid_field='number',
-                mongo_dbname='run'),
-            strax.DataDirectory('/data/xenon/xams/strax_processed_gas/',
-                                provide_run_metadata=False,
-                                deep_scan=False,
-                                readonly=True),
-            strax.DataDirectory('/data/xenon/xams/strax_processed_peaks/',
-                                provide_run_metadata=False,
-                                deep_scan=False,
-                                readonly=False,
-                                )],
-        forbid_creation_of='raw_records',
-        **common_opts,
-    )
-
-
-def amstrax_gas_test_analysis_alt_baseline():
-    """Return strax test for analysis of Xams gas test data"""
-    UserWarning("Unsure if this context is complete and/or working")
-    return strax.Context(
-        storage=[
-            strax.DataDirectory('/data/xenon/xams/strax_processed_gas/',
-                                provide_run_metadata=False,
-                                deep_scan=False,
-                                readonly=False),
-            strax.DataDirectory('/data/xenon/xams/strax_processed_peaks/',
-                                provide_run_metadata=False,
-                                deep_scan=False,
-                                readonly=True,
-                                )],
-        forbid_creation_of='raw_records',
-        register_all=[ax.daqreader, ax.pulse_processing_alt_baseline],
-        store_run_fields=(
-            'name', 'number',
-            'start', 'end', 'livetime',
-            'tags'),
-    )
-
-
-def amstrax_run10_analysis(output_folder='./strax_data'):
-    """Return strax test for analysis of Xams gas test data"""
-    UserWarning("Unsure if this context is complete and/or working")
-    return strax.Context(
-        storage=[
-            strax.DataDirectory(f'{output_folder}',
-                                provide_run_metadata=False,
-                                deep_scan=False,
-                                readonly=False),
-        ],
-        config=dict(**xams_common_config),
-        register=ax.RecordsFromPax,
-        **common_opts
-    )
-
 
 def context_for_daq_reader(st: strax.Context,
                            run_id: str,
-                           detector: str,
+                           detector: str = 'xams',
                            runs_col_kwargs: dict = None,
                            run_doc: dict = None,
                            check_exists=True,
@@ -235,7 +129,15 @@ def context_for_daq_reader(st: strax.Context,
         run_col = ax.get_mongo_collection(detector)
         run_doc = run_col.find_one({'number': int(run_id)})
     daq_config = run_doc['daq_config']
-    live_dir = st.config['live_data_dir']
+
+    live_dir = daq_config['strax_output_path']
+
+    # Check if live dir is set in the config, in case it is, set it
+    # to the live dir in the config
+    if 'live_data_dir' in st.config:
+        live_dir = st.config['live_data_dir']
+        # Print a UserWarning that the live_data_dir is overwritten
+        UserWarning(f'live_data_dir is overwritten to {live_dir}')
 
     input_dir = os.path.join(live_dir, run_id)
     if not os.path.exists(input_dir):
@@ -255,6 +157,20 @@ def context_for_daq_reader(st: strax.Context,
     UserWarning(f'You changed the context for {run_id}. Do not process any other run!')
     return st
 
+def xams_led(**kwargs):
+    st = xams(**kwargs)
+    st.set_context_config(
+        {'check_available': ('raw_records', 'records_led', 'led_calibration')})
+    # Return a new context with only raw_records and led_calibration registered
+    st = st.new_context(
+        replace=True,
+        config=st.config,
+        storage=st.storage,
+        **st.context_config)
+    st.register([ax.DAQReader,
+                 ax.RecordsLED,
+                 ax.LEDCalibration])
+    return st
 
 def _check_raw_records_exists(st: strax.Context, run_id: str) -> bool:
     for plugin_name in st._plugin_class_registry.keys():

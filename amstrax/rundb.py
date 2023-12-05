@@ -2,7 +2,8 @@ import os
 import re
 import socket
 import typing
-
+from typing import Union, Dict, Any
+import configparser
 import pymongo
 import strax
 from sshtunnel import SSHTunnelForwarder
@@ -10,69 +11,102 @@ from tqdm import tqdm
 
 export, __all__ = strax.exporter()
 
-default_mongo_dbname = 'run'
-default_mongo_collname = 'runs'
-
-_SECRET_SERVING_PORT = {}
-
-
-def _check_environment_var(key):
-    if key not in os.environ:
-        raise RuntimeError(
-            f"{key} not set. Please define in .bashrc file. (i.e. "
-            f"'export {key} = <secret {key.lower()}>')")
+# Configuration
+CONFIG = {
+    'DEFAULT_DBNAME': 'admin',
+    'DEFAULT_DETECTOR': 'xams',
+    'DEFAULT_RUNCOLNAME': 'run',
+    'DEFAULT_COLLECTION': 'runs_gas'
+}
 
 
-def link_to_daq(
-        daq_host="145.102.133.168",
-        daq_user="xams"
-):
-    """Create an SSH tunnel to the daq machine to get access to the runsdb"""
+def get_configs() -> Dict[str, Any]:
+    """Get the configuration dictionary."""
+
+    result = {}    
+    required_keys = ['DAQ_PASSWORD', 'DAQ_HOST', 'DAQ_USER', 'MONGO_USER', 'MONGO_PASSWORD', 'MONGO_PORT']
+
+    # I need to check if the config file exists, and then get the keys preferably from there otherwise from the environment variables and otherwise raise an error
+
+    config_file_path = os.path.join(os.getenv('HOME'), '.xams_config')
+    if not os.path.exists(config_file_path):
+        # raise a warning
+        print(f'Warning: could not find {config_file_path}. Will try to get the configuration from environment variables.')
+
+        # we will check in the environment variables
+        for key in required_keys:
+            if key in os.environ:
+                result[key] = os.environ[key]
+            else:
+                raise ValueError(f'Could not find {key} in environment variables or default configuration in ~/.xams_config')
+    
+    else:
+        # we will check in the config file
+        config_file = configparser.ConfigParser()
+        config_file.read(config_file_path)
+        for key in required_keys:
+            if key in config_file['default']:
+                result[key] = config_file['default'][key]
+            elif key in os.environ:
+                result[key] = os.environ[key]
+            else:
+                raise ValueError(f'Could not find {key} in environment variables or default configuration in ~/.xams_config')
+
+    return result
+
+def establish_ssh_tunnel(daq_host: str, daq_user: str, daq_password: str, mongo_port: str, secret_serving_port: Dict[str, Any]) -> int:
+    """Establish an SSH tunnel and return the local bind port."""
+
     port_key = f'{daq_host}_{daq_user}'
-    if _SECRET_SERVING_PORT is not None and port_key in _SECRET_SERVING_PORT:
-        return _SECRET_SERVING_PORT[port_key]
-    _check_environment_var("DAQ_PASSWORD")
-    daq_password = os.environ['DAQ_PASSWORD']
+    
+    if port_key in secret_serving_port:
+        return secret_serving_port[port_key]
+
     server = SSHTunnelForwarder(
         daq_host,
         ssh_username=daq_user,
         ssh_password=daq_password,
-        remote_bind_address=('127.0.0.1', 27017)
+        remote_bind_address=('127.0.0.1', mongo_port),
     )
     server.start()
-    _SECRET_SERVING_PORT[port_key] = server.local_bind_port
+    secret_serving_port[port_key] = server.local_bind_port
     return server.local_bind_port
 
 
 @export
-def get_mongo_client(**link_kwargs):
-    """Get a mongo client, any kwargs are passed on to link_to_daq"""
-    _check_environment_var('MONGO_USER')
-    _check_environment_var('MONGO_PASSWORD')
-    local_port = link_to_daq(**link_kwargs)
-    user = os.environ['MONGO_USER']
-    password = os.environ['MONGO_PASSWORD']
-    return pymongo.MongoClient(f'mongodb://{user}:{password}@127.0.0.1:{local_port}/admin')
+def get_mongo_client(daq_host: str = "", 
+                     daq_user: str = "", 
+                     secret_serving_port: Dict[str, Any] = {}
+                     ) -> pymongo.MongoClient:
+    """Get a MongoDB client."""
 
+    # get all the passwords from get_configs
+    configs = get_configs()
+    daq_password = configs['DAQ_PASSWORD']
+    daq_host = configs['DAQ_HOST']
+    daq_user = configs['DAQ_USER']
+    user = configs['MONGO_USER']
+    password = configs['MONGO_PASSWORD']
+    mongo_port = int(configs['MONGO_PORT'])
+    
+    local_port = establish_ssh_tunnel(daq_host, daq_user, daq_password, mongo_port, secret_serving_port)
 
-# @export
-# def get_mongo_collection(database_name='run',
-#                          database_col='runs_new',
-#                          **link_kwargs,
-#                          ):
-#     """Get the runs collection"""
-#     return get_mongo_client(**link_kwargs)[database_name][database_col]
+    return pymongo.MongoClient(f'mongodb://{user}:{password}@127.0.0.1:{local_port}/{CONFIG["DEFAULT_DBNAME"]}')
 
 @export
-def get_mongo_collection(detector,
-                         **link_kwargs,
-                         ):
-    if detector == 'xams':
-        return get_mongo_client(**link_kwargs)['run']['runs_gas']
-    elif detector == 'xamsl':
-        return get_mongo_client(**link_kwargs)['run']['runs_new']
-    else:
+def get_mongo_collection(detector: str = CONFIG['DEFAULT_DETECTOR'], 
+                         runcolname: str = CONFIG['DEFAULT_RUNCOLNAME'],
+                         **link_kwargs
+                         ) -> pymongo.collection.Collection:
+    """Get a specific MongoDB collection based on the detector."""
+    client = get_mongo_client(**link_kwargs)
+    collections = {
+        'xams': 'runs_gas',
+        'xamsl': 'runs_new'
+    }
+    if detector not in collections:
         raise NameError(f'detector {detector} is not a valid detector name.')
+    return client[runcolname][collections[detector]]
 
 @export
 class RunDB(strax.StorageFrontend):
@@ -88,8 +122,8 @@ class RunDB(strax.StorageFrontend):
     provide_run_metadata = True
 
     def __init__(self,
-                 mongo_dbname=None,
-                 mongo_collname=None,
+                 mongo_dbname=CONFIG['DEFAULT_DBNAME'],
+                 mongo_collname=CONFIG['DEFAULT_COLLECTION'],
                  runid_field='name',
                  local_only=True,
                  new_data_path=None,
@@ -128,10 +162,6 @@ class RunDB(strax.StorageFrontend):
 
         self.client = get_mongo_client()
 
-        if mongo_dbname is None:
-            mongo_dbname = default_mongo_dbname
-        if mongo_collname is None:
-            mongo_collname = default_mongo_collname
         self.collection = self.client[mongo_dbname][mongo_collname]
 
         self.backends = [
@@ -222,7 +252,7 @@ class RunDB(strax.StorageFrontend):
         projection = dq.copy()
         projection.update({
             k: True
-            for k in 'name number data.protocol data.location'.split()})
+            for k in 'name number'.split()})
 
         results_dict = dict()
         for doc in self.collection.find(
