@@ -35,7 +35,7 @@ export, __all__ = strax.exporter()
 )
 class PeakBasics(strax.Plugin):
     provides = ("peak_basics",)
-    depends_on = "peaks"
+    depends_on = ("peaks", "peak_classification")
     data_kind = "peaks"
 
     parallel = "False"
@@ -75,10 +75,9 @@ class PeakBasics(strax.Plugin):
           'rise_time'), np.float32),
         (('Number of PMTs with hits within tight range of mean',
           'tight_coincidence'), np.int16),
-        (('Classification of the peak(let)',
-          'type'), np.int8),
+        (('Type of peak (s1 or s2)',
+          'type'), np.int16),
     ]
-
 
     def compute(self, peaks):
         p = peaks

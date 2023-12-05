@@ -7,7 +7,7 @@ export, __all__ = strax.exporter()
 
 
 @strax.takes_config(
-    strax.Option('electron_drift_velocity', default=1.6e-4, track=True,
+    strax.Option('electron_drift_velocity', default=1.6e-6, track=True,
                   help='Vertical electron drift velocity in cm/ns (1e4 m/ms)'),
     strax.Option('allow_posts2_s1s',
                   default=False, infer_type=False,
@@ -20,7 +20,7 @@ export, __all__ = strax.exporter()
                   default=True, infer_type=False,
                   help="Make sure alt_s2 is in max drift time starting from main S1"),
     strax.Option('event_s1_min_coincidence',
-                  default=2, infer_type=False,
+                  default=0, infer_type=False,
                   help="Event level S1 min coincidence. Should be >= s1_min_coincidence "
                        "in the peaklet classification"),
     strax.Option('max_drift_length',
@@ -45,7 +45,8 @@ class EventBasics(strax.Plugin):
     depends_on = ('events',
                   'peak_basics',
                   'peak_positions',
-                  'peak_proximity')
+                  'peak_proximity', 
+                  'peak_classification')
     provides = 'event_basics'
     data_kind = 'events'
     loop_over = 'events'
@@ -228,6 +229,8 @@ class EventBasics(strax.Plugin):
         """For a single event with the result_buffer"""
         # Consider S2s first, then S1s (to enable allow_posts2_s1s = False)
         # number_of_peaks=0 selects all available s2 and sort by area
+
+
         largest_s2s, s2_idx = self.get_largest_sx_peaks(peaks, s_i=2, number_of_peaks=0)
 
         if not self.allow_posts2_s1s and len(largest_s2s):
@@ -259,16 +262,21 @@ class EventBasics(strax.Plugin):
         self.set_sx_index(event, s1_idx, s2_idx)
         self.set_event_properties(event, largest_s1s, largest_s2s, peaks)
 
+
         # Loop over S1s and S2s and over main / alt.
         for s_i, largest_s_i in enumerate([largest_s1s, largest_s2s], 1):
             # Largest index 0 -> main sx, 1 -> alt sx
             for largest_index, main_or_alt in enumerate(['s', 'alt_s']):
                 peak_properties_to_save = [name for name, _, _ in self.peak_properties]
                 if s_i == 1:
-                    peak_properties_to_save += ['max_diff', 'min_diff']
+                    # peak_properties_to_save += ['max_diff', 'min_diff']
+                    pass
                 elif s_i == 2:
-                    peak_properties_to_save += ['x', 'y']
-                    peak_properties_to_save += self.posrec_save
+
+                    # peak_properties_to_save += ['x', 'y']
+                    # peak_properties_to_save += self.posrec_save
+                    pass
+
                 field_names = [f'{main_or_alt}{s_i}_{name}' for name in peak_properties_to_save]
                 self.copy_largest_peaks_into_event(event,
                                                    largest_s_i,

@@ -2,6 +2,7 @@ import argparse
 import time
 from datetime import datetime, timedelta
 import subprocess 
+import logging
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -99,9 +100,6 @@ if __name__ == '__main__':
             run_name = f'{int(run_doc["number"]):06}'
 
             if process_stomboot:
-                # submit_stbc.submit_job(run_name, target=target, context=context, detector=detector,script='process_run')
-                # runs_col.find_one_and_update({'number': run_name},
-                #                             {'$set': {'processing_status': 'submitted_job' }})
                 pass
 
             else: #process locally
@@ -114,6 +112,3 @@ if __name__ == '__main__':
             break
         print("Waiting %d seconds before rechecking, press Ctrl+C to quit..." % nap_time)
         time.sleep(nap_time)
-
-
-print('Done!')

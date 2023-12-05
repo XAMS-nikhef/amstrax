@@ -3,7 +3,7 @@ import re
 import socket
 import typing
 from typing import Union, Dict, Any
-
+import configparser
 import pymongo
 import strax
 from sshtunnel import SSHTunnelForwarder
@@ -13,7 +13,6 @@ export, __all__ = strax.exporter()
 
 # Configuration
 CONFIG = {
-    'MONGO_PORT': 27017,
     'DEFAULT_DBNAME': 'admin',
     'DEFAULT_DETECTOR': 'xams',
     'DEFAULT_RUNCOLNAME': 'run',
@@ -21,22 +20,43 @@ CONFIG = {
 }
 
 
-def check_environment_var(key: str) -> None:
-    """Check if an environment variable is set."""
-    if key not in os.environ:
-        raise RuntimeError(
-            f"{key} not set. Please define in .bashrc file. (i.e. 'export {key}=<value>')")
+def get_configs() -> Dict[str, Any]:
+    """Get the configuration dictionary."""
 
+    result = {}    
+    required_keys = ['DAQ_PASSWORD', 'DAQ_HOST', 'DAQ_USER', 'MONGO_USER', 'MONGO_PASSWORD', 'MONGO_PORT']
 
-def get_env_var(key: str) -> str:
-    """Retrieve the value of an environment variable after checking its existence."""
-    check_environment_var(key)
-    return os.environ[key]
+    # I need to check if the config file exists, and then get the keys preferably from there otherwise from the environment variables and otherwise raise an error
 
+    config_file_path = os.path.join(os.getenv('HOME'), '.xams_config')
+    if not os.path.exists(config_file_path):
+        # raise a warning
+        print(f'Warning: could not find {config_file_path}. Will try to get the configuration from environment variables.')
 
-def establish_ssh_tunnel(daq_host: str, daq_user: str, secret_serving_port: Dict[str, Any]) -> int:
+        # we will check in the environment variables
+        for key in required_keys:
+            if key in os.environ:
+                result[key] = os.environ[key]
+            else:
+                raise ValueError(f'Could not find {key} in environment variables or default configuration in ~/.xams_config')
+    
+    else:
+        # we will check in the config file
+        config_file = configparser.ConfigParser()
+        config_file.read(config_file_path)
+        for key in required_keys:
+            if key in config_file['default']:
+                result[key] = config_file['default'][key]
+            elif key in os.environ:
+                result[key] = os.environ[key]
+            else:
+                raise ValueError(f'Could not find {key} in environment variables or default configuration in ~/.xams_config')
+
+    return result
+
+def establish_ssh_tunnel(daq_host: str, daq_user: str, daq_password: str, mongo_port: str, secret_serving_port: Dict[str, Any]) -> int:
     """Establish an SSH tunnel and return the local bind port."""
-    daq_password = get_env_var("DAQ_PASSWORD")
+
     port_key = f'{daq_host}_{daq_user}'
     
     if port_key in secret_serving_port:
@@ -46,7 +66,7 @@ def establish_ssh_tunnel(daq_host: str, daq_user: str, secret_serving_port: Dict
         daq_host,
         ssh_username=daq_user,
         ssh_password=daq_password,
-        remote_bind_address=('127.0.0.1', CONFIG['MONGO_PORT']),
+        remote_bind_address=('127.0.0.1', mongo_port),
     )
     server.start()
     secret_serving_port[port_key] = server.local_bind_port
@@ -60,14 +80,17 @@ def get_mongo_client(daq_host: str = "",
                      ) -> pymongo.MongoClient:
     """Get a MongoDB client."""
 
-    daq_host = get_env_var('DAQ_HOST')
-    daq_user = get_env_var('DAQ_USER')
-
-    local_port = establish_ssh_tunnel(daq_host, daq_user, secret_serving_port)
-
-    user = get_env_var('MONGO_USER')
-    password = get_env_var('MONGO_PASSWORD')
+    # get all the passwords from get_configs
+    configs = get_configs()
+    daq_password = configs['DAQ_PASSWORD']
+    daq_host = configs['DAQ_HOST']
+    daq_user = configs['DAQ_USER']
+    user = configs['MONGO_USER']
+    password = configs['MONGO_PASSWORD']
+    mongo_port = int(configs['MONGO_PORT'])
     
+    local_port = establish_ssh_tunnel(daq_host, daq_user, daq_password, mongo_port, secret_serving_port)
+
     return pymongo.MongoClient(f'mongodb://{user}:{password}@127.0.0.1:{local_port}/{CONFIG["DEFAULT_DBNAME"]}')
 
 @export

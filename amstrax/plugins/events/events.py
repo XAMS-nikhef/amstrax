@@ -5,23 +5,24 @@ export, __all__ = strax.exporter()
 
 @export
 @strax.takes_config(
-    strax.Option('trigger_min_area', default=100,
+    strax.Option('trigger_min_area', default=10,
                  help='Peaks must have more area (PE) than this to '
                       'cause events'),
-    strax.Option('trigger_min_competing', default=3,
+    strax.Option('trigger_min_competing', default=3, # not used
                  help='Peaks must have More nearby larger or slightly smaller'
                       ' peaks to cause events'),
-    strax.Option('left_event_extension', default=int(1e6),
+    strax.Option('left_event_extension', default=int(5e5),
                  help='Extend events this many ns to the left from each '
                       'triggering peak'),
-    strax.Option('right_event_extension', default=int(1e6),
+    strax.Option('right_event_extension', default=int(1e5),
                  help='Extend events this many ns to the right from each '
                       'triggering peak'),
 )
 class Events(strax.OverlapWindowPlugin):
     depends_on = ['peaks', 
-                  'peak_basics',
-                  'peak_proximity']  # peak_basics instead of n_competing
+                  #'peak_basics',
+                  #'peak_proximity',
+                  'peak_classification']  # peak_basics instead of n_competing
     rechunk_on_save = False
     data_kind = 'events'
     parallel = False
@@ -30,7 +31,7 @@ class Events(strax.OverlapWindowPlugin):
         ('time', np.int64, 'Event start time in ns since the unix epoch'),
         ('endtime', np.int64, 'Event end time in ns since the unix epoch')]
     events_seen = 0
-    __version__ = '0.0.6'
+    __version__ = '1.0'
 
     def get_window_size(self):
         return (2 * self.config['left_event_extension'] +
@@ -41,8 +42,12 @@ class Events(strax.OverlapWindowPlugin):
         re = self.config['right_event_extension']
 
         triggers = peaks[
+            (peaks['type'] == 2) &
             (peaks['area'] > self.config['trigger_min_area'])
-            & (peaks['n_competing'] >= self.config['trigger_min_competing'])]
+            ]
+
+        print(f"Found {len(triggers)} triggers")
+
         # Join nearby triggers
         t0, t1 = strax.find_peak_groups(
             triggers,
