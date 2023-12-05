@@ -27,6 +27,7 @@ class PeakClassification(strax.Plugin):
     __version__ = '1.2.16'
     depends_on = ('peaks')
     provides = ('peak_classification')
+
     dtype = [
         ('type', np.int8, 'Classification of the peak.'),
         ('time', np.int64, 'Start time of the peak (ns since unix epoch)'),
@@ -62,6 +63,7 @@ class PeakClassification(strax.Plugin):
         is_s1 &= center_position > self.config['s1_min_center_position']
         is_s1 &= center_position < self.config['s1_max_center_position']
         is_s1 &= both_pmts_filter
+
         r['type'][is_s1] = 1
         
         is_s2 = p['area'] > self.config['s2_min_area']
@@ -88,3 +90,4 @@ class PeakClassification(strax.Plugin):
                 t += t_i * p["dt"] * weight
             result[p_i] = t / p["area"]
         return result
+

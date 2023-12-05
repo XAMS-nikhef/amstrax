@@ -14,7 +14,11 @@ CONFIG = {
     'DEFAULT_COLLECTION': 'runs_gas'
 }
 
-PROCESSED_DATA_FOLDER = '/home/xams/data/xams_processed'
+PATHS_TO_REGISTER = [
+    '/data/xenon/xams_v2/xams_raw_records',
+    '/home/xams/data/xams_processed',
+]
+
 
 COMMON_OPT_XAMS = dict(
     register_all=[],
@@ -74,11 +78,17 @@ def xams(output_folder='./strax_data',
             provide_run_metadata=True,
         )]
 
+    for path in PATHS_TO_REGISTER:
+        if os.path.exists(path):
+            st.storage += [strax.DataDirectory(path,
+                                               provide_run_metadata=False,
+                                               deep_scan=False,
+                                               readonly=True)]
+        else:
+            # just means we are in another ho
+            pass
+
     st.storage += [
-        strax.DataDirectory(PROCESSED_DATA_FOLDER,
-                            provide_run_metadata=False,
-                            deep_scan=False,
-                            readonly=True),
         strax.DataDirectory(output_folder),
     ]
     
