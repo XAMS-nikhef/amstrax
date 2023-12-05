@@ -296,4 +296,3 @@ if __name__ == '__main__':
     args = parse_args()
     setup_logging(args.logs_path)
     main(args)
-

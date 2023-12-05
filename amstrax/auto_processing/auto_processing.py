@@ -112,5 +112,3 @@ if __name__ == '__main__':
             break
         print("Waiting %d seconds before rechecking, press Ctrl+C to quit..." % nap_time)
         time.sleep(nap_time)
-
-
