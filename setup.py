@@ -27,7 +27,7 @@ with open('HISTORY.md') as file:
     history = file.read()
 
 setuptools.setup(name='amstrax',
-                 version='1.2.0',
+                 version='2.2.0',
                  description='strax for XAMS data',
                  author='Nikhef',
                  url='https://github.com/XAMS-nikhef/amstrax',
@@ -41,7 +41,7 @@ setuptools.setup(name='amstrax',
                  tests_require=tests_requires,
                  python_requires=">=3.6",
                  packages=setuptools.find_packages(),
-                 scripts=[],
+                 scripts=['bin/process_run'],
                  classifiers=[
                      'Development Status :: 4 - Beta',
                      'License :: OSI Approved :: BSD License',

@@ -1,29 +1,43 @@
-from amstrax.auto_processing import amstraxer
+#!/usr/bin/env python
+
+import sys
+import subprocess
+
+from amstrax.auto_processing import amstraxer, amstraxer_easy
 
 if __name__ == '__main__':
-    args = amstraxer.parse_args()
+
+    args = amstraxer_easy.parse_args()
 
     # Do import later to get fast --help
+
+    import sys
     import amstrax
 
     detector = args.detector
     run_collection = amstrax.get_mongo_collection(detector)
     run_name = args.run_id
-    target = args.target
-    print(f'Start processing {run_name}: {target}')
+    print(f'Start processing {run_name}: {args.target}')
 
     # Now read configuration
     print(f'Update database')
     run_doc = run_collection.find_one({"number": int(run_name)})
     run_collection.find_one_and_update({"number": int(run_name)},
-                                       {"$set": {"processing_status": f"building_{target}"}})
+                                       {"$set": {"processing_status": f"processing"}})
     print(f'Start amstraxer')
+
+
+    print(args)
+
+
     try:
-        amstraxer.main(args)
+        amstraxer_easy.main(args)
+
     except Exception as e:
         run_collection.find_one_and_update({"number": int(run_name)},
-                                           {"$set": {
-                                               "processing_status": f"failed due to {str(e)}"}})
+                                           {"$set": {"processing_status": f"failed due to {str(e)}"},
+                                           "$inc": { "processing_failed": 1}
+                                           })
         raise e
 
     run_collection.find_one_and_update({"number": int(run_name)},

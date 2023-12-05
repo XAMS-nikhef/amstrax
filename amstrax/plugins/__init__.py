@@ -1,22 +1,16 @@
-from . import daqreader
-from . import event_processing
-from . import pax_interface
-from . import peak_processing
-from . import peak_processing
-from . import pulse_processing
-from . import pulse_processing_alt_baseline
-from . import radon_pulse_processing
-from . import radon_peaks
-from . import radon_peak_basics
-from . import peak_basics
-from .daqreader import *
-from .radon_pulse_processing import *
-from .radon_peaks import *
-from .radon_peak_basics import *
-from .event_processing import *
-from .pax_interface import *
-from .peak_processing import *
-from .peak_processing import *
-from .pulse_processing import *
-from .pulse_processing_alt_baseline import *
-from .peak_basics import *
+# TPC chain, order matters!
+
+from . import raw_records
+from .raw_records import *
+
+from . import records
+from .records import *
+
+from . import led_calibration
+from .led_calibration import *
+
+from . import peaks
+from .peaks import *
+
+from . import events
+from .events import *

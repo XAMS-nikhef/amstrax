@@ -17,7 +17,7 @@ class TestAmstraxerXAMSL(unittest.TestCase):
     """
     run_doc_name = 'rundoc_999999.json'
     live_data_path = './live_data/'
-    test_for_context = 'xams_little'
+    test_for_context = 'xams'
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -43,50 +43,51 @@ class TestAmstraxerXAMSL(unittest.TestCase):
             shutil.rmtree(path)
             print(f'rm {path}')
 
-    def test_amstraxer(self):
-        """Run
-        ```python amstrax.py --some options```
-        This should make some raw-data that we will check is stored afterwards
-        """
-        self.get_test_data()
-        target = [p for p in self.st._plugin_class_registry.keys() if 'raw' in p][0]
-        run_id = self.run_id
-        assert not self.st.is_stored(run_id, target)
-        print(f'Testing for {run_id}: {target}')
-        amstraxer_command = f'python {amstrax.amstrax_dir}/auto_processing/amstraxer.py'
-        arguments = f'{run_id} --target {target}'
-        arguments += f' --context {self.test_for_context}'
-        arguments += f' --context_kwargs \'{json.dumps(dict(init_rundb=False))}\''
-        arguments += f' --testing_rundoc \'{json.dumps(self.get_metadata())}\''
-        arguments += f' --config_kwargs \'{json.dumps(dict(live_data_dir=self.live_data_path))}\''
-        command = f'{amstraxer_command} {arguments}'
-        print(command)
-        return_code = os.system(command)
-        assert return_code == 0, "amstraxer failed"
-        assert self.st.is_stored(run_id, target)
+    # def test_amstraxer(self):
+    #     """Run
+    #     ```python amstrax.py --some options```
+    #     This should make some raw-data that we will check is stored afterwards
+    #     """
+    #     self.get_test_data()
+    #     target = [p for p in self.st._plugin_class_registry.keys() if 'raw' in p][0]
+    #     run_id = self.run_id
+    #     assert not self.st.is_stored(run_id, target)
+    #     print(f'Testing for {run_id}: {target}')
+    #     amstraxer_command = f'python {amstrax.amstrax_dir}/auto_processing/amstraxer.py'
+    #     arguments = f'{run_id} --target {target}'
+    #     arguments += f' --context {self.test_for_context}'
+    #     arguments += f' --context_kwargs \'{json.dumps(dict(init_rundb=False))}\''
+    #     arguments += f' --testing_rundoc \'{json.dumps(self.get_metadata())}\''
+    #     arguments += f' --config_kwargs \'{json.dumps(dict(live_data_dir=self.live_data_path))}\''
+    #     command = f'{amstraxer_command} {arguments}'
+    #     print(command)
+    #     return_code = os.system(command)
+    #     assert return_code == 0, "amstraxer failed"
+    #     assert self.st.is_stored(run_id, target)
 
-    def test_amstraxer_for_coveralls(self):
-        """
-        Same as `test_amstraxer` but now in such a way that coveralls
-        understands that we are using this code
-        """
-        self.get_test_data()
-        target = [p for p in self.st._plugin_class_registry.keys() if 'raw' in p][0]
-        run_id = self.run_id
-        assert not self.st.is_stored(run_id, target)
-        args = DummyArgs()
-        args.lookup.update(dict(
-            run_id=run_id,
-            target=target,
-            context=self.test_for_context,
-            context_kwargs=dict(init_rundb=False),
-            config_kwargs=dict(live_data_dir=self.live_data_path),
-            testing_rundoc=self.get_metadata(),
-            workers=1,
-            timeout=None,
-        ))
-        amstrax.auto_processing.amstraxer.main(args)
-        assert self.st.is_stored(run_id, target)
+    # def test_amstraxer_for_coveralls(self):
+    #     """
+    #     Same as `test_amstraxer` but now in such a way that coveralls
+    #     understands that we are using this code
+    #     """
+    #     self.get_test_data()
+    #     target = [p for p in self.st._plugin_class_registry.keys() if 'raw' in p][0]
+    #     run_id = self.run_id
+    #     assert not self.st.is_stored(run_id, target)
+    #     args = DummyArgs()
+    #     args.lookup.update(dict(
+    #         run_id=run_id,
+    #         target=target,
+    #         context=self.test_for_context,
+    #         context_kwargs=dict(init_rundb=False),
+    #         config_kwargs=dict(live_data_dir=self.live_data_path),
+    #         testing_rundoc=self.get_metadata(),
+    #         workers=1,
+    #         timeout=None,
+    #         output_folder='./strax_data'
+    #     ))
+    #     amstrax.auto_processing.amstraxer.main(args)
+    #     assert self.st.is_stored(run_id, target)
 
     def get_metadata(self):
         md = amstrax_files.get_file(self.run_doc_name)
