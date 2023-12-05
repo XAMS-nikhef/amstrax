@@ -21,9 +21,8 @@ export, __all__ = strax.exporter()
         "in ns count as nearby.",
     ),
     strax.Option(
-        "n_top_pmts",
-        default=4,
-        help="Number of top PMTs to consider for area fraction top",
+        "channel_map",
+        help="Map of channel numbers to top, bottom and aqmon, to be defined in the context",
     ),
     strax.Option(
         "check_peak_sum_area_rtol",
@@ -40,7 +39,7 @@ class PeakBasics(strax.Plugin):
 
     parallel = "False"
     rechunk_on_save = False
-    __version__ = "1.0.3"
+    __version__ = "1.2.0"
     dtype = [
         (('Start time of the peak (ns since unix epoch)',
           'time'), np.int64),
@@ -95,10 +94,17 @@ class PeakBasics(strax.Plugin):
         r['tight_coincidence'] = p['tight_coincidence']
         r['n_saturated_channels'] = p['n_saturated_channels']
 
-        n_top = self.config["n_top_pmts"]
-        area_top = p['area_per_channel'][:, n_top:].sum(axis=1)
-        # Recalculate to prevent numerical inaccuracy #442
-        area_total = p['area_per_channel'].sum(axis=1)
+
+        # channel map is something like this
+        # {'bottom': (0, 0), 'top': (1, 4), 'aqmon': (40, 40)}
+        channel_map = self.config['channel_map']
+        top_pmt_indices = channel_map['top']
+        bottom_pmt_indices = channel_map['bottom']
+
+        area_top = p['area_per_channel'][:, top_pmt_indices[0]:top_pmt_indices[1]].sum(axis=1)
+        area_bottom = p['area_per_channel'][:, bottom_pmt_indices[0]:bottom_pmt_indices[1]].sum(axis=1)
+        area_total = area_top + area_bottom
+
         # Negative-area peaks get NaN AFT
         m = p['area'] > 0
         r['area_fraction_top'][m] = area_top[m] / area_total[m]
