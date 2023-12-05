@@ -8,7 +8,9 @@ sphinx:
 
 build:
   os: ubuntu-20.04  # <- add this line
-  image: latest
+  tools:
+    python: "3.8"
+
 
 python:
   version: "3.8"
