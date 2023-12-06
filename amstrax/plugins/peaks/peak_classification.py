@@ -90,4 +90,3 @@ class PeakClassification(strax.Plugin):
                 t += t_i * p["dt"] * weight
             result[p_i] = t / p["area"]
         return result
-

@@ -24,6 +24,7 @@ export, __all__ = strax.exporter()
     strax.Option(
         "channel_map",
         type=immutabledict,
+        track=False,
         help="Map of channel numbers to top, bottom and aqmon, to be defined in the context",
     ),
     strax.Option(
