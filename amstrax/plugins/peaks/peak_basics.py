@@ -34,15 +34,70 @@ export, __all__ = strax.exporter()
         " (if the area of the peak is positively defined)."
         " Set to None to disable.",
     ),
+    strax.Option(
+      's1_min_width', 
+      default=10 ** (1.85),
+      help="Minimum (IQR) width of S1s"
+    ),
+    strax.Option(
+      's1_max_width',
+      default=10 ** (2.15),
+      help="Maximum (IQR) width of S1s"
+    ),
+    strax.Option(
+      's1_min_area',
+      default=10,
+      help="Minimum area (PE) for S1s"
+    ),
+    strax.Option(
+      's2_min_area',
+      default=10,
+      help="Minimum area (PE) for S2s"
+    ),
+    strax.Option(
+      's2_min_width',
+      default=150,
+      help="Minimum width for S2s"
+    ),
+    strax.Option(
+      's1_min_center_position',
+      default=0.2,
+      help="Minimum center position for S2s"
+    ),
+    strax.Option(
+      's1_max_center_position',
+      default=0.44,
+      help="Maximum center position for S2s"
+    ),
+    strax.Option(
+      's1_min_channels',
+      default=5,
+      help="Minimum number of channels for S1s"
+    ),
+    strax.Option(
+      's2_min_channels',
+      default=5,
+      help="Minimum number of channels for S2s"
+    ),
+    strax.Option(
+      's2_min_area_fraction_top',
+      default=0.2,
+      help="Minimum area fraction top for S2s"
+    ),
+    strax.Option(
+      's1_max_area_fraction_top',
+      default=0.5,
+      help="Maximum area fraction top for S1s"
+    ),
 )
 class PeakBasics(strax.Plugin):
     provides = ("peak_basics",)
-    depends_on = ("peaks", "peak_classification")
+    depends_on = ("peaks", )
     data_kind = "peaks"
 
     parallel = "False"
     rechunk_on_save = False
-    __version__ = "1.2.0"
+    __version__ = "2.0"
     dtype = [
         (('Start time of the peak (ns since unix epoch)',
           'time'), np.int64),
@@ -87,6 +142,7 @@ class PeakBasics(strax.Plugin):
         needed_fields = 'time length dt area type center_time'
         for q in needed_fields.split():
             r[q] = p[q]
+
         r['endtime'] = p['time'] + p['dt'] * p['length']
         r['n_channels'] = (p['area_per_channel'] > 0).sum(axis=1)
         r['n_hits'] = p['n_hits']
@@ -96,7 +152,6 @@ class PeakBasics(strax.Plugin):
         r['max_pmt_area'] = np.max(p['area_per_channel'], axis=1)
         r['tight_coincidence'] = p['tight_coincidence']
         r['n_saturated_channels'] = p['n_saturated_channels']
-
 
         # channel map is something like this
         # {'bottom': (0, 0), 'top': (1, 4), 'aqmon': (40, 40)}
@@ -116,11 +171,45 @@ class PeakBasics(strax.Plugin):
 
         if self.config['check_peak_sum_area_rtol'] is not None:
             self.check_area(area_total, p, self.config['check_peak_sum_area_rtol'])
+
+        # Negative or zero-area peaks have centertime at startime
+        r["center_time"] = p["time"]
+        r["center_time"][m] += self.compute_center_times(peaks[m])
+
+        # Determine peak type
+        # 0 = unknown
+        # 1 = s1
+        # 2 = s2
+        
+        # Negative or zero-area peaks have centertime at startime
+        center_position = (r['center_time'] - p['time']) / (p['dt'] * p['length'])
+        
+        is_s1 = p['area'] >= self.config['s1_min_area']
+        is_s1 &= range_50p_area > self.config['s1_min_width']
+        is_s1 &= range_50p_area < self.config['s1_max_width']
+        is_s1 &= center_position > self.config['s1_min_center_position']
+        is_s1 &= center_position < self.config['s1_max_center_position']
+        is_s1 &= r['area_fraction_top'] <= self.config['s1_max_area_fraction_top']
+        is_s1 &= r['n_channels'] >= self.config['s1_min_channels']
+        
+        is_s2 = p['area'] > self.config['s2_min_area']
+        is_s2 &= range_50p_area > self.config['s2_min_width']
+        is_s2 &= r['area_fraction_top'] >= self.config['s2_min_area_fraction_top']
+        is_s2 &= r['n_channels'] >= self.config['s2_min_channels']
+        
+        # if both are true, then it's an unknown peak
+        is_s1 &= ~is_s2
+        is_s2 &= ~is_s1
+
+        r['type'][is_s1] = 1
+        r['type'][is_s2] = 2
+
         return r
 
     # n_competing
     def get_window_size(self):
         return 2 * self.config["nearby_window"]
+
 
     @staticmethod
     @numba.jit(nopython=True, nogil=True, cache=False)
