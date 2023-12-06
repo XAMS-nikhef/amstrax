@@ -10,18 +10,6 @@ export, __all__ = strax.exporter()
 @export
 @strax.takes_config(
     strax.Option(
-        "min_area_fraction",
-        default=0.5,
-        help="The area of competing peaks must be at least "
-        "this fraction of that of the considered peak",
-    ),
-    strax.Option(
-        "nearby_window",
-        default=int(1e6),
-        help="Peaks starting within this time window (on either side)"
-        "in ns count as nearby.",
-    ),
-    strax.Option(
         "channel_map",
         type=immutabledict,
         track=False,
@@ -190,10 +178,6 @@ class PeakBasics(strax.Plugin):
         r['type'][is_s2] = 2
 
         return r
-
-    # n_competing
-    def get_window_size(self):
-        return 2 * self.config["nearby_window"]
 
 
     @staticmethod
