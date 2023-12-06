@@ -33,7 +33,7 @@ class EventPositions(strax.Plugin):
 
     depends_on = ('event_basics',)
 
-    __version__ = '0.3.0'
+    __version__ = '0.4.0'
 
 
     def infer_dtype(self):
@@ -65,7 +65,7 @@ class EventPositions(strax.Plugin):
         algo = self.default_reconstruction_algorithm
 
         for j in 'x y'.split():
-            field = f's2_{j}'
+            field = f'{j}'
             result[j] = events[f's2_{j}_{algo}']
 
             field = f'alt_s2_{j}'
