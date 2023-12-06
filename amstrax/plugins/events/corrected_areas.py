@@ -56,7 +56,7 @@ class CorrectedAreas(strax.Plugin):
         # S1 corrections depend on the actual corrected event position.
         # We use this also for the alternate S1; for e.g. Kr this is
         # fine as the S1 correction varies slowly.
-        event_positions = np.vstack([events["x"], events["y"], events["z"]]).T
+        # event_positions = np.vstack([events["x"], events["y"], events["z"]]).T
 
         elife = self.config["elife"]
 

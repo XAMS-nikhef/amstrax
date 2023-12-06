@@ -40,7 +40,7 @@ class EventBasics(strax.Plugin):
     alternative S2 is selected as the largest S2 other than main S2
     in the time window [main S1 time, main S1 time + max drift time].
     """
-    __version__ = '1.3.3'
+    __version__ = '1.4'
 
     depends_on = ('events',
                   'peak_basics',
@@ -163,7 +163,7 @@ class EventBasics(strax.Plugin):
         self.pos_rec_labels.sort()
 
         self.posrec_save = [(xy + algo)
-                            for xy in ['x_', 'y_']
+                            for xy in ['x_', 'y_', 'r_']
                             for algo in self.pos_rec_labels]
 
     def _get_posrec_dtypes(self):

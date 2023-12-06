@@ -64,11 +64,15 @@ class EventPositions(strax.Plugin):
 
         algo = self.default_reconstruction_algorithm
 
-        for j in 'x y r'.split():
+        for j in 'x y'.split():
             field = f's2_{j}'
             result[j] = events[f's2_{j}_{algo}']
 
             field = f'alt_s2_{j}'
             result[field] = events[f'alt_s2_{j}_{algo}']
+
+        result['r'] = np.sqrt(result['x'] ** 2 + result['y'] ** 2)
+        result['alt_s2_r'] = np.sqrt(result['alt_s2_x'] ** 2 + result['alt_s2_y'] ** 2)
+
 
         return result
