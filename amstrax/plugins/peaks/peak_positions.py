@@ -51,6 +51,6 @@ class PeakPositions(strax.Plugin):
         
         result['x_cgr'] = f_12
         result['y_cgr'] = f_13
-        result['r_cgr'] = np.sqrt(result['x']**2+result['y']**2)
+        result['r_cgr'] = np.sqrt(result['x_cgr']**2+result['y_cgr']**2)
 
         return result

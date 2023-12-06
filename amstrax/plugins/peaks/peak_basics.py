@@ -185,15 +185,15 @@ class PeakBasics(strax.Plugin):
         center_position = (r['center_time'] - p['time']) / (p['dt'] * p['length'])
         
         is_s1 = p['area'] >= self.config['s1_min_area']
-        is_s1 &= range_50p_area > self.config['s1_min_width']
-        is_s1 &= range_50p_area < self.config['s1_max_width']
+        is_s1 &= r['range_50p_area'] > self.config['s1_min_width']
+        is_s1 &= r['range_50p_area'] < self.config['s1_max_width']
         is_s1 &= center_position > self.config['s1_min_center_position']
         is_s1 &= center_position < self.config['s1_max_center_position']
         is_s1 &= r['area_fraction_top'] <= self.config['s1_max_area_fraction_top']
         is_s1 &= r['n_channels'] >= self.config['s1_min_channels']
         
         is_s2 = p['area'] > self.config['s2_min_area']
-        is_s2 &= range_50p_area > self.config['s2_min_width']
+        is_s2 &= r['range_50p_area'] > self.config['s2_min_width']
         is_s2 &= r['area_fraction_top'] >= self.config['s2_min_area_fraction_top']
         is_s2 &= r['n_channels'] >= self.config['s2_min_channels']
         
