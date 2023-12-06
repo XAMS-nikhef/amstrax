@@ -31,6 +31,8 @@ COMMON_OPT_XAMS = dict(
         # Events
         ax.Events,
         ax.EventBasics,
+        ax.EventPositions,
+        ax.CorrectedAreas,
         ax.EventInfo,
         ax.EventWaveform,
         ax.EventAreaPerChannel,

@@ -6,8 +6,8 @@ export, __all__ = strax.exporter()
 @export
 class EventInfo(strax.MergeOnlyPlugin):
     depends_on = ['event_basics',
-                 #   'corrected_areas',
-                 #   'event_positions',
+                  'corrected_areas',
+                  'event_positions',
                  #   'energy_estimates',
                   ]
     rechunk_on_save = True
