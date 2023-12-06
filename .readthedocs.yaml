@@ -8,13 +8,14 @@ build:
   tools:
     python: miniconda3-4.7
 
-conda:
-  file: docs/environment.yml
-
 sphinx:
   configuration: docs/source/conf.py
 
+conda:
+  file: docs/environment.yml
+
 python:
+  - version: 3.8
   install:
     - requirements: extra_requirements/requirements-tests.txt
     - method: pip
