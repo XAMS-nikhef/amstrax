@@ -139,7 +139,7 @@ class PeakBasics(strax.Plugin):
     def compute(self, peaks):
         p = peaks
         r = np.zeros(len(p), self.dtype)
-        needed_fields = 'time length dt area type center_time'
+        needed_fields = 'time length dt area type'
         for q in needed_fields.split():
             r[q] = p[q]
 
