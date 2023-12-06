@@ -44,9 +44,7 @@ class EventBasics(strax.Plugin):
 
     depends_on = ('events',
                   'peak_basics',
-                  'peak_positions',
-                  'peak_proximity', 
-                  'peak_classification')
+                  'peak_positions',)
     provides = 'event_basics'
     data_kind = 'events'
     loop_over = 'events'
