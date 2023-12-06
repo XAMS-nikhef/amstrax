@@ -56,18 +56,8 @@ export, __all__ = strax.exporter()
     ),
     strax.Option(
       's2_min_width',
-      default=750,
+      default=225,
       help="Minimum width for S2s"
-    ),
-    strax.Option(
-      's1_min_center_position',
-      default=0.2,
-      help="Minimum center position for S2s"
-    ),
-    strax.Option(
-      's1_max_center_position',
-      default=0.44,
-      help="Maximum center position for S2s"
     ),
     strax.Option(
       's1_min_channels',
@@ -81,12 +71,12 @@ export, __all__ = strax.exporter()
     ),
     strax.Option(
       's2_min_area_fraction_top',
-      default=0.2,
+      default=0,
       help="Minimum area fraction top for S2s"
     ),
     strax.Option(
       's1_max_area_fraction_top',
-      default=0.5,
+      default=.2,
       help="Maximum area fraction top for S1s"
     ),
 )
@@ -97,7 +87,7 @@ class PeakBasics(strax.Plugin):
 
     parallel = "False"
     rechunk_on_save = False
-    __version__ = "2.0"
+    __version__ = "2.1"
     dtype = [
         (('Start time of the peak (ns since unix epoch)',
           'time'), np.int64),
@@ -180,15 +170,10 @@ class PeakBasics(strax.Plugin):
         # 0 = unknown
         # 1 = s1
         # 2 = s2
-        
-        # Negative or zero-area peaks have centertime at startime
-        center_position = (r['center_time'] - p['time']) / (p['dt'] * p['length'])
-        
+                
         is_s1 = p['area'] >= self.config['s1_min_area']
         is_s1 &= r['range_50p_area'] > self.config['s1_min_width']
         is_s1 &= r['range_50p_area'] < self.config['s1_max_width']
-        is_s1 &= center_position > self.config['s1_min_center_position']
-        is_s1 &= center_position < self.config['s1_max_center_position']
         is_s1 &= r['area_fraction_top'] <= self.config['s1_max_area_fraction_top']
         is_s1 &= r['n_channels'] >= self.config['s1_min_channels']
         
