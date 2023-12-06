@@ -4,5 +4,5 @@ dependencies:
   - graphviz
   - pip
   - pip:
-      - -r requirements.txt
-      - -r extra_requirements/requirements-docs.txt
+      - -r ../requirements.txt
+      - -r ../extra_requirements/requirements-docs.txt
