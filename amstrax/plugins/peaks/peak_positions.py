@@ -1,6 +1,7 @@
 import numba
 import numpy as np
 import strax
+from immutabledict import immutabledict
 export, __all__ = strax.exporter()
 
 

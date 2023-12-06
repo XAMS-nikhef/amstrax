@@ -36,12 +36,12 @@ export, __all__ = strax.exporter()
     ),
     strax.Option(
       's1_min_width', 
-      default=10 ** (1.85),
+      default=10,
       help="Minimum (IQR) width of S1s"
     ),
     strax.Option(
       's1_max_width',
-      default=10 ** (2.15),
+      default=225,
       help="Maximum (IQR) width of S1s"
     ),
     strax.Option(
@@ -56,7 +56,7 @@ export, __all__ = strax.exporter()
     ),
     strax.Option(
       's2_min_width',
-      default=150,
+      default=750,
       help="Minimum width for S2s"
     ),
     strax.Option(
