@@ -104,8 +104,8 @@ class PeakBasics(strax.Plugin):
         top_pmt_indices = channel_map['top']
         bottom_pmt_indices = channel_map['bottom']
 
-        area_top = p['area_per_channel'][:, top_pmt_indices[0]:top_pmt_indices[1]].sum(axis=1)
-        area_bottom = p['area_per_channel'][:, bottom_pmt_indices[0]:bottom_pmt_indices[1]].sum(axis=1)
+        area_top = p['area_per_channel'][:, top_pmt_indices[0]:top_pmt_indices[1]+1].sum(axis=1)
+        area_bottom = p['area_per_channel'][:, bottom_pmt_indices[0]:bottom_pmt_indices[1]+1].sum(axis=1)
         area_total = area_top + area_bottom
 
         # Negative-area peaks get NaN AFT
