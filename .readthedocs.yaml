@@ -4,14 +4,18 @@
 # Required
 version: 2
 
+build:
+  os: "ubuntu-22.04"
+  tools:
+    python: "miniconda3-4.7"
+
 sphinx:
   configuration: docs/source/conf.py
 
-build:
-  image: latest
+conda:
+  environment: docs/environment.yml
 
 python:
-  version: "3.8"
   install:
     - requirements: extra_requirements/requirements-tests.txt
     - method: pip
