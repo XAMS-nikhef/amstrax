@@ -40,13 +40,11 @@ class EventBasics(strax.Plugin):
     alternative S2 is selected as the largest S2 other than main S2
     in the time window [main S1 time, main S1 time + max drift time].
     """
-    __version__ = '1.3.3'
+    __version__ = '1.6'
 
     depends_on = ('events',
                   'peak_basics',
-                  'peak_positions',
-                  'peak_proximity', 
-                  'peak_classification')
+                  'peak_positions',)
     provides = 'event_basics'
     data_kind = 'events'
     loop_over = 'events'
@@ -106,7 +104,6 @@ class EventBasics(strax.Plugin):
             ('area', np.float32, 'area, uncorrected [PE]'),
             ('n_channels', np.int16, 'count of contributing PMTs'),
             ('n_hits', np.int16, 'count of hits contributing at least one sample to the peak'),
-            ('n_competing', np.int32, 'number of competing peaks'),
             ('max_pmt', np.int16, 'PMT number which contributes the most PE'),
             ('max_pmt_area', np.float32, 'area in the largest-contributing PMT (PE)'),
             ('range_50p_area', np.float32, 'width, 50% area [ns]'),
@@ -272,10 +269,10 @@ class EventBasics(strax.Plugin):
                     # peak_properties_to_save += ['max_diff', 'min_diff']
                     pass
                 elif s_i == 2:
-
-                    # peak_properties_to_save += ['x', 'y']
-                    # peak_properties_to_save += self.posrec_save
-                    pass
+                    
+                    algo = self.pos_rec_labels[0]
+                    peak_properties_to_save += [f'x_{algo}', f'y_{algo}']
+                    peak_properties_to_save += self.posrec_save
 
                 field_names = [f'{main_or_alt}{s_i}_{name}' for name in peak_properties_to_save]
                 self.copy_largest_peaks_into_event(event,

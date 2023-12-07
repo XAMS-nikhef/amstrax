@@ -1,4 +1,5 @@
 # Config for writing documentation
+# Fails if not it master branch
 
 # Required
 version: 2

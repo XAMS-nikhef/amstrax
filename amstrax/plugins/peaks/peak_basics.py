@@ -1,6 +1,7 @@
 import numba
 import numpy as np
 import strax
+from immutabledict import immutabledict
 
 export, __all__ = strax.exporter()
 
@@ -9,21 +10,10 @@ export, __all__ = strax.exporter()
 @export
 @strax.takes_config(
     strax.Option(
-        "min_area_fraction",
-        default=0.5,
-        help="The area of competing peaks must be at least "
-        "this fraction of that of the considered peak",
-    ),
-    strax.Option(
-        "nearby_window",
-        default=int(1e6),
-        help="Peaks starting within this time window (on either side)"
-        "in ns count as nearby.",
-    ),
-    strax.Option(
-        "n_top_pmts",
-        default=4,
-        help="Number of top PMTs to consider for area fraction top",
+        "channel_map",
+        type=immutabledict,
+        track=False,
+        help="Map of channel numbers to top, bottom and aqmon, to be defined in the context",
     ),
     strax.Option(
         "check_peak_sum_area_rtol",
@@ -32,15 +22,60 @@ export, __all__ = strax.exporter()
         " (if the area of the peak is positively defined)."
         " Set to None to disable.",
     ),
+    strax.Option(
+      's1_min_width', 
+      default=10,
+      help="Minimum (IQR) width of S1s"
+    ),
+    strax.Option(
+      's1_max_width',
+      default=225,
+      help="Maximum (IQR) width of S1s"
+    ),
+    strax.Option(
+      's1_min_area',
+      default=10,
+      help="Minimum area (PE) for S1s"
+    ),
+    strax.Option(
+      's2_min_area',
+      default=10,
+      help="Minimum area (PE) for S2s"
+    ),
+    strax.Option(
+      's2_min_width',
+      default=225,
+      help="Minimum width for S2s"
+    ),
+    strax.Option(
+      's1_min_channels',
+      default=5,
+      help="Minimum number of channels for S1s"
+    ),
+    strax.Option(
+      's2_min_channels',
+      default=5,
+      help="Minimum number of channels for S2s"
+    ),
+    strax.Option(
+      's2_min_area_fraction_top',
+      default=0,
+      help="Minimum area fraction top for S2s"
+    ),
+    strax.Option(
+      's1_max_area_fraction_top',
+      default=.2,
+      help="Maximum area fraction top for S1s"
+    ),
 )
 class PeakBasics(strax.Plugin):
     provides = ("peak_basics",)
-    depends_on = ("peaks", "peak_classification")
+    depends_on = ("peaks", )
     data_kind = "peaks"
 
     parallel = "False"
     rechunk_on_save = False
-    __version__ = "1.0"
+    __version__ = "2.1"
     dtype = [
         (('Start time of the peak (ns since unix epoch)',
           'time'), np.int64),
@@ -85,6 +120,7 @@ class PeakBasics(strax.Plugin):
         needed_fields = 'time length dt area type'
         for q in needed_fields.split():
             r[q] = p[q]
+
         r['endtime'] = p['time'] + p['dt'] * p['length']
         r['n_channels'] = (p['area_per_channel'] > 0).sum(axis=1)
         r['n_hits'] = p['n_hits']
@@ -95,10 +131,16 @@ class PeakBasics(strax.Plugin):
         r['tight_coincidence'] = p['tight_coincidence']
         r['n_saturated_channels'] = p['n_saturated_channels']
 
-        n_top = self.config["n_top_pmts"]
-        area_top = p['area_per_channel'][:, n_top:].sum(axis=1)
-        # Recalculate to prevent numerical inaccuracy #442
-        area_total = p['area_per_channel'].sum(axis=1)
+        # channel map is something like this
+        # {'bottom': (0, 0), 'top': (1, 4), 'aqmon': (40, 40)}
+        channel_map = self.config['channel_map']
+        top_pmt_indices = channel_map['top']
+        bottom_pmt_indices = channel_map['bottom']
+
+        area_top = p['area_per_channel'][:, top_pmt_indices[0]:top_pmt_indices[1]+1].sum(axis=1)
+        area_bottom = p['area_per_channel'][:, bottom_pmt_indices[0]:bottom_pmt_indices[1]+1].sum(axis=1)
+        area_total = area_top + area_bottom
+
         # Negative-area peaks get NaN AFT
         m = p['area'] > 0
         r['area_fraction_top'][m] = area_top[m] / area_total[m]
@@ -107,14 +149,36 @@ class PeakBasics(strax.Plugin):
 
         if self.config['check_peak_sum_area_rtol'] is not None:
             self.check_area(area_total, p, self.config['check_peak_sum_area_rtol'])
+
         # Negative or zero-area peaks have centertime at startime
-        r['center_time'] = p['time']
-        r['center_time'][m] += self.compute_center_times(peaks[m])
+        r["center_time"] = p["time"]
+        r["center_time"][m] += self.compute_center_times(peaks[m])
+
+        # Determine peak type
+        # 0 = unknown
+        # 1 = s1
+        # 2 = s2
+                
+        is_s1 = p['area'] >= self.config['s1_min_area']
+        is_s1 &= r['range_50p_area'] > self.config['s1_min_width']
+        is_s1 &= r['range_50p_area'] < self.config['s1_max_width']
+        is_s1 &= r['area_fraction_top'] <= self.config['s1_max_area_fraction_top']
+        is_s1 &= r['n_channels'] >= self.config['s1_min_channels']
+        
+        is_s2 = p['area'] > self.config['s2_min_area']
+        is_s2 &= r['range_50p_area'] > self.config['s2_min_width']
+        is_s2 &= r['area_fraction_top'] >= self.config['s2_min_area_fraction_top']
+        is_s2 &= r['n_channels'] >= self.config['s2_min_channels']
+        
+        # if both are true, then it's an unknown peak
+        is_s1 &= ~is_s2
+        is_s2 &= ~is_s1
+
+        r['type'][is_s1] = 1
+        r['type'][is_s2] = 2
+
         return r
 
-    # n_competing
-    def get_window_size(self):
-        return 2 * self.config["nearby_window"]
 
     @staticmethod
     @numba.jit(nopython=True, nogil=True, cache=False)

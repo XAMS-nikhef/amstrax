@@ -2,7 +2,7 @@ import numpy as np
 import amstrax
 
 
-DEFAULT_POSREC_ALGO = 'lpf'
+DEFAULT_POSREC_ALGO = 'cgr'
 
 import strax
 
@@ -14,7 +14,6 @@ export, __all__ = strax.exporter()
     strax.Option('electron_drift_velocity',
                  default=0.0000016,
                  help='Vertical electron drift velocity in cm/ns (1e4 m/ms)'),
-
     strax.Option('electron_drift_time_gate',
                  default=1,
                  help='Electron drift time from the gate in ns'),
@@ -22,7 +21,6 @@ export, __all__ = strax.exporter()
                  default=DEFAULT_POSREC_ALGO,
                  help="default reconstruction algorithm that provides (x,y)"),
 )
-
 
 class EventPositions(strax.Plugin):
     """
@@ -35,58 +33,19 @@ class EventPositions(strax.Plugin):
 
     depends_on = ('event_basics',)
 
-    __version__ = '0.3.0'
+    __version__ = '0.4.0'
 
 
     def infer_dtype(self):
         dtype = []
         for j in 'x y r'.split():
-            comment = f'Main interaction {j}-position, field-distortion corrected (cm)'
+            comment = f'Main interaction {j}-position'
             dtype += [(j, np.float32, comment)]
-            for s_i in [1, 2]:
-                comment = f'Alternative S{s_i} interaction (rel. main S{3 - s_i}) {j}-position, field-distortion corrected (cm)'
-                field = f'alt_s{s_i}_{j}_fdc'
+            for s_i in [2, ]:
+                comment = f'Alternative S{s_i} interaction (rel. main S{3 - s_i}) {j}-position'
+                field = f'alt_s{s_i}_{j}'
                 dtype += [(field, np.float32, comment)]
 
-        for j in ['z']:
-            comment = 'Interaction z-position, corrected to non-uniform drift velocity (cm)'
-            dtype += [(j, np.float32, comment)]
-            comment = 'Interaction z-position, corrected to non-uniform drift velocity, duplicated (cm)'
-            dtype += [(j + "_dv_corr", np.float32, comment)]
-            for s_i in [1, 2]:
-                comment = f'Alternative S{s_i} z-position (rel. main S{3 - s_i}), corrected to non-uniform drift velocity (cm)'
-                field = f'alt_s{s_i}_z'
-                dtype += [(field, np.float32, comment)]
-                # values for corrected Z position
-                comment = f'Alternative S{s_i} z-position (rel. main S{3 - s_i}), corrected to non-uniform drift velocity, duplicated (cm)'
-                field = f'alt_s{s_i}_z_dv_corr'
-                dtype += [(field, np.float32, comment)]
-
-
-        naive_pos = []
-        fdc_pos = []
-        for j in 'r z'.split():
-            naive_pos += [(f'{j}_naive',
-                           np.float32,
-                           f'Main interaction {j}-position with observed position (cm)')]
-            fdc_pos += [(f'{j}_field_distortion_correction',
-                         np.float32,
-                         f'Correction added to {j}_naive for field distortion (cm)')]
-            for s_i in [1, 2]:
-                naive_pos += [(
-                    f'alt_s{s_i}_{j}_naive',
-                    np.float32,
-                    f'Alternative S{s_i} interaction (rel. main S{3 - s_i}) {j}-position with observed position (cm)')]
-                fdc_pos += [(f'alt_s{s_i}_{j}_field_distortion_correction',
-                             np.float32,
-                             f'Correction added to alt_s{s_i}_{j}_naive for field distortion (cm)')]
-        dtype += naive_pos + fdc_pos
-        for s_i in [1, 2]:
-            dtype += [(f'alt_s{s_i}_theta',
-                       np.float32,
-                       f'Alternative S{s_i} (rel. main S{3 - s_i}) interaction angular position (radians)')]
-
-        dtype += [('theta', np.float32, f'Main interaction angular position (radians)')]
         return dtype + strax.time_fields
 
     def setup(self):
@@ -103,38 +62,17 @@ class EventPositions(strax.Plugin):
         result = {'time': events['time'],
                   'endtime': strax.endtime(events)}
 
-        # s_i == 0 indicates the main event, while s_i != 0 means alternative S1 or S2 is used based on s_i value
-        # while the other peak is the main one (e.g., s_i == 1 means that the event is defined using altS1 and main S2)
-        for s_i in [0, 1, 2]:
-            # alt_sx_interaction_drift_time is calculated between main Sy and alternative Sx
-            drift_time = events['drift_time'] if not s_i else events[f'alt_s{s_i}_interaction_drift_time']
-            z_obs = - self.electron_drift_velocity * drift_time
-            xy_pos = 's2_' if s_i != 2 else 'alt_s2_'
-            orig_pos = np.vstack([events[f'{xy_pos}x'], events[f'{xy_pos}y'], z_obs]).T
-            r_obs = np.linalg.norm(orig_pos[:, :2], axis=1)
-            z_obs = z_obs + self.electron_drift_velocity * self.electron_drift_time_gate
+        algo = self.default_reconstruction_algorithm
 
-            # apply z bias correction
-            z_dv_delta = 0 # self.z_bias_map(np.array([r_obs, z_obs]).T, map_name='z_bias_map')
-            corr_pos = np.vstack([events[f"{xy_pos}x"], events[f"{xy_pos}y"], z_obs - z_dv_delta]).T
-            # apply r bias correction
-            delta_r = 0 # self.map(corr_pos)
-            with np.errstate(invalid='ignore', divide='ignore'):
-                r_cor = r_obs + delta_r
-                scale = np.divide(r_cor, r_obs, out=np.zeros_like(r_cor), where=r_obs != 0)
+        for j in 'x y'.split():
+            field = f'{j}'
+            result[j] = events[f's2_{j}_{algo}']
 
-            pre_field = '' if s_i == 0 else f'alt_s{s_i}_'
-            post_field = '' if s_i == 0 else '_fdc'
-            result.update({f'{pre_field}x{post_field}': orig_pos[:, 0] * scale,
-                           f'{pre_field}y{post_field}': orig_pos[:, 1] * scale,
-                           f'{pre_field}r{post_field}': r_cor,
-                           f'{pre_field}r_naive': r_obs,
-                           f'{pre_field}r_field_distortion_correction': delta_r,
-                           f'{pre_field}theta': np.arctan2(orig_pos[:, 1], orig_pos[:, 0]),
-                           f'{pre_field}z_naive': z_obs,
-                           # using z_dv_corr (z_obs - z_dv_delta) in agreement with the dtype description
-                           # the FDC for z (z_cor) is found to be not reliable (see #527)
-                           f'{pre_field}z': z_obs - z_dv_delta,
-                           f'{pre_field}z_dv_corr': z_obs - z_dv_delta,
-                           })
+            field = f'alt_s2_{j}'
+            result[field] = events[f'alt_s2_{j}_{algo}']
+
+        result['r'] = np.sqrt(result['x'] ** 2 + result['y'] ** 2)
+        result['alt_s2_r'] = np.sqrt(result['alt_s2_x'] ** 2 + result['alt_s2_y'] ** 2)
+
+
         return result

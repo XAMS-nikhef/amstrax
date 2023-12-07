@@ -16,6 +16,7 @@ import sys
 import numpy as np
 import strax
 
+
 export, __all__ = strax.exporter()
 __all__ += ['amstrax_dir', 
             'to_pe',
@@ -117,6 +118,34 @@ def print_versions(
         print(info)
     if return_string:
         return info
+    return df
+
+@export
+def get_config_defaults(st, exclude=['raw_records', 'records'], include=[]):
+    configs = []
+    for plugin in st._plugin_class_registry.values():
+        if len(include) > 0:
+            skip = True
+            for t in include:
+                if t in plugin.provides:
+                    skip = False
+            if skip:
+                continue
+
+        # if raw_records or records in plugin.provides:
+        skip = False
+        for t in exclude:
+            if t in plugin.provides:
+                print(f"{plugin.__name__} {t} skipped")
+                skip = True
+        if not skip:
+            takes_config = dict(plugin.takes_config)
+            for name, config in plugin.takes_config.items():
+                    configs.append((name, config.default))
+    configs = set(configs)
+
+    df = pd.DataFrame(configs, columns=['name', 'default'])
+
     return df
 
 
