@@ -1,3 +1,37 @@
+2.1.0 / 2023-12-06
+------------------
+
+New release, major changes.
+
+General: 
+
+- Refactoerd DB connection
+- Refactored secrets handling
+- Refactored xams context
+- Added new minianalysis
+- Fixed deprecated docs building framework
+
+Processing plugins:
+
+>>Peak processing
+- Restructured plugins
+- Fixed area fraction top calculation
+- Peak classification works well, moved to peak_basics (to tune with options)
+- Introduced gain correction (to tune with options, for now)
+- Introduced position reconstruction with center of gravity
+
+>>Events processing
+- Restructured plugins
+- Added simple S2 area correction for electron lifetime (to tune with options, for now)
+- Added positions at event level
+- Added new peak info at event level: waveform and area per channel
+
+Processing framework:
+- New files for processing, copying, deleting data..
+- Moved all auto processing to cluster
+
+
+
 2.0.0 / 2023-08-29
 ------------------
 
