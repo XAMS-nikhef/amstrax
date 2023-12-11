@@ -34,7 +34,7 @@ class Events(strax.OverlapWindowPlugin):
         return (2 * self.config['left_event_extension'] +
                 self.config['right_event_extension'])
 
-    def compute(self, peaks):
+    def compute(self, peaks, start, end):
         le = self.config['left_event_extension']
         re = self.config['right_event_extension']
 
@@ -51,6 +51,12 @@ class Events(strax.OverlapWindowPlugin):
             gap_threshold=le + re + 1,
             left_extension=le,
             right_extension=re)
+
+        # Don't extend beyond the chunk boundaries
+        # This will often happen for events near the invalid boundary of the
+        # overlap processing (which should be thrown away)
+        t0 = np.clip(t0, start, end)
+        t1 = np.clip(t1, start, end)
 
         result = np.zeros(len(t0), self.dtype)
         result['time'] = t0
