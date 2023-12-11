@@ -179,12 +179,16 @@ def handle_runs(rundocs, args):
 
         live_data_path = os.path.join(path, run_id)
 
-        # Copy to stoomboot
-        copied_stomboot = copy_data(run_id, live_data_path, STORAGE_PATHS['stbc'], 'stbc', args.production, args.ssh_host)
+        # Check if data is on stoomboot and copy if not
+        copied_stomboot = False
+        if not any(d['type'] == 'live' and d['host'] == 'stbc' for d in rd['data']):
+            copied_stomboot = copy_data(run_id, live_data_path, STORAGE_PATHS['stbc'], 'stbc', args.production, args.ssh_host)
+        else:
+            copied_stomboot = True
 
-        # Optionally copy to dcache
-        if copied_stomboot and not args.only_stoomboot:
-            if not any(d['type'] == 'live' and d['host'] == 'dcache' for d in rd['data']):
+        if copied_stomboot:
+            # Check if data is on dcache and copy if not (and if not only_stoomboot)
+            if not args.only_stoomboot and (not any(d['type'] == 'live' and d['host'] == 'dcache' for d in rd['data'])):
                 copy_data(run_id, live_data_path, STORAGE_PATHS['dcache'], 'dcache', args.production, args.ssh_host)
                 runs_copied = True
     
