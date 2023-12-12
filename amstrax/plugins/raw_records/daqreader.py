@@ -392,9 +392,6 @@ def split_channel_ranges(records, channel_ranges):
 
     channel_ranges is a list of tuples specifying the channel ranges for each subdetector.
     """
-
-    print("Channel ranges", channel_ranges)
-
     n_subdetectors = len(channel_ranges)
     which_detector = np.zeros(len(records), dtype=np.int8)
     n_in_detector = np.zeros(n_subdetectors, dtype=np.int64)
