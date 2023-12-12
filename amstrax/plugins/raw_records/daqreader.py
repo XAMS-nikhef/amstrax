@@ -359,9 +359,7 @@ class DAQReader(strax.Plugin):
         # Convert to strax chunks
         result = dict()
         for i, subd in enumerate(channel_ranges):
-
-            print(f"{i}. Subdetector {subd} has {len(result_arrays[i])} records")
-
+            
             if len(result_arrays[i]):
                 # dt may differ per subdetector
                 dt = result_arrays[i]['dt'][0]
