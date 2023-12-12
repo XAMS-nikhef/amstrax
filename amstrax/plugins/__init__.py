@@ -14,3 +14,10 @@ from .peaks import *
 
 from . import events
 from .events import *
+
+from . import records_ext
+from .records_ext import *
+
+from . import peaks_ext
+from .peaks_ext import *
+
