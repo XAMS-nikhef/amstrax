@@ -6,7 +6,6 @@ import os
 import subprocess
 import time
 import pymongo
-import amstrax
 import logging
 import os
 
@@ -187,6 +186,8 @@ if __name__ == '__main__':
 
     log_name = "copy_live"
 
+    import amstrax 
+    
     versions = amstrax.print_versions(
         modules="strax amstrax numpy numba".split(),
         include_git=False,

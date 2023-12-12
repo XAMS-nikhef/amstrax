@@ -2,7 +2,6 @@ __version__ = "2.1.0"
 
 from .common import *
 from .rundb import *
-from .logging import *
 
 from . import plugins
 from .plugins import *

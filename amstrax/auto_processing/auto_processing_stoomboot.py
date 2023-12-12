@@ -59,9 +59,6 @@ def main(args):
     """
     Main function to handle auto-processing of xams data.
     """
-
-    # Import custom modules
-    import amstrax
     
     version = '2.1.0'
     log.info(f'Starting autoprocess version {version}...')
@@ -269,6 +266,8 @@ if __name__ == '__main__':
     args = parse_args()
 
     log_name = "auto_processing_stoomboot"
+
+    import amstrax
 
     versions = amstrax.print_versions(
         modules="strax amstrax numpy numba".split(),
