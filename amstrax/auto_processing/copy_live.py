@@ -32,6 +32,8 @@ def parse_args():
                         help='The location where the logs should be stored')
     parser.add_argument('--ssh_host', type=str, default='stbc',
                         help='The host that you want to copy the data to')
+    parser.add_argument('--min_run_number', type=int, default=1555,
+                        help='The minimum run number to start copying from')
     parser.add_argument('--production', action='store_true', default=False,
                         help='If you want to run the script in production mode')
     return parser.parse_args()
@@ -71,7 +73,7 @@ def get_rundocs(runsdb, args):
     base_query = {
         # end is at least 1 second ago
         'end': {'$lt': datetime.datetime.now() - datetime.timedelta(seconds=1)},
-        'number': {'$gt': 2000},
+        'number': {'$gt': args.min_run_number},
         'data': {
             '$elemMatch': {
                 'type': 'live',
