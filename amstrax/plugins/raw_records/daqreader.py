@@ -359,7 +359,7 @@ class DAQReader(strax.Plugin):
         # Convert to strax chunks
         result = dict()
         for i, subd in enumerate(channel_ranges):
-            
+
             if len(result_arrays[i]):
                 # dt may differ per subdetector
                 dt = result_arrays[i]['dt'][0]
@@ -403,8 +403,8 @@ def split_channel_ranges(records, channel_ranges):
                 which_detector[r_i] = d_i
                 n_in_detector[d_i] += 1
                 break
-        else:
-            raise ValueError(f"Bad data from DAQ: data in unknown channel {r['channel']}")
+            else:
+                raise ValueError(f"Bad data from DAQ: data in unknown channel {r['channel']}")
 
     # Allocate memory
     results = numba.typed.List()
