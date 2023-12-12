@@ -61,7 +61,7 @@ class DAQLogHandler(logging.Handler):
                  process_name: str,
                  mc=None,
                  opening_message=None,
-                 logdir='/daq_common2/logs/'):
+                 logdir='~/daq/logs/'):
         logging.Handler.__init__(self)
         self.opening_message=opening_message
         self.process_name = process_name
