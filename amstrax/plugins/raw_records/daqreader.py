@@ -408,8 +408,9 @@ def split_channel_ranges(records, channel_ranges):
                 break
             else:
                 # channel_ranges should be sorted ascending.
-                print(f"Unknown channel found: {r['channel']}")  # Add this line for debugging
-                raise ValueError(f"Bad data from DAQ: data in unknown channel {int(r['channel'])}")
+                channel_int = int(r['channel'])  # Convert to int outside the f-string
+                print("Unknown channel found:", channel_int)  # Add this line for debugging
+                raise ValueError(f"Bad data from DAQ: data in unknown channel")
 
     # Allocate memory
     results = numba.typed.List()
