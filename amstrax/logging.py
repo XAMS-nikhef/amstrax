@@ -176,3 +176,4 @@ class DAQLogHandler(logging.Handler):
         """
         func_line = f'{func_name} (L{lineno})'
         return f"{when.isoformat(sep=' ')} | {str(level).upper():8} | {func_line:20} | {msg}\n"
+    
