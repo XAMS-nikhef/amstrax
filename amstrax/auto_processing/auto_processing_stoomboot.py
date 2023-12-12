@@ -4,7 +4,6 @@ import os
 import subprocess
 from datetime import datetime, timedelta
 import logging
-from log.handlers import TimedRotatingFileHandler
 
 import sys
 

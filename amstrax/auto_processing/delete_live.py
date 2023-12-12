@@ -8,7 +8,6 @@ import time
 import pymongo
 import amstrax
 import logging
-from log.handlers import TimedRotatingFileHandler
 import os
 
 def parse_args():
