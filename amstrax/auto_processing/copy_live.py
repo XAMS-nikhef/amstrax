@@ -157,8 +157,10 @@ def handle_runs(rundocs, args):
         # Check if data is on stoomboot and copy if not
         copied_stomboot = False
         if not any(d['type'] == 'live' and d['host'] == 'stbc' for d in rd['data']):
-            copied_stomboot = copy_data(run_id, live_data_path, STORAGE_PATHS['stbc'], 'stbc', args.production, args.ssh_host)
+            exit_code = copy_data(run_id, live_data_path, STORAGE_PATHS['stbc'], 'stbc', args.production, args.ssh_host)
+            copied_stomboot = (exit_code == 0)
         else:
+            # it was already on stoomboot
             copied_stomboot = True
 
         if copied_stomboot:
