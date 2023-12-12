@@ -9,6 +9,3 @@ iminuit
 matplotlib
 packaging
 gitpython
-logging
-importlib
-datetime
