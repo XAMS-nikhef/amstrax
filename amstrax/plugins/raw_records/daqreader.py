@@ -404,6 +404,8 @@ def split_channel_ranges(records, channel_ranges):
                 n_in_detector[d_i] += 1
                 break
             else:
+                # channel_ranges should be sorted ascending.
+                print(r["time"], r["channel"], channel_ranges)
                 raise ValueError(f"Bad data from DAQ: data in unknown channel {r['channel']}")
 
     # Allocate memory
