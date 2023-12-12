@@ -8,7 +8,7 @@ import time
 import pymongo
 import amstrax
 import logging
-from logging.handlers import TimedRotatingFileHandler
+from log.handlers import TimedRotatingFileHandler
 import os
 
 # Define a dictionary for storage locations
@@ -37,32 +37,6 @@ def parse_args():
     parser.add_argument('--production', action='store_true', default=False,
                         help='If you want to run the script in production mode')
     return parser.parse_args()
-
-
-def setup_logging(logs_path):
-    """
-    Setup logging configuration with daily log rotation.
-    """
-    if not os.path.exists(logs_path):
-        os.makedirs(logs_path)
-
-    log_file = os.path.join(logs_path, 'copying.log')
-
-    log_formatter = logging.Formatter("%(asctime)s | %(levelname)-5.5s | %(message)s")
-    logger = logging.getLogger()
-
-    logger.setLevel(logging.INFO)
-
-    # Setup file handler with daily rotation
-    file_handler = TimedRotatingFileHandler(log_file, when="midnight", interval=1, backupCount=7)
-    file_handler.setFormatter(log_formatter)
-    file_handler.suffix = "%Y%m%d"
-    logger.addHandler(file_handler)
-
-    # Setup console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(log_formatter)
-    logger.addHandler(console_handler)
 
 
 def get_rundocs(runsdb, args):
@@ -138,7 +112,7 @@ def copy_data(run_id, live_data_path, location, hostname, production, ssh_host):
     Copy data to the specified location using rsync.
     """
     if not os.path.exists(live_data_path):
-        logging.error(f"Could not find the data for run {run_id} at {live_data_path}, marking run as abandon")
+        log.error(f"Could not find the data for run {run_id} at {live_data_path}, marking run as abandon")
         # add a tag to the tags array in the database, marking the run as abandon
         runsdb.update_one(
             {'number': int(run_id)},
@@ -147,16 +121,16 @@ def copy_data(run_id, live_data_path, location, hostname, production, ssh_host):
 
         return
 
-    logging.info(f"Copying run {run_id} to {location}")
+    log.info(f"Copying run {run_id} to {location}")
     copy_cmd = ['rsync', '-av', live_data_path, f'{ssh_host}:{location}']
     copy = subprocess.run(copy_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     if copy.returncode != 0:
-        logging.error(f"Something went wrong copying run {run_id} to {location}")
-        logging.error(copy.stderr.decode())
+        log.error(f"Something went wrong copying run {run_id} to {location}")
+        log.error(copy.stderr.decode())
     else:
-        logging.info(f"Successfully copied run {run_id} to {location}")
-        logging.info(copy.stdout.decode())
+        log.info(f"Successfully copied run {run_id} to {location}")
+        log.info(copy.stdout.decode())
 
         if production:
             runsdb.update_one(
@@ -164,7 +138,7 @@ def copy_data(run_id, live_data_path, location, hostname, production, ssh_host):
                 {'$push': {'data': {'type': 'live', 'host': hostname, 'location': location,
                                     'by': 'copy_live', 'time': datetime.datetime.now()}}}
             )
-            logging.info(f"Successfully updated the database for run {run_id}")
+            log.info(f"Successfully updated the database for run {run_id}")
 
     return copy.returncode
 
@@ -176,7 +150,7 @@ def handle_runs(rundocs, args):
         try:
             path = next(d['location'] for d in rd['data'] if d['type'] == 'live' and d['host'] == 'daq')
         except StopIteration:
-            logging.error(f"Could not find the DB entry for live data of run {rd['number']}")
+            log.error(f"Could not find the DB entry for live data of run {rd['number']}")
             continue
 
         live_data_path = os.path.join(path, run_id)
@@ -200,22 +174,39 @@ def main(args):
     """
     Main function to automate copying of new runs.
     """
-    logging.info('Starting to copy new runs...')
+
+    log.info('Starting to copy new runs...')
     rundocs = get_rundocs(runsdb, args)
     print(f"Found {len(rundocs)} runs to copy")
     runs_copied = handle_runs(rundocs, args)
-    logging.info('Finished copying new runs.')
+    log.info('Finished copying new runs.')
 
 if __name__ == '__main__':
     args = parse_args()
-    setup_logging(args.logs_path)
+
+    log_name = "copy_live"
+
+    versions = amstrax.print_versions(
+        modules="strax amstrax numpy numba".split(),
+        include_git=False,
+        return_string=True,
+    )
+
+    log = amstrax.get_daq_logger(
+        log_name,
+        log_name,
+        level=logging.DEBUG,
+        opening_message=f"I am processing with these software versions: {versions}",
+        logdir=args.logs_path,
+    )
+
     runsdb = amstrax.get_mongo_collection()
 
     if args.loop_infinite:
         while True:
             runs_copied = main(args)
             sleep_time = 1 if runs_copied else args.sleep_time
-            logging.info(f"Sleeping for {args.sleep_time} seconds...")
+            log.info(f"Sleeping for {args.sleep_time} seconds...")
             time.sleep(args.sleep_time)
     else:
         main(args)
