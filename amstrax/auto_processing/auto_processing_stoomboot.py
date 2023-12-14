@@ -4,7 +4,6 @@ import os
 import subprocess
 from datetime import datetime, timedelta
 import logging
-from logging.handlers import TimedRotatingFileHandler
 
 import sys
 
@@ -43,7 +42,7 @@ def parse_args():
         help="Memory per CPU")
     parser.add_argument(
         '--logs_path',
-        default='/data/xenon/xams_v2/logs/auto_processing',
+        default='/data/xenon/xams_v2/logs/',
         help="Path where to save logs")
     parser.add_argument(
         '--production',
@@ -56,42 +55,13 @@ def parse_args():
 
     return parser.parse_args()
 
-
-def setup_logging(logs_path):
-    """
-    Setup logging configuration with daily log rotation.
-    """
-    if not os.path.exists(logs_path):
-        os.makedirs(logs_path)
-
-    log_file = os.path.join(logs_path, 'copying.log')
-
-    log_formatter = logging.Formatter("%(asctime)s | %(levelname)-5.5s | %(message)s")
-    logger = logging.getLogger()
-
-    logger.setLevel(logging.INFO)
-
-    # Setup file handler with daily rotation
-    file_handler = TimedRotatingFileHandler(log_file, when="midnight", interval=1, backupCount=7)
-    file_handler.setFormatter(log_formatter)
-    file_handler.suffix = "%Y%m%d"
-    logger.addHandler(file_handler)
-
-    # Setup console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(log_formatter)
-    logger.addHandler(console_handler)
-
 def main(args):
     """
     Main function to handle auto-processing of xams data.
     """
-
-    # Import custom modules
-    import amstrax
     
     version = '2.1.0'
-    logging.info(f'Starting autoprocess version {version}...')
+    log.info(f'Starting autoprocess version {version}...')
 
     # Get configuration and setup
     amstrax_dir = amstrax.amstrax_dir
@@ -99,7 +69,7 @@ def main(args):
     output_folder = args.output_folder
     targets = " ".join(args.target)
     runs_col = amstrax.get_mongo_collection()
-    logging.info('Correctly connected, starting loop')
+    log.info('Correctly connected, starting loop')
     amstrax_dir = amstrax.amstrax_dir
     
     client = amstrax.get_mongo_client()
@@ -117,17 +87,17 @@ def main(args):
         handle_running_jobs(runs_col, production=args.production)
 
         if not run_docs_to_do:
-            logging.info(f'I found no runs to process, time to take a nap for {nap_time} seconds')
+            log.info(f'I found no runs to process, time to take a nap for {nap_time} seconds')
             time.sleep(nap_time)
             continue
 
         # Submit new jobs if under max limit
         submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir=amstrax_dir)
 
-        logging.info(f"Waiting {nap_time} seconds before rechecking, press Ctrl+C to quit...")
+        log.info(f"Waiting {nap_time} seconds before rechecking, press Ctrl+C to quit...")
         time.sleep(nap_time)
 
-    logging.info('Done!')
+    log.info('Done!')
 
 # Define additional functions to modularize the script
 
@@ -181,8 +151,8 @@ def update_task_list(args, runs_col, auto_processing_on):
 
     # Log the found runs
     if run_docs_to_do:
-        logging.info(f'I found {len(run_docs_to_do)} runs to process, time to get to work!')
-        logging.info(f'Run numbers: {[run_doc["number"] for run_doc in run_docs_to_do]}')
+        log.info(f'I found {len(run_docs_to_do)} runs to process, time to get to work!')
+        log.info(f'Run numbers: {[run_doc["number"] for run_doc in run_docs_to_do]}')
     return run_docs_to_do
 
 
@@ -208,7 +178,7 @@ def handle_running_jobs(runs_col, production=False):
         if processing_status['status'] in ['running', 'submitted']:
             if processing_status['time'] < datetime.now() - timedelta(hours=0, minutes=30):
                 new_status = 'failed'
-                logging.info(f'Run {run_number} has a job {processing_status["status"]} for more than 1 hour, marking as {new_status}')
+                log.info(f'Run {run_number} has a job {processing_status["status"]} for more than 1 hour, marking as {new_status}')
 
                 if production:
                     runs_col.update_one(
@@ -218,7 +188,7 @@ def handle_running_jobs(runs_col, production=False):
                     )
 
                 else:
-                    logging.info(f'Would have updated run {run_number} to {new_status} in the database')
+                    log.info(f'Would have updated run {run_number} to {new_status} in the database')
 
 
 def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
@@ -233,20 +203,20 @@ def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
     run_docs_running = list(runs_col.find(query, projection).sort(sort))
     num_running_jobs = len(run_docs_running)
 
-    logging.info(f'Found {num_running_jobs} runs that are running or submitted')
+    log.info(f'Found {num_running_jobs} runs that are running or submitted')
 
     for run_doc in run_docs_running:
-        logging.info(f'Run {run_doc["number"]} is in ststus {run_doc["processing_status"]["status"]}')
+        log.info(f'Run {run_doc["number"]} is in ststus {run_doc["processing_status"]["status"]}')
 
     if num_running_jobs >= args.max_jobs:
-        logging.info(f'The number of running jobs ({num_running_jobs}) reached the limit ({args.max_jobs})')
+        log.info(f'The number of running jobs ({num_running_jobs}) reached the limit ({args.max_jobs})')
         return
 
     # Submit new jobs
     max_jobs_to_submit = args.max_jobs - num_running_jobs
 
     will_do_run_ids = [int(run_doc['number']) for run_doc in run_docs_to_do[:max_jobs_to_submit]]
-    logging.info(f'Will submit jobs for runs: {will_do_run_ids}')
+    log.info(f'Will submit jobs for runs: {will_do_run_ids}')
 
     for run_doc in run_docs_to_do[:max_jobs_to_submit]:
         run_id = f'{int(run_doc["number"]):06}'
@@ -287,12 +257,30 @@ def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
                 }
             )
         else:
-            logging.info(f'Would have submitted job for run {run_id}')
-            logging.info(f'Would have updated run {run_doc["number"]} to submitted in the database')
+            log.info(f'Would have submitted job for run {run_id}')
+            log.info(f'Would have updated run {run_doc["number"]} to submitted in the database')
 
 
 # Ensure the script is run as the main program
 if __name__ == '__main__':
     args = parse_args()
-    setup_logging(args.logs_path)
+
+    log_name = "auto_processing_stoomboot"
+
+    import amstrax
+
+    versions = amstrax.print_versions(
+        modules="strax amstrax numpy numba".split(),
+        include_git=False,
+        return_string=True,
+    )
+
+    log = amstrax.get_daq_logger(
+        log_name,
+        log_name,
+        level=logging.DEBUG,
+        opening_message=f"I am processing with these software versions: {versions}",
+        logdir=args.logs_path,
+    )
+
     main(args)
