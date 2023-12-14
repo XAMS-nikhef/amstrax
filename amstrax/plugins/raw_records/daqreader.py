@@ -409,7 +409,7 @@ def split_channel_ranges(records, channel_ranges):
             # channel_ranges should be sorted ascending.
             channel_int = int(r['channel'])  # Convert to int outside the f-string
             print("Unknown channel found:", channel_int)  # Add this line for debugging
-            raise ValueError(f"Bad data from DAQ: data in unknown channel {channel_int}")
+            raise ValueError("Bad data from DAQ: data in unknown channel")
 
 
     # Allocate memory
