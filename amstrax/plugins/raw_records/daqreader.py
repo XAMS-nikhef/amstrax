@@ -398,16 +398,19 @@ def split_channel_ranges(records, channel_ranges):
 
     # First loop to count number of records per detector
     for r_i, r in enumerate(records):
+        found = False
         for d_i, (left, right) in enumerate(channel_ranges):
             if left <= r['channel'] <= right:
                 which_detector[r_i] = d_i
                 n_in_detector[d_i] += 1
+                found = True
                 break
-            else:
-                # channel_ranges should be sorted ascending.
-                channel_int = int(r['channel'])  # Convert to int outside the f-string
-                print("Unknown channel found:", channel_int)  # Add this line for debugging
-                raise ValueError(f"Bad data from DAQ: data in unknown channel")
+        if not found:
+            # channel_ranges should be sorted ascending.
+            channel_int = int(r['channel'])  # Convert to int outside the f-string
+            print("Unknown channel found:", channel_int)  # Add this line for debugging
+            raise ValueError(f"Bad data from DAQ: data in unknown channel {channel_int}")
+
 
     # Allocate memory
     results = numba.typed.List()
