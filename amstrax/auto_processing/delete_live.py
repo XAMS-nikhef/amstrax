@@ -31,6 +31,8 @@ def get_old_runs(runsdb, days, args):
     """
     cutoff_date = datetime.datetime.now() - datetime.timedelta(days=days)
     query = {
+        # always make sure we do not mess with data currentrly being written
+        'end': {'$lt': datetime.datetime.now() - datetime.timedelta(seconds=30)},
         '$or': [
             {'end': {'$lte': cutoff_date},
             'data': {'$all': [
@@ -45,6 +47,8 @@ def get_old_runs(runsdb, days, args):
 
     if args.only_stoomboot and not args.production:
         query = {
+        # always make sure we do not mess with data currentrly being written
+        'end': {'$lt': datetime.datetime.now() - datetime.timedelta(seconds=30)},
         '$or': [
             {'end': {'$lte': cutoff_date},
             'data': {'$all': [
