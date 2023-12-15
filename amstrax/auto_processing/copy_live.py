@@ -44,7 +44,7 @@ def get_rundocs(runsdb, args):
 
     base_query = {
         # end is at least 1 second ago
-        'end': {'$lt': datetime.datetime.now() - datetime.timedelta(seconds=10)},
+        'end': {'$lt': datetime.datetime.now() - datetime.timedelta(seconds=30)},
         'number': {'$gt': args.min_run_number},
         'data': {
             '$elemMatch': {
