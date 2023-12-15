@@ -30,6 +30,8 @@ export, __all__ = strax.exporter()
                  help="Number of channels"), 
     strax.Option('gain_to_pe_array', default=None,
                  help="Gain to pe array"),
+    strax.Option('n_ext_pmts', track=True, default=1,
+                    help="Number of external channels"),
 )
 class PeaksEXT(strax.Plugin):
     depends_on = ('records_ext',)
@@ -38,18 +40,20 @@ class PeaksEXT(strax.Plugin):
     provides = ('peaks_ext')
     rechunk_on_save = True
 
-    __version__ = '0.0.1'
+    __version__ = '0.0.2'
 
     def infer_dtype(self):
     
-        return strax.peak_dtype(n_channels=self.config['n_tpc_pmts'])
+        # it's a bit silly, but for how strax function find_peaks is structured
+        # we need to provide empty channels for the TPC pmts as well
+        return strax.peak_dtype(n_channels=self.config['n_ext_pmts']+self.config['n_tpc_pmts'])
 
     def compute(self, records_ext, start, end):
 
         r = records_ext
   
         if self.config['gain_to_pe_array'] is None:
-            self.to_pe = np.ones(self.config['n_tpc_pmts'])
+            self.to_pe = np.ones(self.config['n_ext_pmts']+self.config['n_tpc_pmts'])
         else:
             self.to_pe = self.config['gain_to_pe_array']
 
@@ -60,13 +64,15 @@ class PeaksEXT(strax.Plugin):
 
         # Rewrite to just peaks/hits
         peaks = strax.find_peaks(
-            hits, self.to_pe,
+            hits, np.array(self.to_pe),
             gap_threshold=self.config['peak_gap_threshold'],
             left_extension=self.config['peak_left_extension'],
             right_extension=self.config['peak_right_extension'],
             min_area=self.config['peak_min_area'],
             min_channels=1,
-            result_dtype=strax.peak_dtype(n_channels=self.config['n_tpc_pmts'])
+            # must have more than one channel (why?)
+            # see here https://github.com/AxFoundation/strax/blob/b0ca3cb245275abb84a4c3535544cce2876bd50e/strax/dtypes.py#L190
+            result_dtype=strax.peak_dtype(n_channels=self.config['n_ext_pmts']+self.config['n_tpc_pmts'])
         )
 
         strax.sum_waveform(peaks, hits, r, rlinks, self.to_pe)
