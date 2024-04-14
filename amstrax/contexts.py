@@ -100,6 +100,22 @@ def xams(output_folder='./strax_data',
     
     return st
 
+def xmas_som(**kwargs):
+    """XENONnT context for the SOM."""
+
+    st = ax.contexts.xams(**kwargs)
+    del st._plugin_class_registry["peaks"]
+    st.register(
+        (
+            ax.PeaksSOM,
+            #straxen.PeakBasicsSOM,
+            #straxen.EventBasicsSOM,
+        )
+    )
+
+    return st
+
+
 def context_for_daq_reader(st: strax.Context,
                            run_id: str,
                            detector: str = 'xams',
