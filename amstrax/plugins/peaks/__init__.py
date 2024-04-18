@@ -7,5 +7,5 @@ from .peak_basics import *
 from . import peak_positions
 from .peak_positions import *
 
-from . import peak_som
-from .peak_som import *
+from . import peaks_som
+from .peaks_som import *
