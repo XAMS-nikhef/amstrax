@@ -58,38 +58,38 @@ class PeaksSOM(Peaks):
 
     def compute(self, peaks):
         # Current classification
-        peaklets_classifcation = super().compute(peaklets)
+        peaks_classifcation = super().compute(peaks)
 
-        peaklet_with_som = np.zeros(len(peaklets_classifcation), dtype=self.dtype)
-        strax.copy_to_buffer(peaklets_classifcation, peaklet_with_som, "_copy_peaklets_information")
-        peaklet_with_som["straxen_type"] = peaklets_classifcation["type"]
-        del peaklets_classifcation
+        peaks_with_som = np.zeros(len(peaks_classifcation), dtype=self.dtype)
+        strax.copy_to_buffer(peaks_classifcation, peaks_with_som, "_copy_peaklets_information")
+        peaks_with_som["straxen_type"] = peaks_classifcation["type"]
+        del peaks_classifcation
 
         # SOM classification
-        peaklets_w_type = peaklets.copy()
-        peaklets_w_type["type"] = peaklet_with_som["type"]
-        _is_s1_or_s2 = peaklets_w_type["type"] != 0
+        peaks_w_type = peaks.copy()
+        peaks_w_type["type"] = peaks_w_type["type"]
+        _is_s1_or_s2 = peaks_w_type["type"] != 0
 
-        peaklets_w_type = peaklets_w_type[_is_s1_or_s2]
+        peaks_w_type = peaks_w_type[_is_s1_or_s2]
 
         som_type, x_som, y_som = recall_populations(
-            peaklets_w_type, self.som_weight_cube, self.som_img, self.som_norm_factors
+            peaks_w_type, self.som_weight_cube, self.som_img, self.som_norm_factors
         )
-        peaklet_with_som["som_sub_type"][_is_s1_or_s2] = som_type
-        peaklet_with_som["loc_x_som"][_is_s1_or_s2] = x_som
-        peaklet_with_som["loc_y_som"][_is_s1_or_s2] = y_som
+        peaks_with_som["som_sub_type"][_is_s1_or_s2] = som_type
+        peaks_with_som["loc_x_som"][_is_s1_or_s2] = x_som
+        peaks_with_som["loc_y_som"][_is_s1_or_s2] = y_som
 
         strax_type = som_type_to_type(
             som_type, self.som_s1_array, self.som_s2_array, self.som_s3_array, self.som_s0_array
         )
 
-        peaklet_with_som["som_type"][_is_s1_or_s2] = strax_type
+        peaks_with_som["som_type"][_is_s1_or_s2] = strax_type
         if self.use_som_as_default:
-            peaklet_with_som["type"][_is_s1_or_s2] = strax_type
+            peaks_with_som["type"][_is_s1_or_s2] = strax_type
         else:
-            peaklet_with_som["type"] = peaklet_with_som["straxen_type"]
+            peaks_with_som["type"] = peaks_with_som["straxen_type"]
 
-        return peaklet_with_som
+        return peaks_with_som
 
 
 def recall_populations(dataset, weight_cube, som_cls_img, norm_factors):
