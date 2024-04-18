@@ -1,11 +1,11 @@
 import numpy as np
 import numpy.lib.recfunctions as rfn
 from scipy.spatial.distance import cdist
-from amstrax.plugins.peaks.peaks import PeakletClassification
+from amstrax.plugins.peaks.peaks import Peaks
 import numba
 
 import strax
-import amstrax
+#from amstrax import Peaks
 
 export, __all__ = strax.exporter()
 
@@ -29,21 +29,12 @@ class PeaksSOM(Peaks):
 
     __version__ = "0.2.0"
     child_plugin = True
-    depends_on = ('records',)
-    provides = ("peaks")
+    depends_on = ("records",)
+    provides = "peaks"
 
-    som_files = straxen.URLConfig(
-        default="resource://xedocs://som_classifiers?attr=value&version=v1&run_id=045000&fmt=npy"
-    )
+    som_files = np.load('/data/xenon/xams_v2/users/lsanchez/SOM_config/xams_som_v1.npz')
 
-    use_som_as_default = straxen.URLConfig(
-        default=True,
-        help=(
-            "Boolean to indicate whether to use SOM"
-            " or the straxen classifcation method for"
-            "peaklet classification"
-        ),
-    )
+    use_som_as_default = True
 
     def infer_dtype(self):
         dtype = strax.peak_interval_dtype + [
