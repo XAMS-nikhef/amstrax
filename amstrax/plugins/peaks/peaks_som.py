@@ -29,8 +29,8 @@ class PeaksSOM(Peaks):
 
     __version__ = "0.2.0"
     child_plugin = True
-    depends_on = ("records",)
-    provides = "peaks"
+    #depends_on = ("records",)
+    #provides = "peaks"
 
     som_files = np.load('/data/xenon/xams_v2/users/lsanchez/SOM_config/xams_som_v1.npz')
 
