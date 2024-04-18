@@ -56,7 +56,7 @@ class PeaksSOM(Peaks):
         self.som_s3_array = self.som_files["s3_array"]
         self.som_s0_array = self.som_files["s0_array"]
 
-    def compute(self, peaklets):
+    def compute(self, peaks):
         # Current classification
         peaklets_classifcation = super().compute(peaklets)
 
