@@ -32,7 +32,7 @@ class PeaksSOM(Peaks):
     #depends_on = ("records",)
     #provides = "peaks"
 
-    som_files = np.load('/data/xenon/xams_v2/users/lsanchez/SOM_config/xams_som_v1.npz')
+    som_files = np.load('./som_models/xams_som_v1.npz')
 
     use_som_as_default = True
 
