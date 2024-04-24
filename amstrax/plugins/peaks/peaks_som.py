@@ -184,7 +184,7 @@ def data_to_log_decile_log_area_aft(peaklet_data, normalization_factor):
     + AFT Since we are dealing with logs, anything less than 1 will be set to 1."""
     # turn deciles into approriate 'normalized' format
     # (maybe also consider L1 normalization of these inputs)
-    decile_data = compute_quantiles(peaklet_data, 10)
+    decile_data = compute_strax_deciles_comb(peaklet_data)
     data = peaklet_data.copy()
     decile_data[decile_data < 1] = 1
 
@@ -193,9 +193,7 @@ def data_to_log_decile_log_area_aft(peaklet_data, normalization_factor):
     # Now lets deal with area
     data["area"] = data["area"] + normalization_factor[11] + 1
     peaklet_log_area = np.log10(data["area"])
-    peaklet_aft = (
-        np.sum(data["area_per_channel"][:, : straxen.n_top_pmts], axis=1) / peaklet_data["area"]
-    )
+    peaklet_aft = data['area_fraction_top']
     peaklet_aft = np.where(peaklet_aft > 0, peaklet_aft, 0)
     peaklet_aft = np.where(peaklet_aft < 1, peaklet_aft, 1)
     deciles_area_aft = np.concatenate(
@@ -206,7 +204,7 @@ def data_to_log_decile_log_area_aft(peaklet_data, normalization_factor):
         ),
         axis=1,
     )
-    return deciles_area_aft
+    return deciles_area_aft[:,1:]
 
 
 def compute_quantiles(peaks: np.ndarray, n_samples: int):
