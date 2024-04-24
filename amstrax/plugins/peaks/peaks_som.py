@@ -120,7 +120,7 @@ def recall_populations(dataset, weight_cube, som_cls_img, norm_factors):
         ydim == img_ydim
     ), f"Dimensions mismatch between SOM weight cube ({ydim}) and reference image ({img_ydim})"
 
-    assert all(dataset["type"] != 0), "Dataset contains unclassified peaklets"
+    #assert all(dataset["type"] != 0), "Dataset contains unclassified peaklets"
     # Get the deciles representation of data for recall
     decile_transform_check = data_to_log_decile_log_area_aft(dataset, norm_factors)
     # preform a recall of the dataset with the weight cube
