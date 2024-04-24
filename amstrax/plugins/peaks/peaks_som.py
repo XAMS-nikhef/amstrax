@@ -35,7 +35,7 @@ class PeaksSOM(Peaks):
 
     # This is not a great solution but needed for now
     directory = os.path.dirname(__file__)  # Get the directory where the script is located
-    file_path = os.path.join(directory, 'som_models', 'xams_som_v1.npz')
+    file_path = os.path.join(directory, 'som_models', 'xams_som_v2.npz')
     som_files = np.load(file_path)
 
     use_som_as_default = True
