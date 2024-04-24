@@ -188,8 +188,8 @@ def data_to_log_decile_log_area_aft(peaklet_data, normalization_factor):
     data = peaklet_data.copy()
     decile_data[decile_data < 1] = 1
 
-    area_top = decile_data['area_per_channel'][:, 1:].sum(axis=1)
-    area_bottom = decile_data['area_per_channel'][:, 0].sum(axis=1)
+    area_top = data['area_per_channel'][:, 1:].sum(axis=1)
+    area_bottom = data['area_per_channel'][:, 0].sum(axis=1)
     area_total = area_top + area_bottom
 
     # Negative-area peaks get NaN AFT
