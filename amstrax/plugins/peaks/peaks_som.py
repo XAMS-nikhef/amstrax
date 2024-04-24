@@ -265,16 +265,12 @@ def compute_wf_attributes(data, sample_length, n_samples: int):
 
     return quantiles
 
-
-@export
-class PeaksSOMClass(PeaksSOM):
-    """Plugin which allows in addition to the straxen classification the SOM classification."""
-
-    child_plugin = True
-    __version__ = "0.0.1"
-
-    provides = "peaklet_classification_som"
-
-    def compute(self, peaklets):
-        peaklet_classifcation_som = super().compute(peaklets)
-        return peaklet_classifcation_som
+def compute_strax_deciles_comb(data):
+    # Maybe separate by s1 s2 and s0?
+    idx_frac = strax.index_of_fraction(data, np.arange(10.1)/10)
+    idx_frac_dt = (idx_frac.T * data['dt']).T
+    #s1_deciles = np.diff(idx_frac_dt, axis=1)[data['type'] == 1]
+    #s2_deciles = np.diff(idx_frac_dt, axis=1)[data['type'] == 2]
+    #s0_deciles = np.diff(idx_frac_dt, axis=1)[data['type'] == 0]
+    #print(len(s1_deciles), len(s2_deciles), len(s0_deciles))
+    return np.diff(idx_frac_dt, axis=1)
