@@ -67,29 +67,29 @@ class PeaksSOM(Peaks):
         peaks_with_som = np.zeros(len(peaks_classifcation), dtype=self.dtype)
         strax.copy_to_buffer(peaks_classifcation, peaks_with_som, "_copy_peaklets_information")
         peaks_with_som["straxen_type"] = peaks_classifcation["type"]
-        del peaks_classifcation
+        #del peaks_classifcation
 
         # SOM classification
-        peaks_w_type = peaks.copy()
-        peaks_w_type["type"] = peaks_w_type["type"]
-        _is_s1_or_s2 = peaks_w_type["type"] != 0
+        peaks_w_type = peaks_classifcation.copy()
+        peaks_w_type["type"] = peaks_with_som["type"]
+        #_is_s1_or_s2 = peaks_w_type["type"] != 0
 
-        peaks_w_type = peaks_w_type[_is_s1_or_s2]
+        peaks_w_type = peaks_w_type
 
         som_type, x_som, y_som = recall_populations(
             peaks_w_type, self.som_weight_cube, self.som_img, self.som_norm_factors
         )
-        peaks_with_som["som_sub_type"][_is_s1_or_s2] = som_type
-        peaks_with_som["loc_x_som"][_is_s1_or_s2] = x_som
-        peaks_with_som["loc_y_som"][_is_s1_or_s2] = y_som
+        peaks_with_som["som_sub_type"] = som_type
+        peaks_with_som["loc_x_som"] = x_som
+        peaks_with_som["loc_y_som"] = y_som
 
         strax_type = som_type_to_type(
             som_type, self.som_s1_array, self.som_s2_array, self.som_s3_array, self.som_s0_array
         )
 
-        peaks_with_som["som_type"][_is_s1_or_s2] = strax_type
+        peaks_with_som["som_type"] = strax_type
         if self.use_som_as_default:
-            peaks_with_som["type"][_is_s1_or_s2] = strax_type
+            peaks_with_som["type"] = strax_type
         else:
             peaks_with_som["type"] = peaks_with_som["straxen_type"]
 
