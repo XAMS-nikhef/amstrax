@@ -2,6 +2,7 @@ import numpy as np
 import numpy.lib.recfunctions as rfn
 from scipy.spatial.distance import cdist
 from amstrax.plugins.peaks.peaks import Peaks
+import os
 import numba
 
 import strax
@@ -32,7 +33,10 @@ class PeaksSOM(Peaks):
     #depends_on = ("records",)
     #provides = "peaks"
 
-    som_files = np.load('./som_models/xams_som_v1.npz')
+    # This is not a great solution but needed for now
+    directory = os.path.dirname(__file__)  # Get the directory where the script is located
+    file_path = os.path.join(directory, 'som_models', 'xams_som_v1.npz')
+    som_files = np.load(file_path)
 
     use_som_as_default = True
 
