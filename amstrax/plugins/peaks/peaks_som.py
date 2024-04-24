@@ -56,9 +56,9 @@ class PeaksSOM(Peaks):
         self.som_s3_array = self.som_files["s3_array"]
         self.som_s0_array = self.som_files["s0_array"]
 
-    def compute(self, peaks):
+    def compute(self, records, start, end):
         # Current classification
-        peaks_classifcation = super().compute(peaks)
+        peaks_classifcation = super().compute(records, start, end)
 
         peaks_with_som = np.zeros(len(peaks_classifcation), dtype=self.dtype)
         strax.copy_to_buffer(peaks_classifcation, peaks_with_som, "_copy_peaklets_information")
