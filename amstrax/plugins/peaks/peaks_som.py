@@ -37,9 +37,9 @@ class PeaksSOM(strax.Plugin):
     """
 
     __version__ = "0.2.0"
-    depends_on = ('records',)
+    depends_on = ('records')
     data_kind = 'peaks'
-    parallel = 'process'
+    #parallel = 'process'
     provides = ('peaks')
     rechunk_on_save = True
 
@@ -60,7 +60,7 @@ class PeaksSOM(strax.Plugin):
             ("loc_y_som", np.int16, "y location of the peak(let) in the SOM"),
         ]
         #return strax.peak_dtype(n_channels=self.config['n_tpc_pmts'])
-        return dtype, strax.peak_dtype(n_channels=4)
+        return strax.merged_dtype(strax.peak_dtype(n_channels=4), dtype)
 
     def setup(self):
         self.som_weight_cube = self.som_files["weight_cube"]
