@@ -60,7 +60,7 @@ class PeaksSOM(strax.Plugin):
             ("loc_y_som", np.int16, "y location of the peak(let) in the SOM"),
         ]
         #return strax.peak_dtype(n_channels=self.config['n_tpc_pmts'])
-        return dtype, strax.peak_dtype(n_channels=self.config['n_tpc_pmts'])
+        return dtype #strax.peak_dtype(n_channels=self.config['n_tpc_pmts'])
 
     def setup(self):
         self.som_weight_cube = self.som_files["weight_cube"]
