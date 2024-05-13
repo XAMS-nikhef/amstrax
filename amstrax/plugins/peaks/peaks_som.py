@@ -20,7 +20,7 @@ HITFINDER_OPTIONS = tuple([
     )])
 
 @export
-class PeaksSOM(Peaks):
+class PeaksSOM(strax.Plugin):
     """
     Self-Organizing Maps (SOM)
     https://xe1t-wiki.lngs.infn.it/doku.php?id=xenon:xenonnt:lsanchez:unsupervised_neural_network_som_methods
@@ -107,7 +107,7 @@ class PeaksSOM(Peaks):
 
         strax.compute_widths(peaks)
 
-        peaks_classifcation = peaks
+        peaks_classifcation = peaks.copy()
         peaks_with_som = np.zeros(len(peaks_classifcation), dtype=self.dtype)
         strax.copy_to_buffer(peaks_classifcation, peaks_with_som, "_copy_peaklets_information")
         peaks_with_som["straxen_type"] = peaks_classifcation["type"]
