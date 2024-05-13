@@ -51,6 +51,7 @@ class PeaksSOM(strax.Plugin):
     use_som_as_default = True
 
     def infer_dtype(self):
+        base_dtype = strax.peak_dtype(n_channels=4)
         dtype = strax.peak_interval_dtype + [
             ("type", np.int8, "Classification of the peak(let)"),
             ("som_sub_type", np.int32, "SOM subtype of the peak(let)"),
@@ -60,7 +61,17 @@ class PeaksSOM(strax.Plugin):
             ("loc_y_som", np.int16, "y location of the peak(let) in the SOM"),
         ]
         #return strax.peak_dtype(n_channels=self.config['n_tpc_pmts'])
-        return strax.merged_dtype((strax.peak_dtype(n_channels=4), dtype))
+
+        # Manually combine the dtypes
+        combined_dtype = []
+        for name in base_dtype.names:
+            combined_dtype.append((name, base_dtype[name]))
+
+        for name in dtype.names:
+            combined_dtype.append((name, dtype[name]))
+
+        return np.dtype(combined_dtype)
+        #return strax.merged_dtype((strax.peak_dtype(n_channels=4), dtype))
 
     def setup(self):
         self.som_weight_cube = self.som_files["weight_cube"]
