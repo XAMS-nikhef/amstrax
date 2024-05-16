@@ -9,3 +9,6 @@ from .peak_positions import *
 
 from . import peaks_som
 from .peaks_som import *
+
+from . import merged_peaks
+from .merged_peaks import *
