@@ -40,6 +40,8 @@ COMMON_OPT_XAMS = dict(
         ax.PulseProcessingEXT,
         ax.PeaksEXT,
         ax.PeakBasicsEXT,
+        ax.PeakWaveforms,
+        ax.PeaksSOM
         # LED plugins not default
         # ax.RecordsLED,
         # ax.LEDCalibration,
@@ -107,8 +109,8 @@ def xams_som(**kwargs):
     #del st._plugin_class_registry["peaks"]
     st.register(
         (
-            ax.PeaksSOM,
-            ax.PeakWaveforms,
+            #ax.PeaksSOM,
+            #ax.PeakWaveforms,
             #straxen.EventBasicsSOM,
         )
     )
