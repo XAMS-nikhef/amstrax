@@ -45,7 +45,7 @@ class PeakWaveforms(strax.Plugin):
     depends_on = ('records',)
     data_kind = 'peaks'
     parallel = 'process'
-    provides = ('peak_wavefroms')
+    provides = ('peak_waveforms')
     rechunk_on_save = True
 
     __version__ = '0.1.50'
