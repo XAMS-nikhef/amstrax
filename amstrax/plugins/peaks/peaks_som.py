@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.lib.recfunctions as rfn
 from scipy.spatial.distance import cdist
-from amstrax.plugins.peaks.peaks import Peaks
+from amstrax.plugins.peaks.peak_waveforms import PeakWaveforms
 import os
 import numba
 
@@ -20,7 +20,7 @@ HITFINDER_OPTIONS = tuple([
     )])
 
 @export
-class PeaksSOM(Peaks):
+class PeaksSOM(PeakWaveforms):
     """
     Self-Organizing Maps (SOM)
     https://xe1t-wiki.lngs.infn.it/doku.php?id=xenon:xenonnt:lsanchez:unsupervised_neural_network_som_methods
@@ -37,7 +37,7 @@ class PeaksSOM(Peaks):
     """
 
     __version__ = "0.2.0"
-    #depends_on = ('records')
+    depends_on = ('peak_wavefroms')
     #data_kind = 'peaks'
     #parallel = 'process'
     provides = ('peaks_som')

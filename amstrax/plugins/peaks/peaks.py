@@ -25,7 +25,7 @@ class Peaks(strax.Plugin):
     curious or just want to test it or try it out but note this is note ready to be used in
     analysis.
     """
-    depends_on = ('peaks_wavefrom','peaks_som')
+    depends_on = ('peak_wavefroms','peaks_som')
     data_kind = 'peaks'
     # parallel = 'process'
     provides = ('peaks')
@@ -35,7 +35,7 @@ class Peaks(strax.Plugin):
     def infer_dtype(self):
         dtype = super().infer_dtype()
         return dtype
-    def compute(self, peaks_wavefrom, peaks_som):
-        peaks = super().compute(peaks_wavefrom)
+    def compute(self, peak_wavefroms, peaks_som):
+        peaks = super().compute(peak_wavefroms)
         peaks_som = super().compute(peaks_som)
         return strax.merged_dtype(peaks, peaks_som)
