@@ -20,7 +20,7 @@ HITFINDER_OPTIONS = tuple([
     )])
 
 @export
-class PeaksSOM(Peaks):
+class PeaksSOM(strax.Plugin):
     """
     Self-Organizing Maps (SOM)
     https://xe1t-wiki.lngs.infn.it/doku.php?id=xenon:xenonnt:lsanchez:unsupervised_neural_network_som_methods
