@@ -10,14 +10,6 @@ import strax
 
 export, __all__ = strax.exporter()
 
-# These are also needed in peaklets, since hitfinding is repeated
-HITFINDER_OPTIONS = tuple([
-    strax.Option(
-        'hit_min_amplitude',
-        default='pmt_commissioning_initial',
-        help='Minimum hit amplitude in ADC counts above baseline. '
-             'See straxen.hit_min_amplitude for options.'
-    )])
 
 @export
 class PeaksSOM(strax.Plugin):
@@ -37,21 +29,18 @@ class PeaksSOM(strax.Plugin):
     """
 
     __version__ = "0.2.0"
-    depends_on = ('peaks')
-    data_kind = 'peaks'
-    #parallel = 'process'
-    provides = ('peaks_som')
-    #rechunk_on_save = True
+    child_plugin = True
+    depends_on = ("peaks",)
+    provides = "peaks_som"
 
     # This is not a great solution but needed for now
-    directory = os.path.dirname(__file__)  # Get the directory where the script is located
-    file_path = os.path.join(directory, 'som_models', 'xams_som_v2.npz')
+    directory = os.path.dirname('/data/xenon/xams_v2/users/lsanchez/')  # Get the directory where the script is located
+    file_path = os.path.join(directory, 'SOM_config', 'xams_som_v2.npz')
     som_files = np.load(file_path)
 
     use_som_as_default = True
 
     def infer_dtype(self):
-        #base_dtype = strax.peak_dtype(n_channels=4)
         dtype = strax.peak_interval_dtype + [
             ("type", np.int8, "Classification of the peak(let)"),
             ("som_sub_type", np.int32, "SOM subtype of the peak(let)"),
@@ -60,7 +49,6 @@ class PeaksSOM(strax.Plugin):
             ("loc_x_som", np.int16, "x location of the peak(let) in the SOM"),
             ("loc_y_som", np.int16, "y location of the peak(let) in the SOM"),
         ]
-        #return strax.peak_dtype(n_channels=self.config['n_tpc_pmts'])
         return dtype
 
     def setup(self):
@@ -72,49 +60,12 @@ class PeaksSOM(strax.Plugin):
         self.som_s3_array = self.som_files["s3_array"]
         self.som_s0_array = self.som_files["s0_array"]
 
-    def compute(self, records, start, end):
+    def compute(self, peaks):
         # Current classification
-        """
-        r = records
+        peaks_classifcation = peaks.copy()
 
-        if self.config['gain_to_pe_array'] is None:
-            self.to_pe = np.ones(self.config['n_tpc_pmts'])
-        else:
-            self.to_pe = self.config['gain_to_pe_array']
-
-        hits = strax.find_hits(r)
-        hits = strax.sort_by_time(hits)
-
-        rlinks = strax.record_links(r)
-
-        # Rewrite to just peaks/hits
-        peaks = strax.find_peaks(
-            hits, self.to_pe,
-            gap_threshold=self.config['peak_gap_threshold'],
-            left_extension=self.config['peak_left_extension'],
-            right_extension=self.config['peak_right_extension'],
-            min_area=self.config['peak_min_area'],
-            min_channels=self.config['peak_min_pmts'],
-            #             min_channels=1,
-            result_dtype=strax.peak_dtype(n_channels=self.config['n_tpc_pmts'])
-            #             result_dtype=self.dtype
-        )
-        print("")
-
-        strax.sum_waveform(peaks, hits, r, rlinks, self.to_pe)
-
-        peaks = strax.split_peaks(
-            peaks, hits, r, rlinks, self.to_pe,
-            min_height=self.config['peak_split_min_height'],
-            min_ratio=self.config['peak_split_min_ratio'])
-
-        strax.compute_widths(peaks)
-        """
-
-        #peaks_classifcation = peaks.copy()
-        peaks_classifcation = super().compute(records, start, end)
         peaks_with_som = np.zeros(len(peaks_classifcation), dtype=self.dtype)
-        strax.copy_to_buffer(peaks_classifcation, peaks_with_som, "_copy_peaks_information")
+        strax.copy_to_buffer(peaks_classifcation, peaks_with_som, "_copy_peaklets_information")
         peaks_with_som["straxen_type"] = peaks_classifcation["type"]
         #del peaks_classifcation
 
@@ -238,12 +189,12 @@ def data_to_log_decile_log_area_aft(peaklet_data, normalization_factor):
     decile_data[decile_data < 1] = 1
 
     area_top = data['area_per_channel'][:, 1:].sum(axis=1)
-    #area_bottom = data['area_per_channel'][:, 0]
+    #area_bottom = data['area_per_channel'][:, 0].sum(axis=1)
     #area_total = area_top + area_bottom
 
     # Negative-area peaks get NaN AFT
     #m = p['area'] > 0
-    area_fraction_top = area_top / data["area"]
+    area_fraction_top = area_top / data['area']
 
     decile_log = np.log10(decile_data)
     decile_log_over_max = np.divide(decile_log, normalization_factor[:10])

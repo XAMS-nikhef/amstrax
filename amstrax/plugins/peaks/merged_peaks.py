@@ -10,7 +10,7 @@ import strax
 export, __all__ = strax.exporter()
 
 @export
-class MergedPeaks(strax.Plugin):
+class MergedPeaks(strax.MergeOnlyPlugin):
     """
     Self-Organizing Maps (SOM)
     https://xe1t-wiki.lngs.infn.it/doku.php?id=xenon:xenonnt:lsanchez:unsupervised_neural_network_som_methods
@@ -26,16 +26,7 @@ class MergedPeaks(strax.Plugin):
     analysis.
     """
     depends_on = ('peaks', 'peaks_som')
-    data_kind = 'peaks'
+    #data_kind = 'peaks'
     # parallel = 'process'
     provides = ('merged_peaks')
-    rechunk_on_save = True
-    __version__ = "0.2.0"
 
-    def infer_dtype(self):
-        dtype = super().infer_dtype()
-        return dtype
-    def compute(self, peaks, peaks_som):
-        peaks = super().compute(peaks)
-        peaks_som = super().compute(peaks_som)
-        return strax.merged_dtype(peaks, peaks_som)
