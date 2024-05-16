@@ -108,7 +108,7 @@ def xams_som(**kwargs):
     st.register(
         (
             ax.PeaksSOM,
-            ax.MergedPeaksSOM,
+            ax.PeakWaveforms,
             #straxen.EventBasicsSOM,
         )
     )
