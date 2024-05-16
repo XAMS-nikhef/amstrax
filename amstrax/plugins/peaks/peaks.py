@@ -1,7 +1,6 @@
 import numpy as np
 import numpy.lib.recfunctions as rfn
 from scipy.spatial.distance import cdist
-from amstrax.plugins.peaks.peaks import Peaks
 import os
 import numba
 
