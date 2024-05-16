@@ -38,7 +38,7 @@ class PeaksSOM(PeakWaveforms):
 
     __version__ = "0.2.0"
     depends_on = ('peak_waveforms')
-    #data_kind = 'peaks'
+    data_kind = 'peaks'
     #parallel = 'process'
     provides = ('peaks_som')
     #rechunk_on_save = True

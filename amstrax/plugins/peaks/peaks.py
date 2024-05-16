@@ -25,7 +25,7 @@ class Peaks(strax.Plugin):
     curious or just want to test it or try it out but note this is note ready to be used in
     analysis.
     """
-    depends_on = ('peak_waveforms','peaks_som')
+    depends_on = ('peak_waveforms', 'peaks_som')
     data_kind = 'peaks'
     # parallel = 'process'
     provides = ('peaks')
