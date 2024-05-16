@@ -70,7 +70,7 @@ export, __all__ = strax.exporter()
 )
 class PeakBasics(strax.Plugin):
     provides = ("peak_basics",)
-    depends_on = ("peaks", )
+    depends_on = ("merged_peaks", )
     data_kind = "peaks"
 
     parallel = "False"
@@ -158,7 +158,8 @@ class PeakBasics(strax.Plugin):
         # 0 = unknown
         # 1 = s1
         # 2 = s2
-                
+        """        
+        # Remove previous classification from peaks
         is_s1 = p['area'] >= self.config['s1_min_area']
         is_s1 &= r['range_50p_area'] > self.config['s1_min_width']
         is_s1 &= r['range_50p_area'] < self.config['s1_max_width']
@@ -176,7 +177,7 @@ class PeakBasics(strax.Plugin):
 
         r['type'][is_s1] = 1
         r['type'][is_s2] = 2
-
+        """
         return r
 
 
