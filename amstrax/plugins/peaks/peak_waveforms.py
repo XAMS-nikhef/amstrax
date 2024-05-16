@@ -37,7 +37,7 @@ HITFINDER_OPTIONS = tuple([
     strax.Option('diagnose_sorting', track=False, default=False,
                  help="Enable runtime checks for sorting and disjointness"),
     strax.Option('n_tpc_pmts', track=False, default=False,
-                 help="Number of channels"), 
+                 help="Number of channels"),
     strax.Option('gain_to_pe_array', default=None,
                  help="Gain to pe array"),
 )
@@ -45,18 +45,19 @@ class PeakWaveforms(strax.Plugin):
     depends_on = ('records',)
     data_kind = 'peaks'
     parallel = 'process'
-    provides = ('peak_waveforms',)
+    provides = ('peak_wavefroms')
     rechunk_on_save = True
 
     __version__ = '0.1.50'
 
     def infer_dtype(self):
+
         return strax.peak_dtype(n_channels=self.config['n_tpc_pmts'])
 
     def compute(self, records, start, end):
 
         r = records
-  
+
         if self.config['gain_to_pe_array'] is None:
             self.to_pe = np.ones(self.config['n_tpc_pmts'])
         else:
