@@ -14,8 +14,8 @@ HITFINDER_OPTIONS = tuple([
     )])
 
 
-
-""""@strax.takes_config(
+@export
+@strax.takes_config(
     strax.Option('peak_gap_threshold', default=300,
                  help="No hits for this many ns triggers a new peak"),
     strax.Option('peak_left_extension', default=10,
@@ -41,12 +41,10 @@ HITFINDER_OPTIONS = tuple([
     strax.Option('gain_to_pe_array', default=None,
                  help="Gain to pe array"),
 )
-"""
-@export
 class Peaks(strax.Plugin):
     depends_on = ('records',)
     data_kind = 'peaks'
-    #parallel = 'process'
+    parallel = 'process'
     provides = ('peaks_wavefrom')
     rechunk_on_save = True
 
