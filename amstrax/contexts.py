@@ -40,6 +40,8 @@ COMMON_OPT_XAMS = dict(
         ax.PulseProcessingEXT,
         ax.PeaksEXT,
         ax.PeakBasicsEXT,
+        #ax.PeakWaveforms,
+        #ax.PeaksSOM
         # LED plugins not default
         # ax.RecordsLED,
         # ax.LEDCalibration,
@@ -99,6 +101,22 @@ def xams(output_folder='./strax_data',
     ]
     
     return st
+
+def xams_som(**kwargs):
+    """XENONnT context for the SOM."""
+
+    st = ax.contexts.xams(**kwargs)
+    #del st._plugin_class_registry["peaks"]
+    st.register(
+        (
+            ax.PeaksSOM,
+            ax.MergedPeaks,
+            #straxen.EventBasicsSOM,
+        )
+    )
+
+    return st
+
 
 def context_for_daq_reader(st: strax.Context,
                            run_id: str,

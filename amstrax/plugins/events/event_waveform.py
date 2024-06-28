@@ -10,7 +10,7 @@ class EventWaveform(strax.Plugin):
     """Simple plugin that provides total (data) and top (data_top) waveforms for main and
     alternative S1/S2 in the event."""
 
-    depends_on = ("event_basics", "peaks")
+    depends_on = ("event_basics", "merged_peaks")
     provides = "event_waveform"
     __version__ = "0.0.1"
 

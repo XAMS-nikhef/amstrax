@@ -18,7 +18,7 @@ export, __all__ = strax.exporter()
 class EventAreaPerChannel(strax.Plugin):
     """Simple plugin that provides area per channel for main and alternative S1/S2 in the event."""
 
-    depends_on = ("event_basics", "peaks")
+    depends_on = ("event_basics", "merged_peaks")
     provides = ("event_area_per_channel", "event_n_channel")
     data_kind = immutabledict(zip(provides, ("events", "events")))
     __version__ = "0.1.1"
