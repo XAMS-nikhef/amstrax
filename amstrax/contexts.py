@@ -32,6 +32,7 @@ COMMON_OPT_XAMS = dict(
         ax.Events,
         ax.EventBasics,
         ax.EventPositions,
+        ax.EventCoincidences,
         ax.CorrectedAreas,
         ax.EventInfo,
         ax.EventWaveform,
@@ -40,6 +41,7 @@ COMMON_OPT_XAMS = dict(
         ax.PulseProcessingEXT,
         ax.PeaksEXT,
         ax.PeakBasicsEXT,
+        ax.PeakCoincidences,
         # LED plugins not default
         # ax.RecordsLED,
         # ax.LEDCalibration,

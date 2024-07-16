@@ -19,6 +19,6 @@ from .event_area_per_channel import *
 from . import event_waveform
 from .event_waveform import *
 
-
-
+from . import event_coincidences
+from .event_coincidences import *
 
