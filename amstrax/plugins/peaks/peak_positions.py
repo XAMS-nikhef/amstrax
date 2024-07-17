@@ -23,12 +23,12 @@ DEFAULT_POSREC_ALGO = 'corr'
     ),
     strax.Option(
         'px', 
-        default=[81.54492347, -122.86180405, 76.13265045, -17.66706185],
+        default=[212.89988642, -320.95097295, 198.71830514, -46.03953999],
         help="Parameters for a correction function to go from x_cgr to true x"
     ),
     strax.Option(
         'py', 
-        default=[79.21010097, -120.15755073, 75.33693986, -17.69562578],
+        default=[211.40051359, -319.83147964, 198.69552524, -46.23585688],
         help="Parameters for a correction function to go from y_cgr to true y"
     ),
 )
