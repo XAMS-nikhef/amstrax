@@ -26,21 +26,19 @@ import subprocess
 import shlex
 
 
-sbatch_template = """#!/bin/bash
-
-#PBS -N {jobname}
-#PBS -j oe
-#PBS -o {log}
-#PBS -l pmem={mem_per_cpu}
-#PBS -q {queue}
-
-echo "Starting script!"
-echo `date`
-
-{job}
-
-echo "Script complete, bye!"
-echo `date`
+sbatch_template = """
+executable              = {executable}
+arguments               = --channel 1 --run_ids 006712,006713
+log                     = /data/xenon/xams_v2/users/mflierm/notebooks/logs/{job_name}.log
+output                  = /data/xenon/xams_v2/users/mflierm/notebooks/logs/{job_output}.txt
+error                   = /data/xenon/xams_v2/users/mflierm/notebooks/logs/{job_errors}.txt
+request_memory          = {memory}
+## Can use "el7", "el8", or "el9" for UseOS or you can specify your own 
+## SingularityImage but an OS must be specified and in string quotations. 
++UseOS                  = "el9"
+## This job can run up to 4 hours. Can choose "express", "short", "medium", or "long".
++JobCategory            = {queue}
+queue
 
 """
 
@@ -48,15 +46,14 @@ TMPDIR = os.path.join(os.environ.get("user", "."), "tmp")
 
 
 def submit_job(
-    jobstring,
+    executable:str,
     log="job.log",
-    jobname="somejob",
-    queue="generic",
-    sbatch_file=None,
-    dry_run=False,
-    mem_per_cpu=1000,
-    cpus_per_task=1,
+    job_name="somejob",
+    job_output="someoutput",
+    job_errors="someerrors",
+    queue="express",
     hours=None,
+    memory="500M",
     **kwargs
 ):
     """
@@ -78,13 +75,13 @@ def submit_job(
     """
 
     sbatch_script = sbatch_template.format(
-        jobname=jobname,
+        executable=executable,
+        job_name=job_name,
+        job_output=job_output,
+        job_errors=job_errors,
         log=log,
-        job=jobstring,
         queue=queue,
-        mem_per_cpu=mem_per_cpu,
-        cpus_per_task=cpus_per_task,
-        hours=hours,
+        memory=memory,
     )
 
     if dry_run:

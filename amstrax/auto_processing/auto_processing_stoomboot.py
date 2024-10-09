@@ -52,6 +52,10 @@ def parse_args():
         '--only_manual',
         action='store_true',
         help="Set to only process runs with tag process")
+    parser.add_argument(
+        '--local',
+        default=False,
+        help='Run locally, do not submit jobs')
 
     return parser.parse_args()
 
@@ -82,14 +86,37 @@ def main(args):
 
         # Update task list
         run_docs_to_do = update_task_list(args, runs_col, auto_processing_on)
-        
-        # Check and handle running jobs
-        handle_running_jobs(runs_col, production=args.production)
+
+        run_ids_to_do = find_run_ids_to_do(run_docs_to_do)
 
         if not run_docs_to_do:
             log.info(f'I found no runs to process, time to take a nap for {nap_time} seconds')
             time.sleep(nap_time)
             continue
+
+        if args.local:
+            log.info(f'Running locally, not submitting jobs')
+            for run_id in run_ids_to_do:
+                print(run_id)
+                log.info(f'Processing run {run_id} locally')
+                if args.production:
+                    subprocess.run(f'python make_raw_records.py --run_id {run_id} --local --production', shell=True)
+                    log.info(f'Finished processing run {run_id}')
+                
+                if args.production:
+                    log.info('Updating rundoc')
+                    runs_col.update_one(
+                        {'number': int(run_id)},
+                        {'$set': {'processing_status': {'status': 'done', 'time': datetime.now()}},}
+                    )
+
+                else:
+                    log.info(f'Would have updated run {run_id} to done in the database')
+            
+            continue
+
+        # Check and handle running jobs
+        handle_running_jobs(runs_col, production=args.production)
 
         # Submit new jobs if under max limit
         submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir=amstrax_dir)
@@ -114,7 +141,7 @@ def update_task_list(args, runs_col, auto_processing_on):
                     {
                         'data': {'$not': {'$elemMatch': {'host': 'stbc', 'type': 'raw_records'}}},
                         'processing_failed': {'$not': {'$gt': 3}},
-                        'processing_status.status': {'$not': {'$in': ['running', 'submitted']}},
+                        # 'processing_status.status': {'$not': {'$in': ['running', 'submitted']}},
                         'tags': {'$not': {'$elemMatch': {'name': 'abandon'}}},
                         'start': {'$gt': datetime.today() - timedelta(days=100)},            
                     },
@@ -191,11 +218,15 @@ def handle_running_jobs(runs_col, production=False):
                     log.info(f'Would have updated run {run_number} to {new_status} in the database')
 
 
+def find_run_ids_to_do(run_docs_to_do):
+    return [f"{int(run_doc['number']):06}" for run_doc in run_docs_to_do]
+
+
 def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
     """
     Submit new jobs if the current number of running/submitted jobs is below the max_jobs limit.
     """
-    # Check how many jobs are currently running or submitted
+    #Check how many jobs are currently running or submitted
     query = {'processing_status.status': {'$in': ['submitted', 'running']}}
     projection = {'number': 1, 'processing_status': 1}
     sort = [('number', -1)]
