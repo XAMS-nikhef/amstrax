@@ -109,7 +109,6 @@ def check_data_safety(run_doc, args):
 
     for host in hosts_to_check:
         path = next((d['location'] for d in run_doc['data'] if d['host'] == host), None)
-        print("Path: ", path)
         if not path:
             log.warning(f"Missing data path for run {run_id} on host {host}")
             return False
@@ -154,27 +153,26 @@ def delete_data(runsdb, run_doc, production, we_are_really_sure):
             else:
                 try:
                     log.info(f"Deleting {run_data_path}")
-                    cmd = f"rm -rf {run_data_path}/testesst"
+                    cmd = [f"rm -rf {run_data_path}"]
                     log.info(f"Running command: {cmd}")
-                    remove = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, text=True)
-                    print(remove.stderr)
+                    remove = subprocess.run(cmd, capture_output=True, shell=True, text=True)
+
                     # Move the stbc data entry from 'data' array to 'deleted_data' array in MongoDB
                     stbc_data_entry = next((d for d in run_doc['data'] if d['host'] == 'stbc'), None)
-                    print(stbc_data_entry)
-                    # if stbc_data_entry:
-                    #     runsdb.update_one(
-                    #         {'number': int(run_id)},
-                    #         {'$pull': {'data': stbc_data_entry}}
-                    #     )
-                    #     runsdb.update_one(
-                    #         {'number': int(run_id)},
-                    #         {'$push': {'deleted_data': dict(stbc_data_entry, **{
-                    #             'deleted_at': datetime.datetime.now(),
-                    #             'deleted_by': 'delete_live_stbc.py'})
-                    #             }
-                    #         }
-                    #     )
-                    #     log.info(f"Moved stbc data entry for run {run_id} to 'deleted_data'")
+                    if stbc_data_entry:
+                        runsdb.update_one(
+                            {'number': int(run_id)},
+                            {'$pull': {'data': stbc_data_entry}}
+                        )
+                        runsdb.update_one(
+                            {'number': int(run_id)},
+                            {'$push': {'deleted_data': dict(stbc_data_entry, **{
+                                'deleted_at': datetime.datetime.now(),
+                                'deleted_by': 'delete_live_stbc.py'})
+                                }
+                            }
+                        )
+                        log.info(f"Moved stbc data entry for run {run_id} to 'deleted_data'")
                     
                 except Exception as e:
                     log.error(f"Error in deleting data for run {run_id}: {e}")
@@ -246,103 +244,3 @@ if __name__ == '__main__':
             time.sleep(args.sleep_time)
     else:
         main(args)
-
-
-
-# def delete_data(runsdb, run_doc, production, we_are_really_sure):
-#     """
-#     Delete data from DAQ if safety checks are passed.
-#     """
-#     run_id = str(run_doc['number']).zfill(6)
-#     try:
-#         path = next((d['location'] for d in run_doc['data'] if d['host'] == 'stbc'), None)
-#         print(run_doc['data'])
-#         print(path)
-#         if not production:
-#             log.info(f"[Dry Run] Would delete data for run {run_id} at {path}")
-#         else:
-#             log.info(f"Deleting data for run {run_id} at {path}")
-
-#             if we_are_really_sure:
-#                 # check that the path ends with the run number
-#                 if not path.endswith(run_id):
-#                     log.error(f"Path {path} does not end with run number {run_id}")
-#                     return
-
-#                 # check that the path exists
-#                 if not os.path.exists(path):
-#                     log.error(f"Path {path} does not exist, eliminating it from database")
-#                 else:
-#                     log.info(f"Deleting {path}")
-#                     # delete the directory path
-#                     # os.system(f"rm -rf {path}")
-
-#                 # Move the DAQ data entry from 'data' array to 'deleted_data' array in MongoDB
-#                 daq_data_entry = next((d for d in run_doc['data'] if d['host'] == 'stbc'), None)
-#                 print(daq_data_entry)
-#                 if daq_data_entry:
-#                     # runsdb.update_one(
-#                     #     {'number': int(run_id)},
-#                     #     {'$pull': {'data': daq_data_entry}}
-#                     # )
-#                     # runsdb.update_one(
-#                     #     {'number': int(run_id)},
-#                     #     {'$push': {'deleted_data': dict(daq_data_entry, **{
-#                     #         'deleted_at': datetime.datetime.now(),
-#                     #         'deleted_by': 'delete_live.py'})
-#                     #         }
-#                     #     }
-#                     # )
-#                     log.info(f"Moved DAQ data entry for run {run_id} to 'deleted_data' -> change to do it for stbc")
-#             else:
-#                 log.info(f"[Not Really Sure] Would delete data for run {run_id} at {path}")
-
-#         daq_path = next(d['location'] for d in run_doc['data'] if d['host'] == 'daq')
-#         daq_path = os.path.join(daq_path, run_id)
-#         if not production:
-#             log.info(f"[Dry Run] Would delete data for run {run_id} at {daq_path}")
-#         else:
-#             # we actually do it
-#             log.info(f"Deleting data for run {run_id} at {daq_path}")
-
-#             if we_are_really_sure:
-#                 # check that the path ends with the run number
-#                 if not daq_path.endswith(run_id):
-#                     log.error(f"Path {daq_path} does not end with run number {run_id}")
-#                     return
-
-#                 # check that the path exists
-#                 if not os.path.exists(daq_path):
-#                     log.error(f"Path {daq_path} does not exist, eliminating it from database")
-#                 else:
-#                     log.info(f"Deleting {daq_path}")
-#                     # delete the directory daq_path
-#                     # os.system(f"rm -rf {daq_path}")
-            
-
-#                 # Move the DAQ data entry from 'data' array to 'deleted_data' array in MongoDB
-#                 daq_data_entry = next((d for d in run_doc['data'] if d['host'] == 'daq'), None)
-#                 if daq_data_entry:
-#                     runsdb.update_one(
-#                         {'number': int(run_id)},
-#                         {'$pull': {'data': daq_data_entry}}
-#                     )
-#                     runsdb.update_one(
-#                         {'number': int(run_id)},
-#                         {'$push': {'deleted_data': dict(daq_data_entry, **{
-#                             'deleted_at': datetime.datetime.now(),
-#                             'deleted_by': 'delete_live.py'})
-#                             }
-#                         }
-#                     )
-#                     log.info(f"Moved DAQ data entry for run {run_id} to 'deleted_data'")
-#             else:
-#                 log.info(f"[Not Really Sure] Would delete data for run {run_id} at {daq_path}")
-
-#     except Exception as e:
-#         log.error(f"Error in deleting data for run {run_id}: {e}")
-
-
-
-
-
