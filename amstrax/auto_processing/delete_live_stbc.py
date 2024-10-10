@@ -242,9 +242,25 @@ if __name__ == '__main__':
 
     if args.loop_infinite:
         while True:
-            runs_deleted = main(args)
-            sleep_time = 1 if runs_deleted else args.sleep_time
-            log.info(f"Sleeping for {args.sleep_time} seconds...")
-            time.sleep(args.sleep_time)
+            try:
+                runs_deleted = main(args)
+                sleep_time = 1 if runs_deleted else args.sleep_time
+                log.info(f"Sleeping for {args.sleep_time} seconds...")
+                time.sleep(args.sleep_time)
+                        try:
+            except (KeyboardInterrupt, SystemExit):
+                raise
+            except Exception as fatal_error:
+                log.error(
+                    f"Fatal warning:\tran into {fatal_error}. Try "
+                    "logging error and restart loop"
+                )
+                try:
+                    log_warning(f"Fatal warning:\tran into {fatal_error}", priority="error")
+                except Exception as warning_error:
+                    log.error(f"Fatal warning:\tcould not log {warning_error}")
+                # This usually only takes a minute or two
+                time.sleep(60)
+                log.warning("Restarting run loop")
     else:
         main(args)
