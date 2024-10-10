@@ -174,6 +174,9 @@ def delete_data(runsdb, run_doc, production, we_are_really_sure):
                                 }
                             )
                             log.info(f"Moved stbc data entry for run {run_id} to 'deleted_data'")
+                    else:
+                        # TODO: make sure the run is skipped in the next try
+                        log.error(f"Path {run_data_path} does still exist?! Check the file permissions.")
                     
                 except Exception as e:
                     log.error(f"Error in deleting data for run {run_id}: {e}")
