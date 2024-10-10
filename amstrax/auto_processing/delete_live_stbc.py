@@ -156,23 +156,24 @@ def delete_data(runsdb, run_doc, production, we_are_really_sure):
                     cmd = [f"rm -rf {run_data_path}"]
                     log.info(f"Running command: {cmd}")
                     remove = subprocess.run(cmd, capture_output=True, shell=True, text=True)
-
-                    # Move the stbc data entry from 'data' array to 'deleted_data' array in MongoDB
-                    stbc_data_entry = next((d for d in run_doc['data'] if d['host'] == 'stbc'), None)
-                    if stbc_data_entry:
-                        runsdb.update_one(
-                            {'number': int(run_id)},
-                            {'$pull': {'data': stbc_data_entry}}
-                        )
-                        runsdb.update_one(
-                            {'number': int(run_id)},
-                            {'$push': {'deleted_data': dict(stbc_data_entry, **{
-                                'deleted_at': datetime.datetime.now(),
-                                'deleted_by': 'delete_live_stbc.py'})
+                    if not os.path.exists(run_data_path):
+                        log.info(f"Successfully deleted {run_data_path}")
+                        # Move the stbc data entry from 'data' array to 'deleted_data' array in MongoDB
+                        stbc_data_entry = next((d for d in run_doc['data'] if d['host'] == 'stbc'), None)
+                        if stbc_data_entry:
+                            runsdb.update_one(
+                                {'number': int(run_id)},
+                                {'$pull': {'data': stbc_data_entry}}
+                            )
+                            runsdb.update_one(
+                                {'number': int(run_id)},
+                                {'$push': {'deleted_data': dict(stbc_data_entry, **{
+                                    'deleted_at': datetime.datetime.now(),
+                                    'deleted_by': 'delete_live_stbc.py'})
+                                    }
                                 }
-                            }
-                        )
-                        log.info(f"Moved stbc data entry for run {run_id} to 'deleted_data'")
+                            )
+                            log.info(f"Moved stbc data entry for run {run_id} to 'deleted_data'")
                     
                 except Exception as e:
                     log.error(f"Error in deleting data for run {run_id}: {e}")
