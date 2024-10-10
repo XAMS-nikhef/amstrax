@@ -191,7 +191,7 @@ def main(args):
     stbc_path = args.live_data_path
     free_space = check_diskspace(stbc_path)
 
-    while free_space < args.min_free_diskspace:
+    if free_space < args.min_free_diskspace:
         log.info(f"Free space in {stbc_path} is {free_space} bytes.\n"
                    "Deleting runs {old_runs['number']}, but first checking safety")
 
