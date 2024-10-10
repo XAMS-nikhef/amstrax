@@ -244,4 +244,3 @@ if __name__ == '__main__':
             time.sleep(args.sleep_time)
     else:
         main(args)
-
