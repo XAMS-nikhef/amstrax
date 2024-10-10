@@ -247,7 +247,6 @@ if __name__ == '__main__':
                 sleep_time = 1 if runs_deleted else args.sleep_time
                 log.info(f"Sleeping for {args.sleep_time} seconds...")
                 time.sleep(args.sleep_time)
-                        try:
             except (KeyboardInterrupt, SystemExit):
                 raise
             except Exception as fatal_error:
