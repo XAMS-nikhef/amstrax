@@ -34,6 +34,8 @@ def parse_args():
                         help='The minimum run number to start copying from')
     parser.add_argument('--production', action='store_true', default=False,
                         help='If you want to run the script in production mode')
+    parser.add_argument('--ssh_key', type=str, default="/home/xams/.ssh/xams_key",
+                        help='Path to the ssh-key used to ssh to remote location')
     return parser.parse_args()
 
 
@@ -105,7 +107,7 @@ def get_rundocs(runsdb, args):
 
     return list(rundocs)
 
-def copy_data(run_id, live_data_path, location, hostname, production, ssh_host):
+def copy_data(run_id, live_data_path, location, hostname, production, ssh_host, ssh_key):
     """
     Copy data to the specified location using rsync.
     """
@@ -120,7 +122,7 @@ def copy_data(run_id, live_data_path, location, hostname, production, ssh_host):
         return
 
     log.info(f"Copying run {run_id} to {location}")
-    copy_cmd = ['rsync', '-av', live_data_path, f'{ssh_host}:{location}']
+    copy_cmd = ['rsync', '-av','-e', f"ssh -i {ssh_key}", live_data_path, f'{ssh_host}:{location}']
     copy = subprocess.run(copy_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     if copy.returncode != 0:
@@ -156,7 +158,7 @@ def handle_runs(rundocs, args):
         # Check if data is on stoomboot and copy if not
         copied_stomboot = False
         if not any(d['type'] == 'live' and d['host'] == 'stbc' for d in rd['data']):
-            exit_code = copy_data(run_id, live_data_path, STORAGE_PATHS['stbc'], 'stbc', args.production, args.ssh_host)
+            exit_code = copy_data(run_id, live_data_path, STORAGE_PATHS['stbc'], 'stbc', args.production, args.ssh_host, args.ssh_key)
             copied_stomboot = (exit_code == 0)
         else:
             # it was already on stoomboot
@@ -165,7 +167,7 @@ def handle_runs(rundocs, args):
         if copied_stomboot:
             # Check if data is on dcache and copy if not (and if not only_stoomboot)
             if not args.only_stoomboot and (not any(d['type'] == 'live' and d['host'] == 'dcache' for d in rd['data'])):
-                copy_data(run_id, live_data_path, STORAGE_PATHS['dcache'], 'dcache', args.production, args.ssh_host)
+                copy_data(run_id, live_data_path, STORAGE_PATHS['dcache'], 'dcache', args.production, args.ssh_host, args.ssh_key)
                 runs_copied = True
     
     return runs_copied
