@@ -64,6 +64,7 @@ def get_old_runs(runsdb, days, args):
     # always make sure we do not mess with data currentrly being written
     'end': {'$lt': datetime.datetime.now() - datetime.timedelta(seconds=30)},
     'number': {'$gt': args.min_run_number},
+    'data.attempted_deletion': {'$ne': 'True'},
     '$or': [
         {'end': {'$lte': cutoff_date},
         'data': {'$all': [
@@ -175,8 +176,12 @@ def delete_data(runsdb, run_doc, production, we_are_really_sure):
                             )
                             log.info(f"Moved stbc data entry for run {run_id} to 'deleted_data'")
                     else:
-                        # TODO: make sure the run is skipped in the next try
                         log.error(f"Path {run_data_path} does still exist?! Check the file permissions.")
+                        log.info(f"Marking run {run_id} as attempted deletion")
+                        runsdb.update_one(
+                            {'number': int(run_id)},
+                            {'$set': {'data.attempted_deletion': 'True'}}
+                        )
                     
                 except Exception as e:
                     log.error(f"Error in deleting data for run {run_id}: {e}")
@@ -205,6 +210,11 @@ def main(args):
                 delete_data(runsdb, run_doc, args.production, args.we_are_really_sure)
             else:
                 log.warning(f"Skipping deletion for run {run_doc['number']} due to safety check failure")
+                log.info(f"Marking run {run_doc['number']} as attempted deletion")
+                runsdb.update_one(
+                    {'number': run_doc['number'],'data.host': 'stbc'},
+                    {'$set': {'data.$.attempted_deletion': 'True'}}
+                )
     
     else:
         log.info(f"Free space in {stbc_path} is {free_space} bytes. Not deleting any runs.")
@@ -255,7 +265,7 @@ if __name__ == '__main__':
                     "logging error and restart loop"
                 )
                 try:
-                    log_warning(f"Fatal warning:\tran into {fatal_error}", priority="error")
+                    log.warning(f"Fatal warning:\tran into {fatal_error}")
                 except Exception as warning_error:
                     log.error(f"Fatal warning:\tcould not log {warning_error}")
                 # This usually only takes a minute or two
