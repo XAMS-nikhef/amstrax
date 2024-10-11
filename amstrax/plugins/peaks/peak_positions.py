@@ -4,9 +4,6 @@ import strax
 from immutabledict import immutabledict
 export, __all__ = strax.exporter()
 
-# size of a single mesh cell in mm
-MESH_SIZE = 2.6
-
 DEFAULT_POSREC_ALGO = 'corr'
 
 @export
@@ -35,7 +32,7 @@ DEFAULT_POSREC_ALGO = 'corr'
 class PeakPositions(strax.Plugin):
     depends_on = ('peaks', 'peak_basics')
     rechunk_on_save = False
-    __version__ = '1.2.9'
+    __version__ = '1.2.10'
     dtype = [
         ('x_cgr', np.float32,
          'Interaction x_cgr-position center of gravity'),
@@ -90,8 +87,8 @@ class PeakPositions(strax.Plugin):
         rec_function_x = np.poly1d(np.array(self.config['px']))
         rec_function_y = np.poly1d(np.array(self.config['py']))
         
-        result['x_corr'] = rec_function_x(result['x_cgr']) * MESH_SIZE
-        result['y_corr'] = rec_function_y(result['y_cgr']) * MESH_SIZE
+        result['x_corr'] = rec_function_x(result['x_cgr'])
+        result['y_corr'] = rec_function_y(result['y_cgr'])
         result['r_corr'] = np.sqrt(result['x_corr']**2+result['y_corr']**2)
 
         # set x, y, z to be the values from the default reconstruction algorithm
