@@ -32,7 +32,7 @@ class EventCoincidences(strax.Plugin):
     depends_on = ('event_basics', 'peaks_ext',)
     data_kind = "events"
 
-    __version__ = '1.0.2'
+    __version__ = '1.0.6'
 
     dtype = [
         ('time', np.int64, 'Start time of the event (ns since unix epoch)'),
@@ -40,13 +40,16 @@ class EventCoincidences(strax.Plugin):
         ('is_coinc', np.bool_, 'Whether an event has an external match or not'),
     ]
 
+    # def get_window_size(self):
+    #     return int(600 * 10**9)
+
     def compute(self, events, peaks_ext):
         result = np.empty(len(events), dtype=self.dtype)
         result['time'] = events['time']
         result['endtime'] = events['endtime']
         
-        print(len(events['time']), events['time'])
-        print(len(peaks_ext['time']), peaks_ext['time'])
+        print("events chunk", len(events['time']), events['time'])
+        print("peaks ext chunk", len(peaks_ext['time']), peaks_ext['time'])
         
         na22_peaks = peaks_ext[(peaks_ext['area'] > 511 - self.config['na_peak_delta']) & (peaks_ext['area'] < 511 + self.config['na_peak_delta'])]
         result['is_coinc'] = self.matching_peaks(events['s1_time'], na22_peaks['time'], self.config['max_delay'])
