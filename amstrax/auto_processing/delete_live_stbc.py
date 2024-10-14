@@ -72,7 +72,7 @@ def get_old_runs(runsdb, days, args):
             {'$elemMatch': {'type': 'live', 'host': 'dcache'}},
         ]}},
         {'tags': {'$elemMatch': {'name': 'abandon'}},
-        'data': {'$elemMatch': {'type': 'live', 'host': 'daq'}}}
+        'data': {'$elemMatch': {'type': 'live', 'host': 'stbc'}}}
     ]
     }
 
