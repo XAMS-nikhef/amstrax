@@ -90,16 +90,29 @@ def check_data_safety(run_doc, ssh_host, args):
         num_files = count_files_in_directory(path, run_id, is_remote=(host != 'daq'), ssh_host=ssh_host)
         log.info(f"Found {num_files} files in {path} on {host} for run {run_id}")
         result[host] = num_files
+    
+    num_files_daq = result['daq']
+    log.info(f"File count is {num_files_daq} for run {run_id} on all hosts, safe to delete")
+
+    if 'delete_daq' in run_doc['tags.name']:
+        if not result['dcache']:
+            dcache_path = next((d['location'] for d in run_doc['data'] if d['host'] == 'dcache'), None)
+            result['dcache'] = count_files_in_directory(dcache_path, run_id, is_remote=(host != 'daq'), ssh_host=ssh_host)
+
+        if result['dcache'] == result['stbc']:
+            log.info(f"Run {run_id} has a delete_daq tag and data exists on dcache and stbc, safe to delete")
+            return True
+        
+        else:
+            log.info(f"Run {run_id} has a delete_daq tag and data does not exist on dcache and (!) stbc! Not safe to delete")
+            return False
 
     # Check if the file counts match
     if (result['stbc'] != result.get('dcache', -9) and not args.only_stoomboot) or result['daq'] != result['stbc']:
         log.warning(f"Mismatch in file count for run {run_id}")
         return False
 
-
-    num_files_daq = result['daq']
-    log.info(f"File count is {num_files_daq} for run {run_id} on all hosts, safe to delete")
-
+        
     return True
 
 
