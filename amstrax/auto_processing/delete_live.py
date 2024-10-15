@@ -73,12 +73,8 @@ def check_data_safety(run_doc, ssh_host, args):
     Returns True if safe to delete, False otherwise.
     """
     run_id = str(run_doc['number']).zfill(6)
-
     result = {}
-    hosts_to_check = ['daq', 'stbc', 'dcache']
-
-    if args.only_stoomboot and not args.production:
-        hosts_to_check = ['daq', 'stbc']
+    hosts_to_check = ['daq', 'stbc', 'dcache'] if not (args.only_stoomboot and not args.production) else ['daq', 'stbc']
 
     for host in hosts_to_check:
         path = next((d['location'] for d in run_doc['data'] if d['host'] == host), None)
@@ -95,14 +91,14 @@ def check_data_safety(run_doc, ssh_host, args):
 
     if 'delete_daq' in tags:
         log.info("Found delete_daq tag!")
-        if result.get('dcache', None) == None:
+        if result.get('dcache') is None:
             dcache_path = next((d['location'] for d in run_doc['data'] if d['host'] == 'dcache'), None)
             result['dcache'] = count_files_in_directory(dcache_path, run_id, is_remote=True, ssh_host=ssh_host)
         if result['dcache'] == result['stbc']:
             log.info(f"Run {run_id} has a delete_daq tag and data exists on dcache and stbc, safe to delete")
             return True
         else:
-            log.info(f"Run {run_id} has a delete_daq tag and data does not exist on dcache and (!) stbc! Not safe to delete")
+            log.info(f"Run {run_id} has a delete_daq tag and data does not exist on dcache and stbc! Not safe to delete")
             return False
 
     # Check if the file counts match
