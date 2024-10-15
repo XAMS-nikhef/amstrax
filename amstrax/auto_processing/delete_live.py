@@ -67,6 +67,12 @@ def get_old_runs(runsdb, days, args):
     projection = {'number': 1, 'end': 1, 'data': 1, 'tags': 1}
     return list(runsdb.find(query, projection=projection))[0:args.max_runs]
 
+def check_delete_daq(run_doc):
+    """
+    Check if the run has a 'delete_daq' tag.
+    """
+    return 'delete_daq' in [tag['name'] for tag in run_doc['tags']]
+
 def check_data_safety(run_doc, ssh_host, args):
     """
     Perform checks to ensure that data can be safely deleted from DAQ.
@@ -88,9 +94,7 @@ def check_data_safety(run_doc, ssh_host, args):
         log.info(f"Found {num_files} files in {path} on {host} for run {run_id}")
         result[host] = num_files
 
-    tags = [tag['name'] for tag in run_doc['tags']]
-
-    if 'delete_daq' in tags:
+    if check_delete_daq(run_doc):
         log.info("Found delete_daq tag!")
         if result.get('dcache') is None:
             dcache_path = next((d['location'] for d in run_doc['data'] if d['host'] == 'dcache'), None)
