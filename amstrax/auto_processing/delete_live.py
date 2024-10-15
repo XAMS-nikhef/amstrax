@@ -91,12 +91,12 @@ def check_data_safety(run_doc, ssh_host, args):
         log.info(f"Found {num_files} files in {path} on {host} for run {run_id}")
         result[host] = num_files
     
-    num_files_daq = result['daq']
-    log.info(f"File count is {num_files_daq} for run {run_id} on all hosts, safe to delete")
+    # log.info(f"File count is {num_files_daq} for run {run_id} on all hosts, safe to delete")
 
     tags = [tag['name'] for tag in run_doc['tags']]
 
     if 'delete_daq' in tags:
+        log.info("Found delete_daq tag!")
         if not result['dcache']:
             dcache_path = next((d['location'] for d in run_doc['data'] if d['host'] == 'dcache'), None)
             result['dcache'] = count_files_in_directory(dcache_path, run_id, is_remote=(host != 'daq'), ssh_host=ssh_host)
