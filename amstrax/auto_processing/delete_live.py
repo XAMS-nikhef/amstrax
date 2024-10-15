@@ -109,8 +109,7 @@ def check_data_safety(run_doc, ssh_host, args):
     if (result['stbc'] != result.get('dcache', -9) and not args.only_stoomboot) or result['daq'] != result['stbc']:
         log.warning(f"Mismatch in file count for run {run_id}")
         return False
-
-        
+    
     return True
 
 
