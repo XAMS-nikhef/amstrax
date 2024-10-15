@@ -90,8 +90,6 @@ def check_data_safety(run_doc, ssh_host, args):
         num_files = count_files_in_directory(path, run_id, is_remote=(host != 'daq'), ssh_host=ssh_host)
         log.info(f"Found {num_files} files in {path} on {host} for run {run_id}")
         result[host] = num_files
-    
-    # log.info(f"File count is {num_files_daq} for run {run_id} on all hosts, safe to delete")
 
     tags = [tag['name'] for tag in run_doc['tags']]
 
@@ -99,12 +97,10 @@ def check_data_safety(run_doc, ssh_host, args):
         log.info("Found delete_daq tag!")
         if result.get('dcache', None) == None:
             dcache_path = next((d['location'] for d in run_doc['data'] if d['host'] == 'dcache'), None)
-            result['dcache'] = count_files_in_directory(dcache_path, run_id, is_remote=(host != 'daq'), ssh_host=ssh_host)
-
+            result['dcache'] = count_files_in_directory(dcache_path, run_id, is_remote=True, ssh_host=ssh_host)
         if result['dcache'] == result['stbc']:
             log.info(f"Run {run_id} has a delete_daq tag and data exists on dcache and stbc, safe to delete")
             return True
-        
         else:
             log.info(f"Run {run_id} has a delete_daq tag and data does not exist on dcache and (!) stbc! Not safe to delete")
             return False
