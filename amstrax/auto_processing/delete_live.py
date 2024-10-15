@@ -41,6 +41,8 @@ def get_old_runs(runsdb, days, args):
                 {'$elemMatch': {'type': 'live', 'host': 'dcache'}}
             ]}},
             {'tags': {'$elemMatch': {'name': 'abandon'}},
+            'data': {'$elemMatch': {'type': 'live', 'host': 'daq'}}},
+            {'tags': {'$elemMatch': {'name': 'delete_daq'}},
             'data': {'$elemMatch': {'type': 'live', 'host': 'daq'}}}
         ]
     }
@@ -56,11 +58,11 @@ def get_old_runs(runsdb, days, args):
                 {'$elemMatch': {'type': 'live', 'host': 'stbc'}},
             ]}},
             {'tags': {'$elemMatch': {'name': 'abandon'}},
+            'data': {'$elemMatch': {'type': 'live', 'host': 'daq'}}},
+            {'tags': {'$elemMatch': {'name': 'delete_daq'}},
             'data': {'$elemMatch': {'type': 'live', 'host': 'daq'}}}
         ]
-    }
-
-        
+    }   
 
     projection = {'number': 1, 'end': 1, 'data': 1, 'tags': 1}
     return list(runsdb.find(query, projection=projection))[0:args.max_runs]
@@ -180,7 +182,7 @@ def delete_data(runsdb, run_doc, production, we_are_really_sure):
 def main(args):
     runsdb = amstrax.get_mongo_collection()
     old_runs = get_old_runs(runsdb, args.days_old, args)
-    log.info(f"Found {len(old_runs)} runs with data older than {args.days_old} days or with abandon tag")
+    log.info(f"Found {len(old_runs)} runs with data older than {args.days_old} days or with abandon or delete_daq tag")
     for run_doc in old_runs:
         # if abandoned, delete immediately (tags.name == 'abandon')
         if 'abandon' in [tag['name'] for tag in run_doc.get('tags', [])]:
