@@ -94,6 +94,7 @@ def check_data_safety(run_doc, ssh_host, args):
     num_files_daq = result['daq']
     log.info(f"File count is {num_files_daq} for run {run_id} on all hosts, safe to delete")
 
+    print(run_doc['tags'])
     if 'delete_daq' in run_doc['tags'].get('name','No_tags'):
         if not result['dcache']:
             dcache_path = next((d['location'] for d in run_doc['data'] if d['host'] == 'dcache'), None)
