@@ -70,6 +70,7 @@ def get_old_runs(runsdb, days, args):
 def check_data_safety(run_doc, ssh_host, args):
     """
     Perform checks to ensure that data can be safely deleted from DAQ.
+    If the run has a 'delete_daq' tag, check if data exists on both(!) dcache and stbc.
     Returns True if safe to delete, False otherwise.
     """
     run_id = str(run_doc['number']).zfill(6)
