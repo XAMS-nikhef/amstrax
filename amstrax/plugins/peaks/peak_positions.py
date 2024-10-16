@@ -32,7 +32,7 @@ DEFAULT_POSREC_ALGO = 'corr'
 class PeakPositions(strax.Plugin):
     depends_on = ('peaks', 'peak_basics')
     rechunk_on_save = False
-    __version__ = '1.2.10'
+    __version__ = '1.2.26'
     dtype = [
         ('x_cgr', np.float32,
          'Interaction x_cgr-position center of gravity'),
@@ -72,12 +72,22 @@ class PeakPositions(strax.Plugin):
         top_map = self.config['channel_map']['top']
         top_indeces = np.arange(top_map[0], top_map[1]+1)
 
+        # a bit convoluted, but necessary to avoid division by zero
+        numerator_12 = peaks['area_per_channel'][:,top_indeces[0]]+peaks['area_per_channel'][:,top_indeces[1]]
+        numerator_13 = peaks['area_per_channel'][:,top_indeces[0]]+peaks['area_per_channel'][:,top_indeces[2]]
+        denominator = top_sum[:]
+        
+        mask = (denominator != 0)
+        
         # f_12 is the fraction of the top area in the top row
         # if top is (1,4) this means that we take the area of channel 1 and 2
-        f_12 = (peaks['area_per_channel'][:,top_indeces[0]]+peaks['area_per_channel'][:,top_indeces[1]])/top_sum[:]
         # f_13 is the fraction of the top area in the first column
         # if top is (1,4) this means that we take the area of channel 1 and 3
-        f_13 = (peaks['area_per_channel'][:,top_indeces[0]]+peaks['area_per_channel'][:,top_indeces[2]])/top_sum[:]
+        f_12 = np.full(len(peaks), np.nan, dtype=np.float32)
+        f_13 = np.full(len(peaks), np.nan, dtype=np.float32)
+                
+        f_12[mask] = numerator_12[mask]/denominator[mask]
+        f_13[mask] = numerator_13[mask]/denominator[mask]
         
         result['x_cgr'] = f_12
         result['y_cgr'] = f_13
