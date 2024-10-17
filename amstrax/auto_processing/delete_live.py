@@ -35,7 +35,7 @@ def get_old_runs(runsdb, days, args):
                 "end": {"$lte": cutoff_date},
                 "data": {
                     "$all": [
-                        {"$elemMatch": {"type": "live", "host": "daq"}},
+                        # {"$elemMatch": {"type": "live", "host": "daq"}},
                         {"$elemMatch": {"type": "live", "host": "stbc"}},
                         {"$elemMatch": {"type": "live", "host": "dcache"}},
                     ]
