@@ -19,6 +19,7 @@ def parse_args():
     parser.add_argument("--loop_infinite", action="store_true", help="Loop infinitely")
     parser.add_argument("--max_runs", type=int, default=10, help="Max number of runs to process")
     parser.add_argument("--sleep_time", type=int, default=60, help="Sleep time between runs")
+    parser.add_argument("--min_run_number", type=int, default=2000, help="Minimum run number to consider")
 
     return parser.parse_args()
 
@@ -30,6 +31,7 @@ def get_old_runs(runsdb, days, args):
     cutoff_date = datetime.datetime.now() - datetime.timedelta(days=days)
     query = {
         "end": {"$lt": datetime.datetime.now() - datetime.timedelta(seconds=30)},
+        "number": {"$gt": args.min_run_number},
         "$or": [
             {
                 "end": {"$lte": cutoff_date},
@@ -146,6 +148,7 @@ if __name__ == "__main__":
     if args.loop_infinite:
         while True:
             main(args)
+            log.info(f"Sleeping for {args.sleep_time} seconds")
             time.sleep(args.sleep_time)
     else:
         main(args)
