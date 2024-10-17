@@ -74,18 +74,23 @@ def check_data_safety(run_doc, ssh_host, args):
 
 def count_files_in_directory(path, run_id, is_remote=False, ssh_host=None):
     """
-    Count the number of files in a given directory, locally or via SSH for remote storage.
+    Count the number of files in a given directory, locally or remotely via SSH.
     """
     full_path = os.path.join(path, run_id)
-    if is_remote:
-        cmd = ["ssh", ssh_host, f"ls -1 {full_path}/* | wc -l"]
-    else:
-        cmd = f"ls -1 {full_path}/* | wc -l"
 
-    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=is_remote, text=True)
+    if is_remote:
+        # Construct SSH command for remote execution
+        ssh_cmd = f"ssh {ssh_host} 'ls -1 {full_path}/**/* | wc -l'"
+        result = subprocess.run(ssh_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, text=True)
+    else:
+        # Local execution
+        cmd = f"ls -1 {full_path}/**/* | wc -l"
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, text=True)
+
     if result.returncode != 0:
         log.error(f"Command failed: {result.stderr}")
         return 0
+
     return int(result.stdout.strip())
 
 
