@@ -32,16 +32,19 @@ def check_diskspace(path, is_remote=False, ssh_host=None):
     log.info(f"Checking disk space for {path}")
     if is_remote:
         cmd = ["ssh", ssh_host, f"df -h {path}"]
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     else:
-        cmd = f"df -h {path}"
-
-    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=is_remote, text=True)
+        cmd = f"df -h {path}"  # Run locally
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, text=True)
+    
     if result.returncode != 0:
         log.error(f"Command failed: {result.stderr}")
         return None
 
-    free_space_str = result.stdout.split(" ")[-4]  # Extract the free space in human-readable format
+    # Extract the free space string from df output
+    free_space_str = result.stdout.splitlines()[-1].split()[3]  # Adjust according to `df` output
     return convert_to_bytes(free_space_str)
+
 
 
 def convert_to_bytes(size_str):
