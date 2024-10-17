@@ -4,6 +4,9 @@ from .common import *
 from .rundb import *
 from .logging_utils import *
 
+from . import xams_config
+from .xams_config import *
+
 from . import plugins
 from .plugins import *
 
@@ -19,3 +22,5 @@ from .mini_analysis import *
 from .matplotlib_utils import *
 
 from . import analyses
+
+

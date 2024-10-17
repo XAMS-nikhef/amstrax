@@ -6,14 +6,8 @@ import amstrax
 
 export, __all__ = strax.exporter()
 
+
 @export
-@strax.takes_config(
-    strax.Option(
-        "elife",
-        default=30000,
-        help="electron lifetime in [ns] (should be implemented in db soon)",
-    ),
-)
 class CorrectedAreas(strax.Plugin):
     """Plugin which applies light collection efficiency maps and electron life time to the data.
 
@@ -32,6 +26,10 @@ class CorrectedAreas(strax.Plugin):
 
     depends_on = ("event_basics", "event_positions")
 
+    elife = amstrax.XAMSConfig(default="cmt://elife?version=v0&run_id=plugin.run_id", help="electron lifetime in [ns]")
+
+    config_bla = amstrax.XAMSConfig(default=28, help="bla bla bla")
+
     def infer_dtype(self):
         dtype = []
         dtype += strax.time_fields
@@ -46,7 +44,6 @@ class CorrectedAreas(strax.Plugin):
             ]
 
         return dtype
-
 
     def compute(self, events):
         result = np.zeros(len(events), self.dtype)
@@ -63,6 +60,6 @@ class CorrectedAreas(strax.Plugin):
         for peak_type in ["", "alt_"]:
 
             result[f"{peak_type}cs1"] = events[f"{peak_type}s1_area"]
-            result[f"{peak_type}cs2"] = events[f"{peak_type}s2_area"]*np.exp(events["drift_time"]/elife)
+            result[f"{peak_type}cs2"] = events[f"{peak_type}s2_area"] * np.exp(events["drift_time"] / elife)
 
         return result
