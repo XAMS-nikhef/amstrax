@@ -19,47 +19,8 @@ def parse_args():
     parser.add_argument("--loop_infinite", action="store_true", help="Loop infinitely")
     parser.add_argument("--max_runs", type=int, default=10, help="Max number of runs to process")
     parser.add_argument("--sleep_time", type=int, default=60, help="Sleep time between runs")
-    parser.add_argument(
-        "--min_free_diskspace", type=int, default=500e9, help="Minimum free disk space in bytes for remote storage"
-    )
+
     return parser.parse_args()
-
-
-def check_diskspace(path, is_remote=False, ssh_host=None):
-    """
-    Check the disk space on a given path, locally or remotely via SSH.
-    """
-    log.info(f"Checking disk space for {path}")
-    if is_remote:
-        cmd = ["ssh", ssh_host, f"df -h {path}"]
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    else:
-        cmd = f"df -h {path}"  # Run locally
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, text=True)
-    
-    if result.returncode != 0:
-        log.error(f"Command failed: {result.stderr}")
-        return None
-
-    # Extract the free space string from df output
-    free_space_str = result.stdout.splitlines()[-1].split()[3]  # Adjust according to `df` output
-    return convert_to_bytes(free_space_str)
-
-
-
-def convert_to_bytes(size_str):
-    size_value = int(size_str[:-1])
-    size_unit = size_str[-1].upper()
-    if size_unit == "T":
-        return size_value * 10**12
-    elif size_unit == "G":
-        return size_value * 10**9
-    elif size_unit == "M":
-        return size_value * 10**6
-    elif size_unit == "K":
-        return size_value * 10**3
-    else:
-        raise ValueError(f"Unknown size unit: {size_unit}")
 
 
 def get_old_runs(runsdb, days, args):
@@ -157,20 +118,16 @@ def main(args):
     log.info(f"Found {len(old_runs)} runs with data older than {args.days_old} days")
 
     # Check local disk space
-    free_space_local = check_diskspace("/data/xenon/xams_v2/live_data")
-    if free_space_local < args.min_free_diskspace:
-        log.info("Insufficient local space. Deleting local data.")
-        for run_doc in old_runs:
-            if check_data_safety(run_doc, args.ssh_host, args):
-                delete_data(run_doc, args.production, args.we_are_really_sure, args.ssh_host, is_remote=False)
+    log.info("Deleting local data.")
+    for run_doc in old_runs:
+        if check_data_safety(run_doc, args.ssh_host, args):
+            delete_data(run_doc, args.production, args.we_are_really_sure, args.ssh_host, is_remote=False)
 
     # Check remote disk space via SSH
-    free_space_remote = check_diskspace("/data/xenon/xams_v2/live_data", is_remote=True, ssh_host=args.ssh_host)
-    if free_space_remote < args.min_free_diskspace:
-        log.info("Insufficient remote space. Deleting remote data.")
-        for run_doc in old_runs:
-            if check_data_safety(run_doc, args.ssh_host, args):
-                delete_data(run_doc, args.production, args.we_are_really_sure, args.ssh_host, is_remote=True)
+    log.info("Deleting remote data.")
+    for run_doc in old_runs:
+        if check_data_safety(run_doc, args.ssh_host, args):
+            delete_data(run_doc, args.production, args.we_are_really_sure, args.ssh_host, is_remote=True)
 
 
 if __name__ == "__main__":
