@@ -65,7 +65,7 @@ class XAMSConfig(Config):
         filename = query_params.get("filename", [None])[0]
         # Run id needs to be the evaluation of plugin.run_id if the string is plugin.run_id, else 
         # it needs to be the string that is passed like run_id=123456
-        run_id = eval(query_params.get("run_id", [plugin.run_id])[0])
+        run_id = plugin.run_id if query_params.get("run_id", [None])[0] == "plugin.run_id" else query_params.get("run_id", [None])[0]
         github_branch = query_params.get("github_branch", ["master"])[0]
 
         self.filename = filename

@@ -64,7 +64,7 @@ def xams(
     mongo_kwargs=dict(
         mongo_collname=CONFIG["DEFAULT_COLLECTION"], mongo_dbname=CONFIG["DEFAULT_RUNCOLNAME"], runid_field="number"
     ),
-    corrections_version="ONLINE",
+    corrections_version=None,
     *args,
     **kwargs,
 ):
