@@ -21,7 +21,7 @@ export, __all__ = strax.exporter()
                  default=39500,
                  help='Drift time belonging to the cathode in ns'),
     strax.Option('gate_cathode_distance',
-                 default=505,
+                 default=50.5,
                  help='Distance between gate and cathode in mm'),    
 )
 
