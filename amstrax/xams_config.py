@@ -12,9 +12,9 @@ export, __all__ = strax.exporter()
 class XAMSConfig(Config):
     """A configuration class that fetches corrections from JSON files."""
 
-    def __init__(self, name="", version="v0", **kwargs):
+    def __init__(self, name="", **kwargs):
         super().__init__(name=name, **kwargs)
-        self.version = version  # Track the version
+        print(f"XAMSConfig initialized with name {name}")
 
     def fetch(self, plugin):
         """
@@ -36,13 +36,20 @@ class XAMSConfig(Config):
 
     def _fetch_from_cmt(self, plugin, config_value):
         """Fetch correction from a cmt:// URL."""
-        run_id = plugin.run_id
         correction_key = self.name
 
-        print(f"Fetching correction for {correction_key} and run_id {run_id}")
+        parsed_url = urlparse(config_value)
+        query_params = parse_qs(parsed_url.query)
+        run_id = plugin.run_id
+        github_branch = query_params.get("github_branch", ["master"])[0]
+        version = query_params.get("version", [None])[0]
+        if not version:
+            raise ValueError(f"Invalid cmt:// URL, missing version: {config_value}")
+
+        print(f"Fetching correction {version} for {correction_key} and run_id {run_id} using branch {github_branch}")
 
         # Retrieve the global corrections file
-        corrections = amstrax.get_correction(f"_global_{self.version}.json")
+        corrections = amstrax.get_correction(f"_global_{version}.json", branch=github_branch)
 
         # Get the specific file for this correction (e.g., 'elife_v0.json')
         correction_file = corrections.get(correction_key)
@@ -50,7 +57,7 @@ class XAMSConfig(Config):
             raise ValueError(f"No correction file found for {correction_key} and run_id {run_id}")
 
         # Load the correction data (e.g., {'001200': 5500, '001300': 6000})
-        correction_data = amstrax.get_correction(correction_file)
+        correction_data = amstrax.get_correction(correction_file, branch=github_branch)
 
         value = self.find_correction_value(correction_data, run_id)
 
@@ -61,11 +68,9 @@ class XAMSConfig(Config):
         # Parse the URL to extract filename and run_id
         parsed_url = urlparse(config_value)
         query_params = parse_qs(parsed_url.query)
-
         filename = query_params.get("filename", [None])[0]
-        # Run id needs to be the evaluation of plugin.run_id if the string is plugin.run_id, else 
-        # it needs to be the string that is passed like run_id=123456
-        run_id = plugin.run_id if query_params.get("run_id", [None])[0] == "plugin.run_id" else query_params.get("run_id", [None])[0]
+        run_id = plugin.run_id
+
         github_branch = query_params.get("github_branch", ["master"])[0]
 
         self.filename = filename
@@ -104,7 +109,7 @@ class XAMSConfig(Config):
                     start_run = "000000"
 
                 end_run = end_run.zfill(6)
-                
+
                 print(f"Checking if {start_run} <= {run_id} <= {end_run}")
 
                 if start_run <= run_id <= end_run:

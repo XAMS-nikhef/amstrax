@@ -202,7 +202,7 @@ def apply_global_correction_version(context: strax.Context, global_version: str)
             continue
 
         # Set the configuration to point to the correct file for each key (e.g., elife, gain)
-        config_value = f"file://{correction_key}?filename={correction_file}&run_id=plugin.run_id"
+        config_value = f"file://{correction_key}?filename={correction_file}"
         xams_config[correction_key] = config_value
 
     # Set the full configuration in the context
