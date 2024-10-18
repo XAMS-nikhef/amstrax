@@ -7,6 +7,9 @@ from .logging_utils import *
 from . import xams_config
 from .xams_config import *
 
+from . import corrections_services
+from .corrections_services import *
+
 from . import plugins
 from .plugins import *
 
