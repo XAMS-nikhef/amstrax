@@ -68,43 +68,45 @@ class XAMSConfig(Config):
 
         filename = query_params.get("filename", [None])[0]
         run_id = query_params.get("run_id", [None])[0] or plugin.run_id
+        github_branch = query_params.get("github_branch", ["master"])[0]
 
         if not filename:
             raise ValueError(f"Invalid file:// URL, missing filename: {config_value}")
 
         # Retrieve the specific correction file (e.g., 'elife_v0.json')
-        correction_data = amstrax.get_correction(filename)
+
+        correction_data = amstrax.get_correction(filename, branch=github_branch)
 
         # Find the correction value based on the run_id
         value = self.find_correction_value(correction_data, run_id)
 
         return value
 
-def find_correction_value(self, correction_data, run_id):
-    run_id = run_id.zfill(6)  # Ensure run_id is always 6 digits
-    value = None
+    def find_correction_value(self, correction_data, run_id):
+        run_id = run_id.zfill(6)  # Ensure run_id is always 6 digits
+        value = None
 
-    for run_range in correction_data.keys():
-        if "-" in run_range:
-            start_run, end_run = run_range.split("-")
-            start_run = start_run.zfill(6)
-            if end_run == "*":
-                # Only allow * for online corrections
-                # check if there is _dev in the filename
-                if "_dev" not in self.name:
-                    raise ValueError(f"Wildcard '*' is only allowed for online corrections")
-                end_run = "999999"  # Treat * as the highest possible run ID
-            end_run = end_run.zfill(6)
+        for run_range in correction_data.keys():
+            if "-" in run_range:
+                start_run, end_run = run_range.split("-")
+                start_run = start_run.zfill(6)
+                if end_run == "*":
+                    # Only allow * for online corrections
+                    # check if there is _dev in the filename
+                    if "_dev" not in self.name:
+                        raise ValueError(f"Wildcard '*' is only allowed for online corrections")
+                    end_run = "999999"  # Treat * as the highest possible run ID
+                end_run = end_run.zfill(6)
 
-            if start_run <= run_id <= end_run:
-                value = correction_data[run_range]
-                break
-        else:
-            if run_range.zfill(6) == run_id:
-                value = correction_data[run_range]
-                break
+                if start_run <= run_id <= end_run:
+                    value = correction_data[run_range]
+                    break
+            else:
+                if run_range.zfill(6) == run_id:
+                    value = correction_data[run_range]
+                    break
 
-    if value is None:
-        raise ValueError(f"No valid correction found for run_id {run_id} and no fallback is allowed.")
+        if value is None:
+            raise ValueError(f"No valid correction found for run_id {run_id} and no fallback is allowed.")
 
-    return value
+        return value
