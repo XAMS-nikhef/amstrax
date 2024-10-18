@@ -1,7 +1,7 @@
 import os
 import requests
 
-export, __all__ = amstrax_files.exporter()
+export, __all__ = strax.exporter()
 
 GITHUB_RAW_URL = f"https://raw.githubusercontent.com/XAMS-nikhef/amstrax_files/{branch}/corrections/"
 
