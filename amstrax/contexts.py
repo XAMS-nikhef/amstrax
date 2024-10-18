@@ -7,7 +7,6 @@ from immutabledict import immutabledict
 
 import sys
 import amstrax as ax
-import amstrax_files
 
 # Configuration
 CONFIG = {"DEFAULT_DETECTOR": "xams", "DEFAULT_RUNCOLNAME": "run", "DEFAULT_COLLECTION": "runs_gas"}
@@ -193,7 +192,7 @@ def apply_global_correction_version(context: strax.Context, global_version: str)
     """
     # Load the global corrections file (e.g., 'global_v0.json')
     global_corrections_file = f"_global_{global_version}.json"
-    global_corrections = amstrax_files.get_correction(global_corrections_file)
+    global_corrections = amstrax.get_correction(global_corrections_file)
 
     # Iterate over all the relevant corrections specified in the global file
     xams_config = {}
