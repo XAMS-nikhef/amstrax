@@ -15,7 +15,6 @@ class XAMSConfig(Config):
     def __init__(self, name="", version="v0", **kwargs):
         super().__init__(name=name, **kwargs)
         self.version = version  # Track the version
-        self.correction_hash = None  # Store correction hash for lineage
 
     def fetch(self, plugin):
         """
@@ -31,7 +30,7 @@ class XAMSConfig(Config):
                 return self._fetch_from_cmt(plugin, config_value)
             elif config_value.startswith("file://"):
                 return self._fetch_from_file_url(plugin, config_value)
-        
+
         # Return regular default value if no URL
         return plugin.config.get(self.name, self.default)
 
@@ -55,9 +54,6 @@ class XAMSConfig(Config):
 
         value = self.find_correction_value(correction_data, run_id)
 
-        # Store the correction hash to ensure lineage tracking
-        self.correction_hash = self.get_correction_hash(correction_file)
-
         return value
 
     def _fetch_from_file_url(self, plugin, config_value):
@@ -67,14 +63,17 @@ class XAMSConfig(Config):
         query_params = parse_qs(parsed_url.query)
 
         filename = query_params.get("filename", [None])[0]
-        run_id = query_params.get("run_id", [None])[0] or plugin.run_id
+        # Run id needs to be the evaluation of plugin.run_id if the string is plugin.run_id, else 
+        # it needs to be the string that is passed like run_id=123456
+        run_id = eval(query_params.get("run_id", [plugin.run_id])[0])
         github_branch = query_params.get("github_branch", ["master"])[0]
+
+        self.filename = filename
 
         if not filename:
             raise ValueError(f"Invalid file:// URL, missing filename: {config_value}")
 
         # Retrieve the specific correction file (e.g., 'elife_v0.json')
-
         correction_data = amstrax.get_correction(filename, branch=github_branch)
 
         # Find the correction value based on the run_id
@@ -93,10 +92,20 @@ class XAMSConfig(Config):
                 if end_run == "*":
                     # Only allow * for online corrections
                     # check if there is _dev in the filename
-                    if "_dev" not in self.name:
+                    if "_dev" not in self.filename:
                         raise ValueError(f"Wildcard '*' is only allowed for online corrections")
                     end_run = "999999"  # Treat * as the highest possible run ID
+
+                if start_run == "*":
+                    # Only allow * for online corrections
+                    # check if there is _dev in the filename
+                    if "_dev" not in self.filename:
+                        raise ValueError(f"Wildcard '*' is only allowed for online corrections")
+                    start_run = "000000"
+
                 end_run = end_run.zfill(6)
+                
+                print(f"Checking if {start_run} <= {run_id} <= {end_run}")
 
                 if start_run <= run_id <= end_run:
                     value = correction_data[run_range]
