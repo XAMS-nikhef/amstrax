@@ -11,12 +11,6 @@ export, __all__ = strax.exporter()
 
 @export
 @strax.takes_config(
-    strax.Option('electron_drift_velocity',
-                 default=0.0000016,
-                 help='Vertical electron drift velocity in cm/ns (1e4 m/ms)'),
-    strax.Option('electron_drift_time_gate',
-                 default=1,
-                 help='Electron drift time from the gate in ns'),
     strax.Option('default_reconstruction_algorithm',
                  default=DEFAULT_POSREC_ALGO,
                  help="default reconstruction algorithm that provides (x,y)"),
@@ -62,16 +56,11 @@ class EventPositions(strax.Plugin):
 
     def setup(self):
 
-        self.electron_drift_velocity = self.config['electron_drift_velocity']
-        self.electron_drift_time_gate = self.config['electron_drift_time_gate']
         self.default_reconstruction_algorithm = self.config['default_reconstruction_algorithm']
         self.drift_time_gate = self.config['drift_time_gate']
         self.drift_time_cathode = self.config['drift_time_cathode']
         self.gate_cathode_distance = self.config['gate_cathode_distance']
         
-        self.coordinate_scales = [1., 1., - self.electron_drift_velocity]
-        # self.map = self.fdc_map
-
     def compute(self, events):
 
         result = {'time': events['time'],
