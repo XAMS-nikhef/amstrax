@@ -1,9 +1,9 @@
-import amstrax_files
 import strax
 import typing as ty
 from strax import Config
 from immutabledict import immutabledict
 from urllib.parse import urlparse, parse_qs
+import amstrax
 
 export, __all__ = strax.exporter()
 
@@ -43,7 +43,7 @@ class XAMSConfig(Config):
         print(f"Fetching correction for {correction_key} and run_id {run_id}")
 
         # Retrieve the global corrections file
-        corrections = amstrax_files.get_correction(f"_global_{self.version}.json")
+        corrections = amstrax.get_correction(f"_global_{self.version}.json")
 
         # Get the specific file for this correction (e.g., 'elife_v0.json')
         correction_file = corrections.get(correction_key)
@@ -51,7 +51,7 @@ class XAMSConfig(Config):
             raise ValueError(f"No correction file found for {correction_key} and run_id {run_id}")
 
         # Load the correction data (e.g., {'001200': 5500, '001300': 6000})
-        correction_data = amstrax_files.get_correction(correction_file)
+        correction_data = amstrax.get_correction(correction_file)
 
         value = self.find_correction_value(correction_data, run_id)
 
@@ -73,7 +73,7 @@ class XAMSConfig(Config):
             raise ValueError(f"Invalid file:// URL, missing filename: {config_value}")
 
         # Retrieve the specific correction file (e.g., 'elife_v0.json')
-        correction_data = amstrax_files.get_correction(filename)
+        correction_data = amstrax.get_correction(filename)
 
         # Find the correction value based on the run_id
         value = self.find_correction_value(correction_data, run_id)

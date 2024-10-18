@@ -9,4 +9,3 @@ iminuit
 matplotlib
 packaging
 gitpython
-amstrax_files @ git+https://github.com/XAMS-nikhef/amstrax_files
