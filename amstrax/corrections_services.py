@@ -4,7 +4,7 @@ import strax
 
 export, __all__ = strax.exporter()
 
-GITHUB_RAW_URL = f"https://raw.githubusercontent.com/XAMS-nikhef/amstrax_files/{branch}/corrections/"
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/XAMS-nikhef/amstrax_files/{branch}/corrections/"
 
 
 @export
@@ -20,6 +20,9 @@ def get_correction(file_name, branch="master"):
 def _fetch_from_github(file_name, branch="master"):
     """Fetch correction file from GitHub raw URL"""
     url = GITHUB_RAW_URL.format(branch=branch) + file_name
+
+
+    
     response = requests.get(url)
 
     if response.status_code == 200:
