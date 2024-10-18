@@ -104,4 +104,6 @@ def monitor_jobs():
     """
     Placeholder for monitoring jobs. Could be used to check job statuses and handle retries/failures.
     """
-    pass
+
+    # Placeholder for now
+    raise NotImplementedError("Monitoring jobs not yet implemented.")
