@@ -26,7 +26,7 @@ class CorrectedAreas(strax.Plugin):
 
     depends_on = ("event_basics", "event_positions")
 
-    elife = amstrax.XAMSConfig(default="cmt://elife?version=v0&run_id=plugin.run_id", help="electron lifetime in [ns]")
+    elife = amstrax.XAMSConfig(default=30000, help="electron lifetime in [ns]")
 
     config_bla = amstrax.XAMSConfig(default=28, help="bla bla bla")
 
