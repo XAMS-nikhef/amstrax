@@ -108,4 +108,3 @@ def find_correction_value(self, correction_data, run_id):
         raise ValueError(f"No valid correction found for run_id {run_id} and no fallback is allowed.")
 
     return value
-
