@@ -2,7 +2,7 @@ import numpy as np
 import amstrax
 
 
-DEFAULT_POSREC_ALGO = 'cgr'
+DEFAULT_POSREC_ALGO = 'corr'
 
 import strax
 
@@ -11,15 +11,18 @@ export, __all__ = strax.exporter()
 
 @export
 @strax.takes_config(
-    strax.Option('electron_drift_velocity',
-                 default=0.0000016,
-                 help='Vertical electron drift velocity in cm/ns (1e4 m/ms)'),
-    strax.Option('electron_drift_time_gate',
-                 default=1,
-                 help='Electron drift time from the gate in ns'),
     strax.Option('default_reconstruction_algorithm',
                  default=DEFAULT_POSREC_ALGO,
                  help="default reconstruction algorithm that provides (x,y)"),
+    strax.Option('drift_time_gate',
+                 default=3000,
+                 help='Drift time belonging to the gate in ns'),
+    strax.Option('drift_time_cathode',
+                 default=39500,
+                 help='Drift time belonging to the cathode in ns'),
+    strax.Option('gate_cathode_distance',
+                 default=505,
+                 help='Distance between gate and cathode in mm'),    
 )
 
 class EventPositions(strax.Plugin):
@@ -33,7 +36,7 @@ class EventPositions(strax.Plugin):
 
     depends_on = ('event_basics',)
 
-    __version__ = '0.4.0'
+    __version__ = '1.1.20'
 
 
     def infer_dtype(self):
@@ -46,22 +49,24 @@ class EventPositions(strax.Plugin):
                 field = f'alt_s{s_i}_{j}'
                 dtype += [(field, np.float32, comment)]
 
+        dtype += [('z', np.float32,
+         'Interaction depth z-position')]
+        
         return dtype + strax.time_fields
 
     def setup(self):
 
-        self.electron_drift_velocity = self.config['electron_drift_velocity']
-        self.electron_drift_time_gate = self.config['electron_drift_time_gate']
         self.default_reconstruction_algorithm = self.config['default_reconstruction_algorithm']
+        self.drift_time_gate = self.config['drift_time_gate']
+        self.drift_time_cathode = self.config['drift_time_cathode']
+        self.gate_cathode_distance = self.config['gate_cathode_distance']
         
-        self.coordinate_scales = [1., 1., - self.electron_drift_velocity]
-        # self.map = self.fdc_map
-
     def compute(self, events):
 
         result = {'time': events['time'],
                   'endtime': strax.endtime(events)}
 
+        # cope the values from the S2s
         algo = self.default_reconstruction_algorithm
 
         for j in 'x y'.split():
@@ -74,5 +79,7 @@ class EventPositions(strax.Plugin):
         result['r'] = np.sqrt(result['x'] ** 2 + result['y'] ** 2)
         result['alt_s2_r'] = np.sqrt(result['alt_s2_x'] ** 2 + result['alt_s2_y'] ** 2)
 
+        slope = -self.gate_cathode_distance / (self.drift_time_cathode - self.drift_time_gate)
+        result['z'] = slope * (events['drift_time'] - self.drift_time_gate)
 
         return result
