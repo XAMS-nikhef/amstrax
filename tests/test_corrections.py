@@ -11,7 +11,7 @@ class TestXamsCorrections(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # Initialize XAMS context with a specific correction version
-        cls.st = amstrax.contexts.xams(corrections_version="ONLINE")
+        cls.st = amstrax.contexts.xams(corrections_version="ONLINE", init_rundb=False)
         cls.run_id = "002230"  # Example run_id to use in tests
 
         # Register a test plugin to verify the configuration setup
