@@ -40,6 +40,10 @@ class PeaksEXT(strax.Plugin):
         help="Gain to pe array"
     )
 
+    def setup(self):
+
+        self.gain_to_pe_array = self.gain_to_pe_array
+
     def infer_dtype(self):
     
         # it's a bit silly, but for how strax function find_peaks is structured

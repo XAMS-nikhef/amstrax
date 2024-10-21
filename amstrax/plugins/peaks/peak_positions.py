@@ -59,6 +59,7 @@ class PeakPositions(strax.Plugin):
     def setup(self):
         
         self.default_reconstruction_algorithm = self.config['default_reconstruction_algorithm']
+        self.pos_rec_params = self.pos_rec_params
 
     def compute(self, peaks):
                 

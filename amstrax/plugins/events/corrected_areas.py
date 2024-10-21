@@ -28,6 +28,10 @@ class CorrectedAreas(strax.Plugin):
 
     elife = amstrax.XAMSConfig(default=30000, help="electron lifetime in [ns]")
 
+    def setup(self):
+
+        self.elife = self.elife
+
     def infer_dtype(self):
         dtype = []
         dtype += strax.time_fields
