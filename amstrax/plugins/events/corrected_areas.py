@@ -53,11 +53,9 @@ class CorrectedAreas(strax.Plugin):
         # fine as the S1 correction varies slowly.
         # event_positions = np.vstack([events["x"], events["y"], events["z"]]).T
 
-        elife = self.config["elife"]
-
         for peak_type in ["", "alt_"]:
 
             result[f"{peak_type}cs1"] = events[f"{peak_type}s1_area"]
-            result[f"{peak_type}cs2"] = events[f"{peak_type}s2_area"] * np.exp(events["drift_time"] / elife)
+            result[f"{peak_type}cs2"] = events[f"{peak_type}s2_area"] * np.exp(events["drift_time"] / self.elife)
 
         return result
