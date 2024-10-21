@@ -199,11 +199,11 @@ def apply_global_correction_version(context: strax.Context, global_version: str)
     """
     # Load the global corrections file (e.g., 'global_v0.json')
 
-    if '@' in global_version:
-        global_version, github_branch = global_version.split('@')
-    else: 
-        github_branch = None
-        
+    if "@" in global_version:
+        global_version, github_branch = global_version.split("@")
+    else:
+        github_branch = "master"
+
     global_corrections_file = f"_global_{global_version}.json"
     global_corrections = ax.get_correction(global_corrections_file, branch=github_branch)
 
