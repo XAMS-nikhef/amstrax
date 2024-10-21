@@ -30,7 +30,7 @@ class CorrectedAreas(strax.Plugin):
 
     def setup(self):
 
-        self.elife = self.elife
+        self.elife_value = self.elife
 
     def infer_dtype(self):
         dtype = []
@@ -60,6 +60,6 @@ class CorrectedAreas(strax.Plugin):
         for peak_type in ["", "alt_"]:
 
             result[f"{peak_type}cs1"] = events[f"{peak_type}s1_area"]
-            result[f"{peak_type}cs2"] = events[f"{peak_type}s2_area"] * np.exp(events["drift_time"] / self.elife)
+            result[f"{peak_type}cs2"] = events[f"{peak_type}s2_area"] * np.exp(events["drift_time"] / self.elife_value)
 
         return result
