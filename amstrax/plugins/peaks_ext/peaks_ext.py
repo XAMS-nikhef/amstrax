@@ -14,22 +14,14 @@ export, __all__ = strax.exporter()
                  help="Include this many ns right of hits in peaks"),
     strax.Option('peak_min_area', default=10,
                  help="Minimum contributing PMTs needed to define a peak"),
-    strax.Option('peak_min_pmts', default=1,
-                 help="Minimum contributing PMTs needed to define a peak"),
-    strax.Option('single_channel_peaks', default=False,
-                 help='Whether single-channel peaks should be reported'),
     strax.Option('peak_split_min_height', default=25,
                  help="Minimum height in PE above a local sum waveform"
                       "minimum, on either side, to trigger a split"),
     strax.Option('peak_split_min_ratio', default=4,
                  help="Minimum ratio between local sum waveform"
                       "minimum and maxima on either side, to trigger a split"),
-    strax.Option('diagnose_sorting', track=False, default=False,
-                 help="Enable runtime checks for sorting and disjointness"),
     strax.Option('n_tpc_pmts', track=False, default=False,
                  help="Number of channels"), 
-    strax.Option('gain_to_pe_array', default=None,
-                 help="Gain to pe array"),
     strax.Option('n_ext_pmts', track=True, default=1,
                     help="Number of external channels"),
 )
@@ -41,6 +33,11 @@ class PeaksEXT(strax.Plugin):
     rechunk_on_save = True
 
     __version__ = '0.0.2'
+
+    gain_to_pe_array = amstrax.XAMSConfig(
+        default=None,
+        help="Gain to pe array"
+    )
 
     def infer_dtype(self):
     

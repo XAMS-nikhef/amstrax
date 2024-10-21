@@ -12,7 +12,11 @@ import amstrax as ax
 CONFIG = {"DEFAULT_DETECTOR": "xams", "DEFAULT_RUNCOLNAME": "run", "DEFAULT_COLLECTION": "runs_gas"}
 
 PATHS_TO_REGISTER = [
+    # The path for raw records on nikhef
     "/data/xenon/xams_v2/xams_raw_records",
+    # The path for processed data on nikhef
+    "/data/xenon/xams_v2/xams_processed",
+    # The path for raw records on the xams server
     "/home/xams/data/xams_processed",
 ]
 
@@ -187,12 +191,21 @@ def _check_raw_records_exists(st: strax.Context, run_id: str) -> bool:
 def apply_global_correction_version(context: strax.Context, global_version: str) -> None:
     """
     Set all the relevant correction variables based on the specified global version.
+    Only for testing purposes, you can add a github branch to the version by adding '@branchname' to the version.
 
     :param global_version: A specific version (e.g., 'v0') to apply corrections.
+
+
     """
     # Load the global corrections file (e.g., 'global_v0.json')
+
+    if '@' in global_version:
+        global_version, github_branch = global_version.split('@')
+    else: 
+        github_branch = None
+        
     global_corrections_file = f"_global_{global_version}.json"
-    global_corrections = ax.get_correction(global_corrections_file)
+    global_corrections = ax.get_correction(global_corrections_file, github_branch=github_branch)
 
     # Iterate over all the relevant corrections specified in the global file
     xams_config = {}
@@ -202,7 +215,8 @@ def apply_global_correction_version(context: strax.Context, global_version: str)
             continue
 
         # Set the configuration to point to the correct file for each key (e.g., elife, gain)
-        config_value = f"file://{correction_key}?filename={correction_file}"
+        add_github_branch = "&github_branch=" + github_branch if github_branch is not None else ""
+        config_value = f"file://{correction_key}?filename={correction_file}{add_github_branch}"
         xams_config[correction_key] = config_value
 
     # Set the full configuration in the context

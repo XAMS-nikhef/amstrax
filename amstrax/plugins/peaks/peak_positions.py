@@ -2,6 +2,8 @@ import numba
 import numpy as np
 import strax
 from immutabledict import immutabledict
+import amstrax
+
 export, __all__ = strax.exporter()
 
 DEFAULT_POSREC_ALGO = 'corr'
@@ -17,17 +19,7 @@ DEFAULT_POSREC_ALGO = 'corr'
     strax.Option('default_reconstruction_algorithm',
                  default=DEFAULT_POSREC_ALGO,
                  help="default reconstruction algorithm that provides (x,y)"
-    ),
-    strax.Option(
-        'px', 
-        default=[212.89988642, -320.95097295, 198.71830514, -46.03953999],
-        help="Parameters for a correction function to go from x_cgr to true x"
-    ),
-    strax.Option(
-        'py', 
-        default=[211.40051359, -319.83147964, 198.69552524, -46.23585688],
-        help="Parameters for a correction function to go from y_cgr to true y"
-    ),
+    )
 )
 class PeakPositions(strax.Plugin):
     depends_on = ('peaks', 'peak_basics')
@@ -55,6 +47,14 @@ class PeakPositions(strax.Plugin):
         ('time', np.int64, 'Start time of the peak (ns since unix epoch)'),
         ('endtime', np.int64, 'End time of the peak (ns since unix epoch)')
     ]
+
+    pos_rec_params = amstrax.XAMSConfig(
+        default=[
+            [212.89988642, -320.95097295, 198.71830514, -46.03953999],
+            [211.40051359, -319.83147964, 198.69552524, -46.23585688]
+        ],
+        help="Parameters for a correction function to go from x_cgr to true x and y_cgr to true y"
+    )
 
     def setup(self):
         
@@ -94,8 +94,11 @@ class PeakPositions(strax.Plugin):
         result['r_cgr'] = np.sqrt(result['x_cgr']**2+result['y_cgr']**2)
 
         # correct the x and y cgr positions
-        rec_function_x = np.poly1d(np.array(self.config['px']))
-        rec_function_y = np.poly1d(np.array(self.config['py']))
+        px = pos_rec_params[0]
+        py = pos_rec_params[1]
+
+        rec_function_x = np.poly1d(np.array(px))
+        rec_function_y = np.poly1d(np.array(py))
         
         result['x_corr'] = rec_function_x(result['x_cgr'])
         result['y_corr'] = rec_function_y(result['y_cgr'])
