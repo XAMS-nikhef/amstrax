@@ -205,7 +205,7 @@ def apply_global_correction_version(context: strax.Context, global_version: str)
         github_branch = None
         
     global_corrections_file = f"_global_{global_version}.json"
-    global_corrections = ax.get_correction(global_corrections_file, github_branch=github_branch)
+    global_corrections = ax.get_correction(global_corrections_file, branch=github_branch)
 
     # Iterate over all the relevant corrections specified in the global file
     xams_config = {}
