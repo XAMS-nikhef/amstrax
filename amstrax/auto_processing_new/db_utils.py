@@ -8,7 +8,6 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 # Create a MongoDB client and connect to the rundb collection
-runsdb = amstrax.get_mongo_collection()
 
 def update_processing_status(run_id, status, reason=None, host='stbc', production=False, pull=dict(), is_online=False):
     """
@@ -21,6 +20,10 @@ def update_processing_status(run_id, status, reason=None, host='stbc', productio
     :param production: If True, actually updates the database, else simulates the update.
     :return: None
     """
+    
+    runsdb = amstrax.get_mongo_collection()
+
+
     update = {
         'status': status,
         'time': datetime.datetime.now(),
@@ -75,6 +78,10 @@ def add_data_entry(
     :param production: If True, actually updates the database, else simulates the update.
     :return: None
     """
+
+    runsdb = amstrax.get_mongo_collection()
+
+
     data_entry = {
         'time': datetime.datetime.now(),
         'type': data_type,
@@ -109,6 +116,9 @@ def query_runs(query):
     :param query: MongoDB query object.
     :return: List of runs matching the query.
     """
+    
+    runsdb = amstrax.get_mongo_collection()
+
     results = list(runsdb.find(query))
     log.info(f"Found {len(results)} runs matching query.")
     return results
