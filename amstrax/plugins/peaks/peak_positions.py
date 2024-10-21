@@ -94,8 +94,8 @@ class PeakPositions(strax.Plugin):
         result['r_cgr'] = np.sqrt(result['x_cgr']**2+result['y_cgr']**2)
 
         # correct the x and y cgr positions
-        px = pos_rec_params[0]
-        py = pos_rec_params[1]
+        px = self.pos_rec_params[0]
+        py = self.pos_rec_params[1]
 
         rec_function_x = np.poly1d(np.array(px))
         rec_function_y = np.poly1d(np.array(py))
