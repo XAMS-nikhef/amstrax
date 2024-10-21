@@ -1,160 +1,192 @@
 # processing.py
 import os
-import strax
-import amstrax
+import sys
 import logging
-from db_interaction import update_processing_status, add_data_entry
+import argparse
+import strax
+from functools import partial
+import socket
+import getpass
+import time, datetime
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 
-def process_run(
-    run_id,
-    targets,
-    live_folder,
-    raw_records_folder,
-    output_folder,
-    allow_raw_records=False,
-    corrections_version="ONLINE",
-    production=False,
-):
-    """
-    Process a single run based on the provided parameters.
+class RunProcessor:
+    def __init__(self, args):
+        self.run_id = f"{int(args.run_id):06d}"
+        self.targets = args.targets
+        self.output_folder = args.output_folder
+        self.allow_raw_records = args.allow_raw_records
+        self.corrections_version = args.corrections_version
+        self.production = args.production
+        self.amstrax_path = args.amstrax_path
+        self.is_online = args.is_online
+        
 
-    :param run_id: ID of the run to process.
-    :param targets: List of data types to process (e.g., ['raw_records', 'peaks']).
-    :param config: Configuration for the context.
-    :param live_folder: Path to the live data folder for raw records processing.
-    :param raw_records_folder: Path to the folder containing raw records (output from raw records processing).
-    :param output_folder: Path to save the processed data (for peaks, events, etc.).
-    :param rundb: MongoDB collection for retrieving the run document.
-    :param allow_raw_records: Boolean flag to explicitly allow raw_records processing.
-    :param corrections_version: Version of corrections to apply ('ONLINE' or specific).
-    :param production: If True, updates the production database.
-    :return: None
-    """
-    log.info(f"Processing run {run_id} with targets: {targets}")
+    def setup_amstrax(self):
+        if self.amstrax_path:
+            if not os.path.exists(self.amstrax_path):
+                raise FileNotFoundError(f"amstrax path {self.amstrax_path} does not exist.")
+            log.info(f"Adding {self.amstrax_path} to sys.path.")
+            sys.path.insert(0, self.amstrax_path)
+        import amstrax
+        self.amstrax = amstrax
+        log.info(f"Using amstrax version: {amstrax.__version__} at {amstrax.__file__}")
+        
+        self.db_utils = self.amstrax.db_utils
 
-    # Retrieve the run document from rundb
-    rundb = amstrax.get_mongo_collection()
-    run_doc = rundb.find_one({"number": int(run_id)})
-    if not run_doc:
-        log.error(f"Run document for {run_id} not found in rundb.")
-        return
+        self.add_data_entry = partial(
+            self.db_utils.add_data_entry, 
+            run_id=self.run_id,
+            production=self.production,
+            host=socket.gethostname().split("-")[0],
+            location=self.output_folder,
+            user=getpass.getuser(),
+            corrections_version=self.corrections_version,
+            amstrax_path=self.amstrax_path,
+            amstrax_version=self.amstrax.__version__,
+            updated_at=datetime.datetime.now(),
+            is_online=self.is_online
+        )
 
-    # Separate raw_records if it's in the target list
-    if "raw_records" in targets:
-        if not allow_raw_records:
-            log.error("Raw records processing is not allowed. Use the --allow_raw_records flag.")
+
+    def process(self):
+        # Split targets into raw_records and others
+        if "raw_records" in self.targets:
+            if not self.allow_raw_records:
+                log.error("Raw records processing is not allowed. Use the --allow_raw_records flag.")
+                return
+            self.targets.remove("raw_records")
+            self.process_raw_records()
+
+        if self.targets:
+            self.process_remaining_targets()
+
+    def get_info_from_processed_data(self, folder, target):
+        # Logic for getting info from processed data (similar to the existing one)
+        # When the processing succeeds, the data is stored in the output folder
+        # and the data entry is added to the database.
+        # We want to know how many files are in the created folder
+        # what is the lineage_hash 
+        # and the total size of the data in MB
+
+        key_for = str(self.st.key_for(self.run_id, target))
+        log.info(f"Getting info from processed data in {folder} for {key_for}")
+        data_folder = os.path.join(folder, key_for)
+        lineage_hash = key_for.split("-")[-1]
+
+        size_mb = 0
+        n_files = 0
+
+        for root, dirs, files in os.walk(data_folder):
+            for file in files:
+                size_mb += os.path.getsize(os.path.join(root, file)) / 1e6
+                n_files += 1
+
+        log.info(f"Processed data in {data_folder} contains {n_files} files with a total size of {size_mb:.2f} MB.")
+
+        res = {
+            "n_chunks": n_files,
+            "lineage_hash": lineage_hash,
+            "size_mb": size_mb
+        }
+
+        return res
+        
+    def process_raw_records(self):
+        # Logic for processing raw_records (similar to the existing one)
+        raw_records_folder = self.amstrax.get_xams_config("raw_records_folder")
+        live_folder = self.amstrax.get_xams_config("live_folder")
+
+        rundb = self.amstrax.get_mongo_collection()
+        run_doc = rundb.find_one({"number": int(self.run_id)})
+        if not run_doc:
+            log.error(f"Run document for {self.run_id} not found in rundb.")
             return
 
         log.info("Processing raw_records separately...")
-        # Pop raw_records from the targets list
-        targets.remove("raw_records")
+        log.info(f"Live data directory for run {self.run_id}: {live_folder}")
 
-        # Process raw_records using the live data folder
-        log.info(f"Live data directory for run {run_id}: {live_folder}")
-
-        # Setup the context specifically for raw_records
-        raw_st = amstrax.contexts.xams(output_folder=raw_records_folder, init_rundb=False)
+        raw_st = self.amstrax.contexts.xams(
+            output_folder=raw_records_folder,
+            init_rundb=False,
+            corrections_version=self.corrections_version
+        )
         raw_st.storage += [strax.DataDirectory(live_folder, readonly=True)]
         raw_st.set_config({"live_data_dir": live_folder})
 
-        # Process raw_records using the special context
+        # set self.raw_st for later use
+        self.raw_st = raw_st
+
+        target = "raw_records"
+
         try:
-            log.info(f"Processing raw_records for run {run_id}")
-            raw_st.make(run_id, "raw_records", progress_bar=True)
-            update_processing_status(run_id, "done", production=production)
-            add_data_entry(run_id, "raw_records", raw_records_folder, production=production)
+            log.info(f"Processing raw_records for run {self.run_id}")
+            self.raw_st.make(self.run_id, target, progress_bar=True)
+            self.db_utils.update_processing_status(self.run_id, "done", production=self.production, is_online=self.is_online)
+            info = self.get_info_from_processed_data(self.raw_records_folder, target)
+            self.add_data_entry(data_type=target, location=raw_records_folder, **info)
+
         except Exception as e:
-            log.error(f"Failed to process raw_records for run {run_id}: {e}")
-            update_processing_status(run_id, "failed", reason=str(e), production=production)
-            return
+            log.error(f"Failed to process raw_records for run {self.run_id}: {e}")
+            self.db_utils.update_processing_status(self.run_id, "failed", reason=str(e), production=self.production, is_online=self.is_online)
 
-    # Process the remaining targets with the standard context
-    if targets:
-        log.info(f"Processing remaining targets: {targets}")
 
-        # Setup the normal context for peaks/events/etc.
-        st = amstrax.contexts.xams(output_folder=output_folder, corrections_version=corrections_version)
+    def process_remaining_targets(self):
+        raw_records_folder = self.amstrax.get_xams_config("raw_records_folder")
+
+        log.info(f"Processing remaining targets: {self.targets}")
+
+        st = self.amstrax.contexts.xams(
+            output_folder=self.output_folder,
+            corrections_version=self.corrections_version
+        )
         st.storage += [strax.DataDirectory(raw_records_folder, readonly=True)]
-        # st.set_config(set_config_kwargs)
-        # st.set_context_config(set_context_kwargs)
 
-        # Process each remaining target
+        # set self.st for later use
+        self.st = st
+
         try:
-            for target in targets:
-                log.info(f"Processing {target} for run {run_id}")
-                st.make(run_id, target, progress_bar=True)
+            for target in self.targets:
+                if self.st.is_stored(self.run_id, target):
+                    log.info(f"Skipping {target} for run {self.run_id} as it is already processed.")
+                    continue
 
-            # Update processing status to 'done'
-            update_processing_status(run_id, "done", production=production)
-            add_data_entry(run_id, data_type=targets[-1], location=output_folder, production=production)
+                t = time.time()
+                log.info(f"Processing {target} for run {self.run_id}")
+                self.st.make(self.run_id, target, progress_bar=True)
+                log.info(f"Processing of {target} completed successfully ({time.time() - t:.2f}s).")
+                info = self.get_info_from_processed_data(self.output_folder, target)
+                self.add_data_entry(data_type=target, **info)
 
-            log.info(f"Processing of run {run_id} completed successfully.")
+            self.db_utils.update_processing_status(self.run_id, "done", production=self.production, is_online=self.is_online)
+            log.info(f"Processing of run {self.run_id} completed successfully.")
 
         except Exception as e:
-            log.error(f"Processing of remaining targets failed for run {run_id}: {e}")
-            update_processing_status(run_id, "failed", reason=str(e), production=production)
+            log.error(f"Processing of targets failed for run {self.run_id}: {e}")
+            self.db_utils.update_processing_status(self.run_id, "failed", reason=str(e), production=self.production, is_online=self.is_online)
 
 
-def main():
-
-    # Define the command line arguments
-    import argparse
-
+def parse_args():
     parser = argparse.ArgumentParser(description="Process a single run using amstrax.")
     parser.add_argument("--run_id", type=str, help="Run ID to process.")
     parser.add_argument("--targets", nargs="+", help="List of data types to process (e.g., 'raw_records', 'peaks').")
-    parser.add_argument(
-        "--live_folder",
-        type=str,
-        help="Path to the live data folder for raw records processing.",
-        default=None,
-    )
-    parser.add_argument(
-        "--raw_records_folder",
-        type=str,
-        help="Path to the folder containing raw records (output from raw records processing).",
-    )
-    parser.add_argument(
-        "--output_folder",
-        type=str,
-        help="Path to save the processed data (for peaks, events, etc.).",
-    )
-    parser.add_argument(
-        "--allow_raw_records",
-        action="store_true",
-        help="Explicitly allow raw_records processing.",
-    )
-    parser.add_argument(
-        "--corrections_version",
-        type=str,
-        default=None,
-        help="Version of corrections to apply ('ONLINE' or v0,v1 or None).",
-    )
-    parser.add_argument(
-        "--production",
-        action="store_true",
-        help="Update the production database.",
-    )
+    parser.add_argument("--output_folder", type=str, help="Path to save the processed data.")
+    parser.add_argument("--allow_raw_records", action="store_true", help="Explicitly allow raw_records processing.")
+    parser.add_argument("--corrections_version", type=str, default=None, help="Version of corrections to apply.")
+    parser.add_argument("--amstrax_path", type=str, default=None, help="Version of amstrax to use.")
+    parser.add_argument("--production", action="store_true", help="Update the production database.")
+    parser.add_argument("--is_online", action="store_true", help="Process online data.")
+    return parser.parse_args()
 
-    args = parser.parse_args()
 
-    log.info(f"Starting processing.py with arguments: {args}")
-
-    # Process the run based on the provided arguments
-    process_run(
-        args.run_id,
-        args.targets,
-        args.live_folder,
-        args.raw_records_folder,
-        args.output_folder,
-        args.allow_raw_records,
-        args.corrections_version,
-        args.production,
-    )
+def main():
+    args = parse_args()
+    processor = RunProcessor(args)
+    processor.setup_amstrax()
+    processor.process()
 
 
 if __name__ == "__main__":

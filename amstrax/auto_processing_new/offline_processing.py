@@ -7,6 +7,7 @@ from job_submission import submit_job
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
+SETUP_FILE = '/data/xenon/xams_v2/setup.sh'
 
 def parse_args():
     """
@@ -22,32 +23,55 @@ def parse_args():
     parser.add_argument(
         "--targets",
         nargs="+",
-        default=["peaks", "events"],
+        default=["peak_basics", "event_info"],
         help="List of targets to process (e.g., raw_records, peaks, events).",
     )
-    parser.add_argument(
-        "--raw_records_folder",
-        type=str,
-        default="/data/xenon/xams_data/raw_records",
-        help="Path to raw records folder.",
-    )
-    parser.add_argument(
-        "--output_folder", type=str, default="/data/xenon/xams_v2/xams_processed", help="Path to output folder."
-    )
-
-    # Job submission and processing options
+    parser.add_argument("--output_folder", type=str, default=None, help="Path to output folder.")
     parser.add_argument("--mem", default=8000, help="Memory per CPU")
     parser.add_argument("--logs_path", default="/data/xenon/xams_v2/logs/", help="Path where to save logs")
+    parser.add_argument("--amstrax_path", default=None, help="Version of amstrax to use.")
+    parser.add_argument("--corrections_version", default=None, help="Version of corrections to use. Can be ONLINE, v0, v1..")
     parser.add_argument("--production", action="store_true", help="Run in production mode (update the rundb).")
-    parser.add_argument(
-        "--dry_run", action="store_true", help="Simulate job submission without actually submitting jobs."
-    )
-    parser.add_argument(
-        "--amstrax_dir", default="/data/xenon/xams_v2/software/amstrax", help="Path to amstrax directory."
-    )
+    parser.add_argument("--dry_run", action="store_true", help="Simulate job submission without actually submitting jobs.")
 
     return parser.parse_args()
 
+
+def check_for_production(args):
+    """
+    Check if the user really wants to run in production mode.
+    """
+    if args.production:
+
+        # Some constraints for production mode
+        # only if corrections_version is set
+        # only if amstrax_path contains amstrax_versioned
+        # only if output_folder is not set
+
+        if not args.corrections_version:
+            log.error("In production mode, you must specify a corrections version.")
+            raise ValueError("Corrections version not specified in production mode.")
+
+        if not args.amstrax_path or "amstrax_versioned" not in args.amstrax_path:
+            log.error("In production mode, you must specify a versioned amstrax path.")
+            raise ValueError("Amstrax path not specified in production mode.")
+
+        if args.output_folder:
+            log.error("In production mode, you must not specify an output folder. We take them from .xams_config")
+            raise ValueError("Output folder specified in production mode.")
+
+        log.warning("You are about to run in production mode. This will update the rundb and write to the official output folder.")
+        log.warning("Are you sure you want to continue? (y/n)")
+        answer = input()
+        if answer.lower() != "y":
+            log.error("Production mode was not confirmed. Exiting.")
+            sys.exit(1)
+
+    if not args.production:
+        # if xams_processed in output_folder, not allowed
+        if args.output_folder and "xams_processed" in args.output_folder:
+            log.error("You are not allowed to write to the xams_processed folder.")
+            raise ValueError("Output folder is xams_processed.")
 
 def main(args):
     """
@@ -69,15 +93,27 @@ def main(args):
 
         # Build the job submission command
         # Also insert the amstrax dir on top of the PYTHONPATH
+
+        arguments = []
+        arguments.append(f"--run_id {run_id}")
+        arguments.append(f"--targets {' '.join(args.targets)}")
+        arguments.append(f"--output_folder {args.output_folder}")
+        if args.corrections_version:
+            arguments.append(f"--corrections_version {args.corrections_version}")
+        if args.amstrax_path:
+            arguments.append(f"--amstrax_path {args.amstrax_path}")
+        if args.production:
+            arguments.append("--production")
+        
+        arguments = ' '.join(arguments)
+
         job_command = f"""
         echo "Processing run {run_id} at $(date)"
-        export PYTHONPATH={args.amstrax_dir}:$PYTHONPATH
-        python {args.amstrax_dir}/amstrax/auto_processing_new/test_connection.py
-        python {args.amstrax_dir}/amstrax/auto_processing_new/processing.py --run_id {run_id} \
-                             --targets {' '.join(args.targets)} \
-                             --raw_records_folder {args.raw_records_folder} \
-                             --output_folder {args.output_folder} \
-                             {'--production' if args.production else ''}
+        source {SETUP_FILE}
+        cd {os.path.dirname(os.path.realpath(__file__))}
+        pwd
+        python processing.py {arguments}
+        echo "Finished run {run_id} at $(date)"
         """
 
         # Submit the job

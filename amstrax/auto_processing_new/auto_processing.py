@@ -4,7 +4,7 @@ import os
 import logging
 from datetime import datetime, timedelta
 from job_submission import submit_job
-from db_interaction import query_runs, update_processing_status
+from db_utils import query_runs, update_processing_status
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -21,9 +21,7 @@ def parse_args():
         default=["raw_records"],
         help="Target final data type to produce (e.g., raw_records, peaks, events).",
     )
-    parser.add_argument(
-        "--output_folder", default="/data/xenon/xams_v2/xams_processed", help="Path where to save processed data"
-    )
+    parser.add_argument("--output_folder", default="/data/xenon/xams_v2/xams_processed", help="Path where to save processed data")
     parser.add_argument("--timeout", default=20, type=int, help="Time (in seconds) between checks.")
     parser.add_argument("--max_jobs", default=5, type=int, help="Maximum number of jobs to submit simultaneously.")
     parser.add_argument("--run_id", default=None, help="Single run ID to process manually.")
@@ -31,11 +29,10 @@ def parse_args():
     parser.add_argument("--logs_path", default="/data/xenon/xams_v2/logs/", help="Path to save job logs.")
     parser.add_argument("--production", action="store_true", help="Run in production mode (will update the rundb).")
     parser.add_argument("--live_folder", default="/data/xenon/xams_data/live_data/", help="Path to live data folder.")
-    parser.add_argument(
-        "--raw_records_folder", default="/data/xenon/xams_data/raw_records/", help="Path to raw records folder."
-    )
+    parser.add_argument("--raw_records_folder", default="/data/xenon/xams_data/raw_records/", help="Path to raw records folder.")
     parser.add_argument("--set_config_kwargs", default="{}", help="Dictionary of kwargs to pass to set_config.")
     parser.add_argument("--set_context_kwargs", default="{}", help="Dictionary of kwargs to pass to set_context.")
+    parser.add_argument()
 
     return parser.parse_args()
 
@@ -130,7 +127,7 @@ def handle_running_jobs(runs_col, production=False):
                 )
 
                 if production:
-                    update_processing_status(run_number, new_status, production=production)
+                    update_processing_status(run_number, new_status, production=production, is_online=True)
                 else:
                     log.info(f"Would have updated run {run_number} to {new_status}")
 
@@ -182,7 +179,7 @@ def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
             )
 
             update_processing_status(
-                run_id, "submitted", pull={"tags": {"name": "process"}}, production=args.production
+                run_id, "submitted", pull={"tags": {"name": "process"}}, production=args.production, is_online=True
             )
         else:
             log.info(f"Would have submitted job for run {run_id}")

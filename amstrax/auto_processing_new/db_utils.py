@@ -10,7 +10,7 @@ log = logging.getLogger(__name__)
 # Create a MongoDB client and connect to the rundb collection
 runsdb = amstrax.get_mongo_collection()
 
-def update_processing_status(run_id, status, reason=None, host='stbc', production=False, pull=dict()):
+def update_processing_status(run_id, status, reason=None, host='stbc', production=False, pull=dict(), is_online=False):
     """
     Update the processing status of a run in the MongoDB rundb.
 
@@ -35,7 +35,7 @@ def update_processing_status(run_id, status, reason=None, host='stbc', productio
 
         
 
-    if production:
+    if production and is_online:
         runsdb.update_one(
             {'number': int(run_id)},
             {
@@ -48,7 +48,21 @@ def update_processing_status(run_id, status, reason=None, host='stbc', productio
     else:
         log.info(f"Would update run {run_id} to status {status} (dry run).")
 
-def add_data_entry(run_id, data_type, location, host='stbc', by='script', user='unknown', production=False):
+def add_data_entry(
+        run_id,
+        data_type,
+        location,
+        host,
+        n_chunks,
+        size_mb,
+        lineage_hash,
+        user=None,
+        amstrax_version=None,
+        amstrax_path=None,
+        corrections_version=None,
+        production=False,
+        **kwargs
+    ):
     """
     Add a new data entry (e.g., raw records) for a run in the rundb.
 
@@ -66,9 +80,13 @@ def add_data_entry(run_id, data_type, location, host='stbc', by='script', user='
         'type': data_type,
         'location': location,
         'host': host,
-        'by': by,
         'user': user,
+        'amstrax_version': amstrax_version,
+        'amstrax_path': amstrax_path,
+        'corrections_version': corrections_version,
     }
+
+    data_entry.update(kwargs)
 
     if production:
         run_doc = runsdb.find_one({'number': int(run_id)})

@@ -49,7 +49,6 @@ def submit_job(
     # Define log, output, and error file paths
     log_file = os.path.join(log_dir, f"{jobname}.log")
     output_file = os.path.join(log_dir, f"{jobname}.out")
-    error_file = os.path.join(log_dir, f"{jobname}.err")
     job_executable = os.path.join(log_dir, f"{jobname}.sh")
 
     full_jobstring = f"""
@@ -73,7 +72,7 @@ def submit_job(
         job_executable=job_executable,
         log=log_file,
         output=output_file,
-        error=error_file,
+        error=output_file,
         mem_per_cpu=mem_per_cpu,
         cpus_per_task=cpus_per_task,
         queue=queue,
@@ -93,6 +92,7 @@ def submit_job(
         command = f"condor_submit {condor_file}"
         subprocess.run(shlex.split(command), check=True)
         log.info(f"Job {jobname} submitted successfully.")
+        log.info(f"Monitor the state of the job with `condor_q` or `condor_watch_q`.")
     except subprocess.CalledProcessError as e:
         log.error(f"Error submitting job: {e}")
     finally:
