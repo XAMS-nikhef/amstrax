@@ -209,15 +209,21 @@ def apply_global_correction_version(context: strax.Context, global_version: str)
 
     # Iterate over all the relevant corrections specified in the global file
     xams_config = {}
-    for correction_key, correction_file in global_corrections.items():
-        if correction_file is None:
+    for correction_key, correction_value in global_corrections.items():
+        if correction_value is None:
             warnings.warn(f"No correction file for {correction_key} in version {global_version}")
             continue
 
-        # Set the configuration to point to the correct file for each key (e.g., elife, gain)
-        add_github_branch = "&github_branch=" + github_branch if github_branch is not None else ""
-        config_value = f"file://{correction_key}?filename={correction_file}{add_github_branch}"
-        xams_config[correction_key] = config_value
+        if correction_value.endswith(".json"):
+            # If the correction is a file, set the configuration to point to the correct file
+            # Set the configuration to point to the correct file for each key (e.g., elife, gain)
+            add_github_branch = "&github_branch=" + github_branch if github_branch is not None else ""
+            config_value = f"file://{correction_key}?filename={correction_value}{add_github_branch}"
+            xams_config[correction_key] = config_value
+        
+        else:
+            # If the correction is a value, just set the value
+            xams_config[correction_key] = correction_value
 
     # Set the full configuration in the context
     context.set_config(xams_config)
