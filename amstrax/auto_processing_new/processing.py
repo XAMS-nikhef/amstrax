@@ -24,7 +24,16 @@ class RunProcessor:
         self.amstrax_path = args.amstrax_path
         self.is_online = args.is_online
         
+        log.info(f"Processing run {self.run_id} with the following parameters:")
+        log.info(f" --Targets: {self.targets}")
+        log.info(f" --Output folder: {self.output_folder}")
+        log.info(f" --Allow raw_records: {self.allow_raw_records}")
+        log.info(f" --Corrections version: {self.corrections_version}")
+        log.info(f" --Production: {self.production}")
+        log.info(f" --Amstrax path: {self.amstrax_path}")
+        log.info(f" --Is online: {self.is_online}")
 
+        
     def setup_amstrax(self):
         if self.amstrax_path:
             if not os.path.exists(self.amstrax_path):
