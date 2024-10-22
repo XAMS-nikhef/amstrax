@@ -4,7 +4,6 @@ import sys
 import logging
 import argparse
 import strax
-from functools import partial
 import socket
 import getpass
 import time, datetime
