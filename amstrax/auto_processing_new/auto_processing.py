@@ -3,8 +3,9 @@ import time
 import os
 import logging
 from datetime import datetime, timedelta
-from job_submission import submit_job
-from db_utils import query_runs, update_processing_status
+
+from amstrax.auto_processing_new.job_submission import submit_job
+from amstrax.auto_processing_new.db_utils import query_runs, update_processing_status
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
