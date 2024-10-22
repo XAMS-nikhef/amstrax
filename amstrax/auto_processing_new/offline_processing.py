@@ -7,7 +7,8 @@ from job_submission import submit_job
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
-SETUP_FILE = '/data/xenon/xams_v2/setup.sh'
+SETUP_FILE = "/data/xenon/xams_v2/setup.sh"
+
 
 def parse_args():
     """
@@ -19,7 +20,9 @@ def parse_args():
     # We should make it a group, so that only one of them can be used
     run_selection = parser.add_mutually_exclusive_group(required=True)
     run_selection.add_argument("--run_id", type=str, nargs="*", help="Specific run ID(s) to process.")
-    run_selection.add_argument("--run_file", type=str, help="File with run IDs to process. It should contain one run ID per line.")
+    run_selection.add_argument(
+        "--run_file", type=str, help="File with run IDs to process. It should contain one run ID per line."
+    )
 
     # Arguments for processing
     parser.add_argument(
@@ -32,9 +35,13 @@ def parse_args():
     parser.add_argument("--mem", default=8000, help="Memory per CPU")
     parser.add_argument("--logs_path", help="Path where to save logs")
     parser.add_argument("--amstrax_path", default=None, help="Version of amstrax to use.")
-    parser.add_argument("--corrections_version", default=None, help="Version of corrections to use. Can be ONLINE, v0, v1..")
+    parser.add_argument(
+        "--corrections_version", default=None, help="Version of corrections to use. Can be ONLINE, v0, v1.."
+    )
     parser.add_argument("--production", action="store_true", help="Run in production mode (update the rundb).")
-    parser.add_argument("--dry_run", action="store_true", help="Simulate job submission without actually submitting jobs.")
+    parser.add_argument(
+        "--dry_run", action="store_true", help="Simulate job submission without actually submitting jobs."
+    )
 
     return parser.parse_args()
 
@@ -67,7 +74,9 @@ def check_for_production(args):
             log.error("In production mode, you must not specify an output folder. We take them from .xams_config")
             raise ValueError("Output folder specified in production mode.")
 
-        log.warning("You are about to run in production mode. This will update the rundb and write to the official output folder.")
+        log.warning(
+            "You are about to run in production mode. This will update the rundb and write to the official output folder."
+        )
         log.warning("Are you sure you want to continue? (y/n)")
         answer = input()
         if answer.lower() != "y":
@@ -83,6 +92,7 @@ def check_for_production(args):
         if not args.output_folder:
             log.error("You must specify an output folder.")
             raise ValueError("Output folder not specified.")
+
 
 def main(args):
     """
@@ -101,12 +111,6 @@ def main(args):
         log.error("Either --run_id or --run_file must be provided.")
         return
 
-
-    logs_path = args.logs_path
-    if args.production:
-        logs_path = amstrax.get_xams_config("logs_path")
-
-
     # Submit jobs for each run
     for run_doc in run_docs:
         run_id = f'{int(run_doc["number"]):06}'
@@ -116,7 +120,7 @@ def main(args):
         if args.corrections_version:
             jobname += f"_{args.corrections_version}"
         if args.production:
-            jobname += os.basename(args.amsrtax_path)
+            jobname += os.path.basename(args.amstrax_path)
 
         arguments = []
         arguments.append(f"--run_id {run_id}")
@@ -128,8 +132,8 @@ def main(args):
             arguments.append(f"--amstrax_path {args.amstrax_path}")
         if args.production:
             arguments.append("--production")
-        
-        arguments = ' '.join(arguments)
+
+        arguments = " ".join(arguments)
 
         job_command = f"""
         echo "Processing run {run_id} at $(date)"
@@ -144,7 +148,7 @@ def main(args):
         submit_job(
             jobstring=job_command,
             jobname=jobname,
-            log_dir=logs_path,
+            log_dir=args.logs_path,
             queue="short",
             mem_per_cpu=args.mem,
             cpus_per_task=1,
