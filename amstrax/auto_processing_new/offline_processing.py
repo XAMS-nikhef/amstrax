@@ -42,6 +42,7 @@ def parse_args():
     parser.add_argument(
         "--dry_run", action="store_true", help="Simulate job submission without actually submitting jobs."
     )
+    parser.add_argument("--queue", default="express", help="Queue to submit jobs to. See Nikhef documentation for options.")
 
     return parser.parse_args()
 
@@ -149,7 +150,7 @@ def main(args):
             jobstring=job_command,
             jobname=jobname,
             log_dir=args.logs_path,
-            queue="short",
+            queue=args.queue,
             mem_per_cpu=args.mem,
             cpus_per_task=1,
             dry_run=args.dry_run,
