@@ -16,8 +16,10 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Offline processing of XAMS data (job submission)")
 
     # Arguments for selecting runs
-    parser.add_argument("--run_id", type=str, nargs="*", help="Specific run ID(s) to process.")
-    parser.add_argument("--run_query", type=str, help="Query string to select runs from rundb (e.g., by date).")
+    # We should make it a group, so that only one of them can be used
+    run_selection = parser.add_mutually_exclusive_group(required=True)
+    run_selection.add_argument("--run_id", type=str, nargs="*", help="Specific run ID(s) to process.")
+    run_selection.add_argument("--run_file", type=str, help="File with run IDs to process. It should contain one run ID per line.")
 
     # Arguments for processing
     parser.add_argument(
@@ -77,14 +79,21 @@ def main(args):
     """
     Main function for offline job submission of selected runs.
     """
-    # Select runs either by run_id or using a custom query
+
+    # Check the run selection method
     if args.run_id:
         run_docs = [{"number": int(run_id)} for run_id in args.run_id]
-    elif args.run_query:
-        raise NotImplementedError("Querying runs from rundb is not yet implemented.")
+    elif args.run_file:
+        # It should contain a list of run numbers, one per line
+        with open(args.run_file, "r") as f:
+            run_numbers = f.readlines()
+        run_docs = [{"number": int(run_number)} for run_number in run_numbers]
     else:
-        log.error("Either --run_id or --run_query must be provided.")
+        log.error("Either --run_id or --run_file must be provided.")
         return
+
+
+
 
     # Submit jobs for each run
     for run_doc in run_docs:
