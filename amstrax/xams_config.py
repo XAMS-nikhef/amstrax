@@ -12,9 +12,9 @@ export, __all__ = strax.exporter()
 class XAMSConfig(Config):
     """A configuration class that fetches corrections from JSON files."""
 
-    def __init__(self, name="", **kwargs):
-        super().__init__(name=name, **kwargs)
-        print(f"XAMSConfig initialized with name {name}")
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._cached_value = None  # Initialize cache for the fetched value
 
     def fetch(self, plugin):
         """
@@ -22,17 +22,24 @@ class XAMSConfig(Config):
         Handles both 'cmt://' and 'file://' URLs. Otherwise, returns default.
         """
 
+        # Check if the value has already been cached
+        if self._cached_value is not None:
+            print(f"Using cached value for {self.name}")
+            return self._cached_value
+
         config_value = plugin.config.get(self.name, self.default)
 
         # Check if the config is a cmt URL or file URL
         if isinstance(config_value, str):
             if config_value.startswith("cmt://"):
-                return self._fetch_from_cmt(plugin, config_value)
+                self._cached_value = self._fetch_from_cmt(plugin, config_value)
             elif config_value.startswith("file://"):
-                return self._fetch_from_file_url(plugin, config_value)
+                self._cached_value = self._fetch_from_file_url(plugin, config_value)
+        else:
+            # Cache the default value if no URL is provided
+            self._cached_value = config_value
 
-        # Return regular default value if no URL
-        return plugin.config.get(self.name, self.default)
+        return self._cached_value
 
     def _fetch_from_cmt(self, plugin, config_value):
         """Fetch correction from a cmt:// URL."""

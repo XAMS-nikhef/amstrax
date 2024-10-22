@@ -59,7 +59,6 @@ class PeakPositions(strax.Plugin):
     def setup(self):
         
         self.default_reconstruction_algorithm = self.config['default_reconstruction_algorithm']
-        self.pos_rec_params_value = self.pos_rec_params
 
     def compute(self, peaks):
                 
@@ -95,8 +94,8 @@ class PeakPositions(strax.Plugin):
         result['r_cgr'] = np.sqrt(result['x_cgr']**2+result['y_cgr']**2)
 
         # correct the x and y cgr positions
-        px = self.pos_rec_params_value[0]
-        py = self.pos_rec_params_value[1]
+        px = self.pos_rec_params[0]
+        py = self.pos_rec_params[1]
 
         rec_function_x = np.poly1d(np.array(px))
         rec_function_y = np.poly1d(np.array(py))

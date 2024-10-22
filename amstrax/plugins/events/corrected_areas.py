@@ -28,10 +28,6 @@ class CorrectedAreas(strax.Plugin):
 
     elife = amstrax.XAMSConfig(default=30000, help="electron lifetime in [ns]")
 
-    def setup(self):
-
-        self.elife_value = self.elife
-
     def infer_dtype(self):
         dtype = []
         dtype += strax.time_fields
@@ -60,6 +56,6 @@ class CorrectedAreas(strax.Plugin):
         for peak_type in ["", "alt_"]:
 
             result[f"{peak_type}cs1"] = events[f"{peak_type}s1_area"]
-            result[f"{peak_type}cs2"] = events[f"{peak_type}s2_area"] * np.exp(events["drift_time"] / self.elife_value)
+            result[f"{peak_type}cs2"] = events[f"{peak_type}s2_area"] * np.exp(events["drift_time"] / self.elife)
 
         return result

@@ -50,10 +50,6 @@ class Peaks(strax.Plugin):
         help="Gain to pe array"
     )
 
-    def setup(self):
-
-        self.gain_to_pe_array_value = self.gain_to_pe_array
-
     def infer_dtype(self):
     
         return strax.peak_dtype(n_channels=self.config['n_tpc_pmts'])
@@ -65,7 +61,7 @@ class Peaks(strax.Plugin):
         if self.config['gain_to_pe_array'] is None:
             self.to_pe = np.ones(self.config['n_tpc_pmts'])
         else:
-            self.to_pe = self.gain_to_pe_array_value
+            self.to_pe = self.gain_to_pe_array
 
         hits = strax.find_hits(r)
         hits = strax.sort_by_time(hits)
