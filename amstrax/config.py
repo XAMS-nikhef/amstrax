@@ -20,9 +20,9 @@ def get_xams_config(key) -> Dict[str, Any]:
     if not os.path.exists(config_file_path):
         raise FileNotFoundError(f'Could not find xams config file {config_file_path}, did you run setup.sh?')
 
-    else:
-        # we will check in the config file
-        config_file = configparser.ConfigParser()
-        config_file.read(config_file_path)
+    
+    # we will check in the config file
+    config_file = configparser.ConfigParser()
+    config_file.read(config_file_path)
 
-        return config_file['default'][key]
+    return config_file['default'][key]
