@@ -2,7 +2,7 @@ import argparse
 import logging
 import os, sys, json
 from datetime import datetime
-from amstrax.auto_processing_new.job_submission import submit_job
+from job_submission import submit_job
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
