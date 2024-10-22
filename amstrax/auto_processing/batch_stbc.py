@@ -1,106 +1,95 @@
-"""
-Carlo Fuselli
-cfuselli@nikhef.nl
--------------------
-
-Module that handles job submission on stoomboot, adapted from utilix sbatchq (XENON)
-
-For more information on the queue, see:
-https://www.nikhef.nl/pdp/computing-course/batch/stoomboot.html
-
-Queue	Default Length	Max Length
-express	10m	10m
-generic	24h	24h
-gpu-nv	24h	96h
-gpu-amd	24h	96h
-long	48h	96h
-multicore	96h	96h
-short	4h	4h
-
-"""
-
-import argparse
 import os
 import tempfile
 import subprocess
 import shlex
 
-
-sbatch_template = """#!/bin/bash
-
-#PBS -N {jobname}
-#PBS -j oe
-#PBS -o {log}
-#PBS -l pmem={mem_per_cpu}
-#PBS -q {queue}
-
-echo "Starting script!"
-echo `date`
-
-{job}
-
-echo "Script complete, bye!"
-echo `date`
-
+condor_template = """
+executable            = {job_executable}
+log                   = {log}
+output                = {output}
+error                 = {error}
+request_memory        = {mem_per_cpu}MB
+request_cpus          = {cpus_per_task}
++UseOS                = "el9"
++JobCategory          = "{queue}"
+queue
 """
-
-TMPDIR = os.path.join(os.environ.get("user", "."), "tmp")
 
 
 def submit_job(
     jobstring,
     log="job.log",
     jobname="somejob",
-    queue="generic",
-    sbatch_file=None,
+    queue="short",
+    condor_file=None,
     dry_run=False,
     mem_per_cpu=1000,
     cpus_per_task=1,
-    hours=None,
-    **kwargs
+    log_dir="logs",  # Log directory
+    **kwargs,
 ):
     """
-
-    See XENONnT utilix function sbatcth for info
+    Submit a job using HTCondor.
 
     :param jobstring: the command to execute
     :param log: where to store the log file of the job
     :param jobname: the name of the job
     :param queue: the queue to submit the job to
-    :param sbatch_file: the file to write the sbatch script to
+    :param condor_file: the file to write the condor submission script to
     :param dry_run: if True, do not submit the job
     :param mem_per_cpu: the memory per cpu in MB
     :param cpus_per_task: the number of cpus per task
-    :param hours: the number of hours to run the job for
-    :param kwargs: additional arguments to pass to the sbatch script
+    :param log_dir: directory where log and error files are stored
     :return:
-
     """
+    # Ensure log directory exists
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
 
-    sbatch_script = sbatch_template.format(
-        jobname=jobname,
-        log=log,
-        job=jobstring,
-        queue=queue,
+    # Define log, output, and error file paths in the same log directory
+    if log.endswith(".log"):
+        log_dir = os.path.dirname(log)
+    log_file = os.path.join(log_dir, f"{jobname}.log")
+    output_file = os.path.join(log_dir, f"{jobname}.out")
+    error_file = os.path.join(log_dir, f"{jobname}.err")
+    # Use a persistent directory for the job script
+    job_executable = os.path.join(log_dir, f"{jobname}.sh")
+
+    # Create the job executable script
+    with open(job_executable, "w") as job_script:
+        job_script.write("#!/bin/bash\n")
+        job_script.write("echo 'Starting job...'\n")
+        job_script.write(f"{jobstring}\n")
+        job_script.write("echo 'Job complete.'\n")
+
+    # Make the job script executable
+    os.chmod(job_executable, 0o755)
+
+    # Create the condor submission script
+    condor_script = condor_template.format(
+        job_executable=job_executable,
+        log=log_file,
+        output=output_file,
+        error=error_file,
         mem_per_cpu=mem_per_cpu,
         cpus_per_task=cpus_per_task,
-        hours=hours,
+        queue=queue,
     )
 
     if dry_run:
         print("=== DRY RUN ===")
-        print(sbatch_script)
+        print(condor_script)
         return
 
-    with tempfile.NamedTemporaryFile(mode='w', suffix=".sh", delete=False) as tmp_file:
-        tmp_file.write(sbatch_script)
-        sbatch_file = tmp_file.name
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".sub", delete=False) as tmp_file:
+        tmp_file.write(condor_script)
+        condor_file = tmp_file.name
 
     try:
-        command = "qsub %s" % sbatch_file
+        command = f"condor_submit {condor_file}"
         subprocess.run(shlex.split(command), check=True)
     except subprocess.CalledProcessError as e:
         print(f"An error occurred while submitting the job: {e}")
     finally:
-        if os.path.exists(sbatch_file):
-            os.remove(sbatch_file)
+        if os.path.exists(condor_file):
+            os.remove(condor_file)
