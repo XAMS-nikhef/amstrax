@@ -50,6 +50,11 @@ def check_for_production(args):
         # only if amstrax_path contains amstrax_versioned
         # only if output_folder is not set
 
+        user = os.environ.get("USER")
+        if user != "xamsdata":
+            log.error("You must be xamsdata to run in production mode.")
+            raise ValueError("Not xamsdata, please log in as xamsdata to keep things tidy :)")
+
         if not args.corrections_version:
             log.error("In production mode, you must specify a corrections version.")
             raise ValueError("Corrections version not specified in production mode.")
