@@ -60,20 +60,21 @@ def check_for_production(args):
 
         user = os.environ.get("USER")
         if user != "xamsdata":
-            log.error("You must be xamsdata to run in production mode.")
-            raise ValueError("Not xamsdata, please log in as xamsdata to keep things tidy :)")
+            raise ValueError("You must be xamsdata to run in production mode.\n \
+            Not xamsdata, please log in as xamsdata to keep things tidy :)")
 
         if not args.corrections_version:
-            log.error("In production mode, you must specify a corrections version.")
             raise ValueError("Corrections version not specified in production mode.")
 
-        if not args.amstrax_path or "amstrax_versioned" not in args.amstrax_path:
-            log.error("In production mode, you must specify a versioned amstrax path.")
+        if not args.amstrax_path:
             raise ValueError("Amstrax path not specified in production mode.")
 
+        if "amstrax_versioned" not in args.amstrax_path:
+            raise ValueError("Amstrax path must be from amstrax_versioned in production mode.")
+
         if args.output_folder:
-            log.error("In production mode, you must not specify an output folder. We take them from .xams_config")
-            raise ValueError("Output folder specified in production mode.")
+            raise ValueError("In production mode, you must not specify an output folder. \n \
+            We take them from .xams_config")
 
         log.warning(
             "You are about to run in production mode. This will update the rundb and write to the official output folder."
@@ -121,7 +122,7 @@ def main(args):
         if args.corrections_version:
             jobname += f"_{args.corrections_version}"
         if args.production:
-            jobname += os.path.basename(args.amstrax_path)
+            jobname += f"_{os.path.basename(args.amstrax_path)}"
 
         arguments = []
         arguments.append(f"--run_id {run_id}")
@@ -141,7 +142,7 @@ def main(args):
         source {SETUP_FILE}
         cd {os.path.dirname(os.path.realpath(__file__))}
         pwd
-        python processing.py {arguments}
+        python process.py {arguments}
         echo "Finished run {run_id} at $(date)"
         """
 

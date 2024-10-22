@@ -164,7 +164,7 @@ def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
         jobstring = f"""
         cd {amstrax_dir}/auto_processing/
         echo "Starting job for run {run_id}"
-        python processing.py --run_id {run_id} --targets {targets} --live_folder {args.live_folder} --raw_records_folder {args.raw_records_folder} --output_folder {args.output_folder} {production_flag} --set_config_kwargs {args.set_config_kwargs} --set_context_kwargs {args.set_context_kwargs}
+        python process.py --run_id {run_id} --targets {targets} --live_folder {args.live_folder} --raw_records_folder {args.raw_records_folder} --output_folder {args.output_folder} {production_flag} --set_config_kwargs {args.set_config_kwargs} --set_context_kwargs {args.set_context_kwargs}
         echo "Job complete!"
         echo `date`
         """
