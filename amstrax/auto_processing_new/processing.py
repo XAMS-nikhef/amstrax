@@ -43,21 +43,26 @@ class RunProcessor:
         import amstrax
         self.amstrax = amstrax
         log.info(f"Using amstrax version: {amstrax.__version__} at {amstrax.__file__}")
-        
+
         self.db_utils = self.amstrax.db_utils
 
-        self.add_data_entry = partial(
-            self.db_utils.add_data_entry, 
+    def add_data_entry(self, data_type, location, **info):
+        """
+        Add the data entry to rundb.
+        """
+        self.db_utils.add_data_entry(
             run_id=self.run_id,
             production=self.production,
             host=socket.gethostname().split("-")[0],
-            location=self.output_folder,
+            location=location,
             user=getpass.getuser(),
             corrections_version=self.corrections_version,
             amstrax_path=self.amstrax_path,
             amstrax_version=self.amstrax.__version__,
             updated_at=datetime.datetime.now(),
-            is_online=self.is_online
+            is_online=self.is_online,
+            data_type=data_type,
+            **info
         )
 
 
@@ -105,7 +110,6 @@ class RunProcessor:
         return res
         
     def process_raw_records(self):
-        # Logic for processing raw_records (similar to the existing one)
         raw_records_folder = self.amstrax.get_xams_config("raw_records_folder")
         live_folder = self.amstrax.get_xams_config("live_folder")
 
@@ -126,16 +130,14 @@ class RunProcessor:
         raw_st.storage += [strax.DataDirectory(live_folder, readonly=True)]
         raw_st.set_config({"live_data_dir": live_folder})
 
-        # set self.raw_st for later use
         self.raw_st = raw_st
-
         target = "raw_records"
 
         try:
             log.info(f"Processing raw_records for run {self.run_id}")
             self.raw_st.make(self.run_id, target, progress_bar=True)
             self.db_utils.update_processing_status(self.run_id, "done", production=self.production, is_online=self.is_online)
-            info = self.get_info_from_processed_data(self.raw_records_folder, target)
+            info = self.get_info_from_processed_data(raw_records_folder, target)
             self.add_data_entry(data_type=target, location=raw_records_folder, **info)
 
         except Exception as e:
@@ -154,7 +156,6 @@ class RunProcessor:
         )
         st.storage += [strax.DataDirectory(raw_records_folder, readonly=True)]
 
-        # set self.st for later use
         self.st = st
 
         try:
@@ -168,7 +169,7 @@ class RunProcessor:
                 self.st.make(self.run_id, target, progress_bar=True)
                 log.info(f"Processing of {target} completed successfully ({time.time() - t:.2f}s).")
                 info = self.get_info_from_processed_data(self.output_folder, target)
-                self.add_data_entry(data_type=target, **info)
+                self.add_data_entry(data_type=target, location=self.output_folder, **info)
 
             self.db_utils.update_processing_status(self.run_id, "done", production=self.production, is_online=self.is_online)
             log.info(f"Processing of run {self.run_id} completed successfully.")
