@@ -158,4 +158,5 @@ def main(args):
 
 if __name__ == "__main__":
     args = parse_args()
+    check_for_production(args)
     main(args)
