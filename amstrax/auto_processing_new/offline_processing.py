@@ -30,7 +30,7 @@ def parse_args():
     )
     parser.add_argument("--output_folder", type=str, default=None, help="Path to output folder.")
     parser.add_argument("--mem", default=8000, help="Memory per CPU")
-    parser.add_argument("--logs_path", default="/data/xenon/xams_v2/logs/", help="Path where to save logs")
+    parser.add_argument("--logs_path", help="Path where to save logs")
     parser.add_argument("--amstrax_path", default=None, help="Version of amstrax to use.")
     parser.add_argument("--corrections_version", default=None, help="Version of corrections to use. Can be ONLINE, v0, v1..")
     parser.add_argument("--production", action="store_true", help="Run in production mode (update the rundb).")
@@ -75,6 +75,10 @@ def check_for_production(args):
             log.error("You are not allowed to write to the xams_processed folder.")
             raise ValueError("Output folder is xams_processed.")
 
+        if not args.output_folder:
+            log.error("You must specify an output folder.")
+            raise ValueError("Output folder not specified.")
+
 def main(args):
     """
     Main function for offline job submission of selected runs.
@@ -93,15 +97,21 @@ def main(args):
         return
 
 
+    logs_path = args.logs_path
+    if args.production:
+        logs_path = amstrax.get_xams_config("logs_path")
 
 
     # Submit jobs for each run
     for run_doc in run_docs:
         run_id = f'{int(run_doc["number"]):06}'
 
-
         # Build the job submission command
-        # Also insert the amstrax dir on top of the PYTHONPATH
+        jobname = f"process_{run_id}"
+        if args.corrections_version:
+            jobname += f"_{args.corrections_version}"
+        if args.production:
+            jobname += os.basename(args.amsrtax_path)
 
         arguments = []
         arguments.append(f"--run_id {run_id}")
@@ -128,8 +138,8 @@ def main(args):
         # Submit the job
         submit_job(
             jobstring=job_command,
-            jobname=f"xams_{run_id}_offline",
-            log_dir=args.logs_path,
+            jobname=jobname,
+            log_dir=logs_path,
             queue="short",
             mem_per_cpu=args.mem,
             cpus_per_task=1,
