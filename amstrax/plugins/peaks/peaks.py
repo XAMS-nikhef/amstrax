@@ -54,15 +54,18 @@ class Peaks(strax.Plugin):
     
         return strax.peak_dtype(n_channels=self.config['n_tpc_pmts'])
 
+
+    def setup(self):
+
+        if self.gain_to_pe_array is None:
+            self.to_pe = np.ones(self.config['n_tpc_pmts'])
+        else:
+            self.to_pe = np.array(self.gain_to_pe_array)
+
     def compute(self, records, start, end):
 
         r = records
   
-        if self.config['gain_to_pe_array'] is None:
-            self.to_pe = np.ones(self.config['n_tpc_pmts'])
-        else:
-            self.to_pe = self.gain_to_pe_array
-
         hits = strax.find_hits(r)
         hits = strax.sort_by_time(hits)
 

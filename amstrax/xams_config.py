@@ -24,7 +24,6 @@ class XAMSConfig(Config):
 
         # Check if the value has already been cached
         if self._cached_value is not None:
-            print(f"Using cached value for {self.name}")
             return self._cached_value
 
         config_value = plugin.config.get(self.name, self.default)
@@ -116,8 +115,6 @@ class XAMSConfig(Config):
                     start_run = "000000"
 
                 end_run = end_run.zfill(6)
-
-                print(f"Checking if {start_run} <= {run_id} <= {end_run}")
 
                 if start_run <= run_id <= end_run:
                     value = correction_data[run_range]
