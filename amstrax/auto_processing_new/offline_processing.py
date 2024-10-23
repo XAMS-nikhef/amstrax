@@ -42,7 +42,10 @@ def parse_args():
     parser.add_argument(
         "--dry_run", action="store_true", help="Simulate job submission without actually submitting jobs."
     )
-    parser.add_argument("--queue", default="express", help="Queue to submit jobs to. See Nikhef documentation for options.")
+    parser.add_argument("--queue", default="short", help="Queue to submit jobs to. See Nikhef documentation for options.")
+
+    parser.add_argument("--max_runs", type=int, default=200, help="Maximum number of runs to process.")
+    parser.add_argument("--start_from", type=int, default=0, help="Start processing from this run number (as in, skip the first N runs from the file).")
 
     return parser.parse_args()
 
@@ -112,6 +115,11 @@ def main(args):
     else:
         log.error("Either --run_id or --run_file must be provided.")
         return
+
+    # Limit the number of runs to process
+    run_docs = run_docs[args.start_from : args.start_from + args.max_runs]
+
+
 
     # Submit jobs for each run
     for run_doc in run_docs:

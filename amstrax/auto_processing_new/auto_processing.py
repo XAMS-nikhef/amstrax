@@ -34,7 +34,7 @@ def parse_args():
     parser.add_argument("--set_context_kwargs", default="{}", help="Dictionary of kwargs to pass to set_context.")
     parser.add_argument("--amstrax_path", default=None, help="Path to the amstrax directory.")
     parser.add_argument("--corrections_version", default=None, help="Version of corrections to use.")
-    parser.add_argument("--queue", default="express", help="Queue to submit jobs to. See Nikhef docs for options.")
+    parser.add_argument("--queue", default="short", help="Queue to submit jobs to. See Nikhef docs for options.")
 
     return parser.parse_args()
 
