@@ -120,7 +120,8 @@ def main(args):
     run_docs = run_docs[args.start_from : args.start_from + args.max_runs]
 
 
-
+    log.info(f"We are about to process {len(run_docs)} runs.")
+    
     # Submit jobs for each run
     for run_doc in run_docs:
         run_id = f'{int(run_doc["number"]):06}'
@@ -167,6 +168,8 @@ def main(args):
             cpus_per_task=1,
             dry_run=args.dry_run,
         )
+
+    log.info(f"All jobs submitted for {len(run_docs)} runs.")
 
 
 if __name__ == "__main__":
