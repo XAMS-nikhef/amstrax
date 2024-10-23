@@ -112,6 +112,12 @@ def get_run_ids_from_args(args):
         run_range = args.run_range.split("-")
         run_ids = list(range(int(run_range[0]), int(run_range[1]) + 1))
 
+
+    run_ids = run_ids[args.start_from : args.start_from + args.max_runs]
+    run_ids = [f"{int(run_id):06}" for run_id in run_ids]
+
+    log.info(f"We are about to process {len(run_docs)} runs.")
+
     return run_ids
 
 
@@ -121,14 +127,10 @@ def main(args):
     """
 
     # Get the run IDs from the arguments
-    run_docs = get_run_ids_from_args(args)
-    # Limit the number of runs to process
-    run_docs = run_docs[args.start_from : args.start_from + args.max_runs]
-    log.info(f"We are about to process {len(run_docs)} runs.")
-    
+    run_ids = get_run_ids_from_args(args)
+
     # Submit jobs for each run
-    for run_doc in run_docs:
-        run_id = f'{int(run_doc["number"]):06}'
+    for run_id in run_ids:
 
         # Build the job submission command
         jobname = f"process_{run_id}"
@@ -173,7 +175,7 @@ def main(args):
             dry_run=args.dry_run,
         )
 
-    log.info(f"All jobs submitted for {len(run_docs)} runs.")
+    log.info(f"All jobs submitted for {len(run_ids)} runs.")
 
 
 if __name__ == "__main__":
