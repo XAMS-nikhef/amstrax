@@ -116,7 +116,7 @@ def get_run_ids_from_args(args):
     run_ids = run_ids[args.start_from : args.start_from + args.max_runs]
     run_ids = [f"{int(run_id):06}" for run_id in run_ids]
 
-    log.info(f"We are about to process {len(run_docs)} runs.")
+    log.info(f"We are about to process {len(run_ids)} runs.")
 
     return run_ids
 
