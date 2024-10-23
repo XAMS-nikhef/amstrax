@@ -55,7 +55,7 @@ class RunProcessor:
             log.info("Setting up production configurations.")
 
             # Set the output folder to the production folder
-            if self.output_folder is not None:
+            if self.output_folder:
                 raise ValueError("Output folder should not be set when processing production data.")
 
             self.output_folder = self.amstrax.get_xams_config("xams_processed")
@@ -215,7 +215,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Process a single run using amstrax.")
     parser.add_argument("--run_id", type=str, help="Run ID to process.")
     parser.add_argument("--targets", nargs="+", help="List of data types to process (e.g., 'raw_records', 'peaks').")
-    parser.add_argument("--output_folder", type=str, help="Path to save the processed data.")
+    parser.add_argument("--output_folder", type=str, help="Path to save the processed data.", default=None)
     parser.add_argument("--allow_raw_records", action="store_true", help="Explicitly allow raw_records processing.")
     parser.add_argument("--corrections_version", type=str, default=None, help="Version of corrections to apply.")
     parser.add_argument("--amstrax_path", type=str, default=None, help="Version of amstrax to use.")

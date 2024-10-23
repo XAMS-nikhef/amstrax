@@ -129,7 +129,9 @@ def main(args):
         arguments = []
         arguments.append(f"--run_id {run_id}")
         arguments.append(f"--targets {' '.join(args.targets)}")
-        arguments.append(f"--output_folder {args.output_folder}")
+        if args.output_folder:
+            # as in production mode we don't allow to specify the output folder
+            arguments.append(f"--output_folder {args.output_folder}")
         if args.corrections_version:
             arguments.append(f"--corrections_version {args.corrections_version}")
         if args.amstrax_path:
