@@ -39,8 +39,6 @@ class RunProcessor:
         self.setup_amstrax()
         self.setup_production()
         self.run_doc = self.db_utils.get_run_doc(self.run_id)
-        self.infer_special_modes()
-
 
     def setup_amstrax(self):
 
@@ -70,7 +68,7 @@ class RunProcessor:
         log.info(f" *** Comments: {self.run_doc.get('comments')}")
         log.info(f" *** Tags: {self.run_doc.get('tags')}")
 
-    def infer_special_modes(self):
+    def infer_special_modes(self, st):
 
         # Check if there is led in the run_doc
         if "ledcalibration" in self.run_doc.get('mode'):
@@ -78,7 +76,7 @@ class RunProcessor:
             log.info("Detected LED calibration run.")
             log.info("Adding LEDCalibration plugin to the context.")
             ax = self.amstrax
-            self.st.register([
+            st.register([
                 ax.DAQReader,
                 ax.RecordsLED,
                 ax.LEDCalibration
@@ -86,7 +84,9 @@ class RunProcessor:
         
             # override the targets to process only the LEDCalibration
             self.targets = ["raw_records", "records_led", "led_calibration"]
+            log.info(f"Overriding targets to {self.targets}")
         
+        return st
 
     def setup_production(self):
 
@@ -227,6 +227,8 @@ class RunProcessor:
             corrections_version=self.corrections_version
         )
         st.storage += [strax.DataDirectory(raw_records_folder, readonly=True)]
+
+        st = self.infer_special_modes(st)
 
         self.st = st
 
