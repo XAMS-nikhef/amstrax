@@ -185,3 +185,5 @@ def run_ids_from_file(filename):
             run_ids.append(f"{int(line):06d}")
 
     print(f"Found {len(run_ids)} runs in {filename}")
+
+    return run_ids
