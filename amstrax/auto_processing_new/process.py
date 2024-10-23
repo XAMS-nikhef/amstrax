@@ -55,11 +55,23 @@ class RunProcessor:
             log.info("Setting up production configurations.")
 
             # Set the output folder to the production folder
-            if self.output_folder:
+            if self.output_folder is not None:
                 raise ValueError("Output folder should not be set when processing production data.")
 
             self.output_folder = self.amstrax.get_xams_config("xams_processed")
             log.info(f"Output folder set to {self.output_folder}")
+
+            # Make sure we specified corrections version
+            if not self.corrections_version:
+                raise ValueError("Corrections version should be specified for production processing.")
+
+            # make sure that amstrax_path contains amstrax_versioned
+            if "amstrax_versioned" not in self.amstrax_path:
+                raise ValueError("amstrax_path should be from amstrax_versioned for production processing.")
+
+            # only xamsdata user can process production data
+            if getpass.getuser() != "xamsdata":
+                raise PermissionError("Only xamsdata user can process production data.")
 
 
     def add_data_entry(self, data_type, location, **info):
