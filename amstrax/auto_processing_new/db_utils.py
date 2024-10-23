@@ -91,10 +91,18 @@ def add_data_entry(
         'amstrax_version': amstrax_version,
         'amstrax_path': amstrax_path,
         'corrections_version': corrections_version,
+        'n_chunks': n_chunks,
+        'size_mb': size_mb,
+        'lineage_hash': lineage_hash,
     }
 
     data_entry.update(kwargs)
 
+    # print them out nicely
+    log.info(f"Data entry for run {run_id} with:")
+    for key, value in data_entry.items():
+        log.info(f"{key}: {value}")
+        
     if production:
         run_doc = runsdb.find_one({'number': int(run_id)})
         for entry in run_doc.get('data', []):

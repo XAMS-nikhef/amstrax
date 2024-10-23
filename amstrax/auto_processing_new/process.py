@@ -23,6 +23,9 @@ class RunProcessor:
         self.amstrax_path = args.amstrax_path
         self.is_online = args.is_online
         
+        if self.amstrax_path:
+            self.amstrax_path = self.amstrax_path.rstrip("/")
+
         log.info(f"Processing run {self.run_id} with the following parameters:")
         log.info(f" --Targets: {self.targets}")
         log.info(f" --Output folder: {self.output_folder}")
