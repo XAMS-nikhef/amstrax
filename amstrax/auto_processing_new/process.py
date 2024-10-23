@@ -54,44 +54,44 @@ class RunProcessor:
 
         self.db_utils = self.amstrax.db_utils
 
-def get_run_doc_info(self):
-    """ This one is just to extract the run document details and log them. """
+    def get_run_doc_info(self):
+        """ This one is just to extract the run document details and log them. """
 
-    # Extract the run document details
-    start_date = self.run_doc.get('start')
-    end_date = self.run_doc.get('end')
+        # Extract the run document details
+        start_date = self.run_doc.get('start')
+        end_date = self.run_doc.get('end')
 
-    # Check if start and end dates are in the expected format
-    if start_date and isinstance(start_date, dict) and '$date' in start_date:
-        start_timestamp = start_date['$date'] / 1e3  # Convert from milliseconds to seconds
-        start_datetime = datetime.datetime.fromtimestamp(start_timestamp)
-    else:
-        start_datetime = None
+        # Check if start and end dates are in the expected format
+        if start_date and isinstance(start_date, dict) and '$date' in start_date:
+            start_timestamp = start_date['$date'] / 1e3  # Convert from milliseconds to seconds
+            start_datetime = datetime.datetime.fromtimestamp(start_timestamp)
+        else:
+            start_datetime = None
 
-    if end_date and isinstance(end_date, dict) and '$date' in end_date:
-        end_timestamp = end_date['$date'] / 1e3  # Convert from milliseconds to seconds
-        end_datetime = datetime.datetime.fromtimestamp(end_timestamp)
-    else:
-        end_datetime = None
+        if end_date and isinstance(end_date, dict) and '$date' in end_date:
+            end_timestamp = end_date['$date'] / 1e3  # Convert from milliseconds to seconds
+            end_datetime = datetime.datetime.fromtimestamp(end_timestamp)
+        else:
+            end_datetime = None
 
-    # Calculate duration if both start and end times are available
-    if start_datetime and end_datetime:
-        duration = (end_timestamp - start_timestamp)
-    else:
-        duration = None
+        # Calculate duration if both start and end times are available
+        if start_datetime and end_datetime:
+            duration = (end_timestamp - start_timestamp)
+        else:
+            duration = None
 
-    # Log the run document details
-    log.info(f"Run document for run {self.run_id}:")
-    log.info(f" *** Mode: {self.run_doc.get('mode')}")
-    if start_datetime:
-        log.info(f" *** Start: {start_datetime}")
-    if end_datetime:
-        log.info(f" *** End: {end_datetime}")
-    if duration is not None:
-        log.info(f" *** Duration: {duration:.2f} seconds")
-    log.info(f" *** User: {self.run_doc.get('user')}")
-    log.info(f" *** Comments: {self.run_doc.get('comments')}")
-    log.info(f" *** Tags: {self.run_doc.get('tags')}")
+        # Log the run document details
+        log.info(f"Run document for run {self.run_id}:")
+        log.info(f" *** Mode: {self.run_doc.get('mode')}")
+        if start_datetime:
+            log.info(f" *** Start: {start_datetime}")
+        if end_datetime:
+            log.info(f" *** End: {end_datetime}")
+        if duration is not None:
+            log.info(f" *** Duration: {duration:.2f} seconds")
+        log.info(f" *** User: {self.run_doc.get('user')}")
+        log.info(f" *** Comments: {self.run_doc.get('comments')}")
+        log.info(f" *** Tags: {self.run_doc.get('tags')}")
 
 
     def infer_special_modes(self, st):
