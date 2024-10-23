@@ -122,7 +122,9 @@ def main(args):
         if args.corrections_version:
             jobname += f"_{args.corrections_version}"
         if args.production:
-            jobname += f"_{os.path.basename(args.amstrax_path)}"
+            # amstrax_path will be something like /data/xenon/xams/amstrax_versioned/vTEST1
+            # we want to extract the last part of the path, for example vTEST1
+            jobname += f"_{args.amstrax_path.split('/')[-1]}_production"
 
         arguments = []
         arguments.append(f"--run_id {run_id}")
