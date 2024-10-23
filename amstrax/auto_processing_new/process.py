@@ -33,8 +33,11 @@ class RunProcessor:
         log.info(f" --This file: {__file__}")
         log.info(f" --Is online: {self.is_online}")
 
-        
+        self.setup_amstrax()
+        self.setup_production()
+
     def setup_amstrax(self):
+
         if self.amstrax_path:
             if not os.path.exists(self.amstrax_path):
                 raise FileNotFoundError(f"amstrax path {self.amstrax_path} does not exist.")
@@ -45,6 +48,19 @@ class RunProcessor:
         log.info(f"Using amstrax version: {amstrax.__version__} at {amstrax.__file__}")
 
         self.db_utils = self.amstrax.db_utils
+
+    def setup_production(self):
+
+        if self.production:
+            log.info("Setting up production configurations.")
+
+            # Set the output folder to the production folder
+            if self.output_folder:
+                raise ValueError("Output folder should not be set when processing production data.")
+
+            self.output_folder = self.amstrax.get_xams_config("xams_processed")
+            log.info(f"Output folder set to {self.output_folder}")
+
 
     def add_data_entry(self, data_type, location, **info):
         """
@@ -199,7 +215,6 @@ def parse_args():
 def main():
     args = parse_args()
     processor = RunProcessor(args)
-    processor.setup_amstrax()
     processor.process()
 
 
