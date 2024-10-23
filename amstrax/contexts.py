@@ -77,7 +77,7 @@ def xams(
         **COMMON_OPT_XAMS, 
         forbid_creation_of=ax.DAQReader.provides,
         # output_folder it will be set again later, but so we do not create a folder /strax_data everywhere
-        output_folder=output_folder, 
+        storage=output_folder, 
         )
 
     st.set_config(XAMS_COMMON_CONFIG)
