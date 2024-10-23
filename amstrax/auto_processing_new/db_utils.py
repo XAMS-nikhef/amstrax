@@ -120,16 +120,17 @@ def add_data_entry(
     else:
         log.info(f"Would add data entry to run {run_id} (dry run).")
 
-def query_runs(query):
+
+def get_run_doc(run_id):
     """
-    Query the rundb to retrieve runs based on a specific filter.
+    Get the document for a specific run from the rundb.
     
-    :param query: MongoDB query object.
-    :return: List of runs matching the query.
+    :param run_id: ID of the run to retrieve.
+    :return: Document for the run.
     """
     
     runsdb = amstrax.get_mongo_collection()
 
-    results = list(runsdb.find(query))
-    log.info(f"Found {len(results)} runs matching query.")
-    return results
+    run_doc = runsdb.find_one({'number': int(run_id)})
+    log.info(f"Found run {run_id} in the database.")
+    return run_doc

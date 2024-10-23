@@ -23,6 +23,7 @@ def parse_args():
     run_selection.add_argument(
         "--run_file", type=str, help="File with run IDs to process. It should contain one run ID per line."
     )
+    run_selection.add_argument("--run_range", type=str, help="Range of run IDs to process (e.g., 1000-2000).")
 
     # Arguments for processing
     parser.add_argument(
@@ -99,27 +100,30 @@ def check_for_production(args):
             raise ValueError("Output folder not specified.")
 
 
+def get_run_ids_from_args(args):
+
+    run_ids = []
+    if args.run_id:
+        run_ids = args.run_id
+    elif args.run_file:
+        with open(args.run_file, "r") as f:
+            run_ids = f.readlines()
+    elif args.run_range:
+        run_range = args.run_range.split("-")
+        run_ids = list(range(int(run_range[0]), int(run_range[1]) + 1))
+
+    return run_ids
+
+
 def main(args):
     """
     Main function for offline job submission of selected runs.
     """
 
-    # Check the run selection method
-    if args.run_id:
-        run_docs = [{"number": int(run_id)} for run_id in args.run_id]
-    elif args.run_file:
-        # It should contain a list of run numbers, one per line
-        with open(args.run_file, "r") as f:
-            run_numbers = f.readlines()
-        run_docs = [{"number": int(run_number)} for run_number in run_numbers]
-    else:
-        log.error("Either --run_id or --run_file must be provided.")
-        return
-
+    # Get the run IDs from the arguments
+    run_docs = get_run_ids_from_args(args)
     # Limit the number of runs to process
     run_docs = run_docs[args.start_from : args.start_from + args.max_runs]
-
-
     log.info(f"We are about to process {len(run_docs)} runs.")
     
     # Submit jobs for each run

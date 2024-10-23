@@ -38,6 +38,9 @@ class RunProcessor:
 
         self.setup_amstrax()
         self.setup_production()
+        self.run_doc = self.db_utils.get_run_doc(self.run_id)
+        self.infer_special_modes()
+
 
     def setup_amstrax(self):
 
@@ -51,6 +54,39 @@ class RunProcessor:
         log.info(f"Using amstrax version: {amstrax.__version__} at {amstrax.__file__}")
 
         self.db_utils = self.amstrax.db_utils
+
+    def get_run_doc_info(self):
+
+        # let's just print out the main info from the rundoc
+        # like mode, start, end, duration, user, comments, tags
+        # we'll need to format the date and time properly, and calculate the duration
+        # use datetime to convert the date to a readable format
+        log.info(f"Run document for run {self.run_id}:")
+        log.info(f" *** Mode: {self.run_doc.get('mode')}")
+        log.info(f" *** Start: {datetime.datetime.fromtimestamp(self.run_doc.get('start') / 1e9)}")
+        log.info(f" *** End: {datetime.datetime.fromtimestamp(self.run_doc.get('end') / 1e9)}")
+        log.info(f" *** Duration: {(self.run_doc.get('end') - self.run_doc.get('start'))/1e9:.2f} seconds")
+        log.info(f" *** User: {self.run_doc.get('user')}")
+        log.info(f" *** Comments: {self.run_doc.get('comments')}")
+        log.info(f" *** Tags: {self.run_doc.get('tags')}")
+
+    def infer_special_modes(self):
+
+        # Check if there is led in the run_doc
+        if "ledcalibration" in self.run_doc.get('mode'):
+            # Add the LEDCalibration plugin to the context
+            log.info("Detected LED calibration run.")
+            log.info("Adding LEDCalibration plugin to the context.")
+            ax = self.amstrax
+            self.st.register([
+                ax.DAQReader,
+                ax.RecordsLED,
+                ax.LEDCalibration
+            ])
+        
+            # override the targets to process only the LEDCalibration
+            self.targets = ["raw_records", "records_led", "led_calibration"]
+        
 
     def setup_production(self):
 
