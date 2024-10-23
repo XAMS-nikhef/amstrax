@@ -24,4 +24,10 @@ from .mini_analysis import *
 
 from .matplotlib_utils import *
 
+from . import config
+from .config import *
+
 from . import analyses
+
+from . import auto_processing_new
+from .auto_processing_new import *
