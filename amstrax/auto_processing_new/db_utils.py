@@ -98,8 +98,11 @@ def add_data_entry(
     if production:
         run_doc = runsdb.find_one({'number': int(run_id)})
         for entry in run_doc.get('data', []):
-            if entry['type'] == data_type and entry['location'] == location:
-                log.info(f"Entry for run {run_id} of type {data_type} already exists.")
+            if entry.get('type', None) == data_type and \
+                entry.get('location', None) == location and \
+                    entry.get('lineage_hash', None) == lineage_hash:
+
+                log.info(f"Entry for run {run_id} of type {data_type} and location {location} already exists.")
                 return
         runsdb.update_one(
             {'number': int(run_id)},

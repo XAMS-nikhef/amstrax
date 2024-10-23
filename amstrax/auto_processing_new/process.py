@@ -30,6 +30,7 @@ class RunProcessor:
         log.info(f" --Corrections version: {self.corrections_version}")
         log.info(f" --Production: {self.production}")
         log.info(f" --Amstrax path: {self.amstrax_path}")
+        log.info(f" --This file: {__file__}")
         log.info(f" --Is online: {self.is_online}")
 
         
@@ -77,7 +78,7 @@ class RunProcessor:
         if self.targets:
             self.process_remaining_targets()
 
-    def get_info_from_processed_data(self, folder, target):
+    def get_info_from_processed_data(self, folder, target, st):
         # Logic for getting info from processed data (similar to the existing one)
         # When the processing succeeds, the data is stored in the output folder
         # and the data entry is added to the database.
@@ -85,7 +86,7 @@ class RunProcessor:
         # what is the lineage_hash 
         # and the total size of the data in MB
 
-        key_for = str(self.st.key_for(self.run_id, target))
+        key_for = str(st.key_for(self.run_id, target))
         log.info(f"Getting info from processed data in {folder} for {key_for}")
         data_folder = os.path.join(folder, key_for)
         lineage_hash = key_for.split("-")[-1]
@@ -132,11 +133,15 @@ class RunProcessor:
         self.raw_st = raw_st
         target = "raw_records"
 
+        if self.raw_st.is_stored(self.run_id, target):
+            log.info(f"Skipping {target} for run {self.run_id} as it is already processed.")
+            return
+
         try:
             log.info(f"Processing raw_records for run {self.run_id}")
             self.raw_st.make(self.run_id, target, progress_bar=True)
             self.db_utils.update_processing_status(self.run_id, "done", production=self.production, is_online=self.is_online)
-            info = self.get_info_from_processed_data(raw_records_folder, target)
+            info = self.get_info_from_processed_data(raw_records_folder, target, self.raw_st)
             self.add_data_entry(data_type=target, location=raw_records_folder, **info)
 
         except Exception as e:
@@ -167,7 +172,7 @@ class RunProcessor:
                 log.info(f"Processing {target} for run {self.run_id}")
                 self.st.make(self.run_id, target, progress_bar=True)
                 log.info(f"Processing of {target} completed successfully ({time.time() - t:.2f}s).")
-                info = self.get_info_from_processed_data(self.output_folder, target)
+                info = self.get_info_from_processed_data(self.output_folder, target, self.st)
                 self.add_data_entry(data_type=target, location=self.output_folder, **info)
 
             self.db_utils.update_processing_status(self.run_id, "done", production=self.production, is_online=self.is_online)

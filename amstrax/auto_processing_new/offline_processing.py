@@ -134,7 +134,6 @@ def main(args):
             arguments.append(f"--amstrax_path {args.amstrax_path}")
         if args.production:
             arguments.append("--production")
-
         arguments = " ".join(arguments)
 
         job_command = f"""
