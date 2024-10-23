@@ -181,6 +181,7 @@ class RunProcessor:
         raw_records_folder = self.amstrax.get_xams_config("raw_records_folder")
 
         log.info(f"Processing remaining targets: {self.targets}")
+        log.info(f"Output folder: {self.output_folder}")
 
         st = self.amstrax.contexts.xams(
             output_folder=self.output_folder,
