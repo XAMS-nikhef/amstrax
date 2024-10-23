@@ -58,7 +58,7 @@ class RunProcessor:
             if self.output_folder:
                 raise ValueError("Output folder should not be set when processing production data.")
 
-            self.output_folder = self.amstrax.get_xams_config("xams_processed")
+            self.output_folder = self.amstrax.get_xams_config("xams_processed_folder")
             log.info(f"Output folder set to {self.output_folder}")
 
             # Make sure we specified corrections version

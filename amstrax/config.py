@@ -25,4 +25,7 @@ def get_xams_config(key) -> Dict[str, Any]:
     config_file = configparser.ConfigParser()
     config_file.read(config_file_path)
 
-    return config_file['default'][key]
+    try:
+        return config_file['default'][key]
+    except KeyError:
+        raise KeyError(f'Could not find key {key} in xams config file {config_file_path}')
