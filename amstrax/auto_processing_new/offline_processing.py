@@ -100,6 +100,25 @@ def check_for_production(args):
             raise ValueError("Output folder not specified.")
 
 
+def check_existing_jobs(job_name):
+    """
+    Check if a job with the same name is already running, idle, or held.
+    """
+    try:
+        result = subprocess.run(['condor_q', '-nobatch'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if result.returncode != 0:
+            raise RuntimeError(f"condor_q command failed: {result.stderr}")
+
+        for line in result.stdout.splitlines():
+            if job_name in line and " C " not in line:  # Ignore completed jobs
+                log.error(f"Job with name '{job_name}' is already running, idle, or held.")
+                raise ValueError(f"Job with name '{job_name}' is already running, idle, or held.")
+    
+    except Exception as e:
+        log.error(f"Error while checking existing jobs: {e}")
+        sys.exit(1)
+
+
 def get_run_ids_from_args(args):
 
     run_ids = []

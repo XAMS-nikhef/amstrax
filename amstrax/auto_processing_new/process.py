@@ -39,6 +39,7 @@ class RunProcessor:
         self.setup_amstrax()
         self.setup_production()
         self.run_doc = self.db_utils.get_run_doc(self.run_id)
+        self.get_run_doc_info()
 
     def setup_amstrax(self):
 
