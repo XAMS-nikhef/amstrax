@@ -22,7 +22,7 @@ class CorrectedAreas(strax.Plugin):
 
     """
 
-    __version__ = "0.5.1"
+    __version__ = "0.6.0"
 
     depends_on = ("event_basics", "event_positions")
 
@@ -57,6 +57,19 @@ class CorrectedAreas(strax.Plugin):
 
         s1_correction_function = lambda z: y0 + a * z
         zmin, zmax, y0, a = self.s1_naive_z_correction
+        s1_correction_average = s1_correction_function((zmin + zmax) / 2)
+        correction = s1_correction_average/s1_correction_function(z)
+
+        return correction
+
+    def s1_naive_z_correction(self, z):
+        """
+        Apply a naive z-dependent S1 correction.
+        Returns the correction factor for the S1 area.
+        """
+
+        s1_correction_function = lambda z: y0 + a * z
+        zmin, zmax, y0, a = self.config["s1_naive_z_correction"]
         s1_correction_average = s1_correction_function((zmin + zmax) / 2)
         correction = s1_correction_average/s1_correction_function(z)
 
