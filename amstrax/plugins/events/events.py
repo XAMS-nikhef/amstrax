@@ -43,8 +43,6 @@ class Events(strax.OverlapWindowPlugin):
             (peaks['area'] > self.config['trigger_min_area'])
             ]
 
-        print(f"Found {len(triggers)} triggers")
-
         # Join nearby triggers
         t0, t1 = strax.find_peak_groups(
             triggers,

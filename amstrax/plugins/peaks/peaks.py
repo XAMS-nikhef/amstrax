@@ -1,6 +1,7 @@
 import numba
 import numpy as np
 import strax
+import amstrax
 
 export, __all__ = strax.exporter()
 
@@ -26,20 +27,14 @@ HITFINDER_OPTIONS = tuple([
                  help="Minimum contributing PMTs needed to define a peak"),
     strax.Option('peak_min_pmts', default=1,
                  help="Minimum contributing PMTs needed to define a peak"),
-    strax.Option('single_channel_peaks', default=False,
-                 help='Whether single-channel peaks should be reported'),
     strax.Option('peak_split_min_height', default=25,
                  help="Minimum height in PE above a local sum waveform"
                       "minimum, on either side, to trigger a split"),
     strax.Option('peak_split_min_ratio', default=4,
                  help="Minimum ratio between local sum waveform"
                       "minimum and maxima on either side, to trigger a split"),
-    strax.Option('diagnose_sorting', track=False, default=False,
-                 help="Enable runtime checks for sorting and disjointness"),
     strax.Option('n_tpc_pmts', track=False, default=False,
-                 help="Number of channels"), 
-    strax.Option('gain_to_pe_array', default=None,
-                 help="Gain to pe array"),
+                 help="Number of channels")
 )
 class Peaks(strax.Plugin):
     depends_on = ('records',)
@@ -50,19 +45,27 @@ class Peaks(strax.Plugin):
 
     __version__ = '0.1.50'
 
+    gain_to_pe_array = amstrax.XAMSConfig(
+        default=None,
+        help="Gain to pe array"
+    )
+
     def infer_dtype(self):
     
         return strax.peak_dtype(n_channels=self.config['n_tpc_pmts'])
+
+
+    def setup(self):
+
+        if self.gain_to_pe_array is None:
+            self.to_pe = np.ones(self.config['n_tpc_pmts'])
+        else:
+            self.to_pe = np.array(self.gain_to_pe_array)
 
     def compute(self, records, start, end):
 
         r = records
   
-        if self.config['gain_to_pe_array'] is None:
-            self.to_pe = np.ones(self.config['n_tpc_pmts'])
-        else:
-            self.to_pe = self.config['gain_to_pe_array']
-
         hits = strax.find_hits(r)
         hits = strax.sort_by_time(hits)
 

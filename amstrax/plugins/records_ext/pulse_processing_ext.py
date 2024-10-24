@@ -34,9 +34,7 @@ class PulseProcessingEXT(strax.Plugin):
     provides = 'records_ext'
     data_kind = 'records_ext'
     
-    # I think in amstrax we can save everything
-    # default is ALWAYS
-    # save_when = strax.SaveWhen.TARGET
+    save_when = strax.SaveWhen.TARGET
        
     def infer_dtype(self):
         record_length = strax.record_length_from_dtype(

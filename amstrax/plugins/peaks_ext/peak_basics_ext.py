@@ -10,19 +10,6 @@ export, __all__ = strax.exporter()
 @export
 @strax.takes_config(
     strax.Option(
-        "channel_map",
-        type=immutabledict,
-        track=False,
-        help="Map of channel numbers to top, bottom and aqmon, to be defined in the context",
-    ),
-    strax.Option(
-        "check_peak_sum_area_rtol",
-        default=1e-4,
-        help="Check if the area of the sum-wf is the same as the total area"
-        " (if the area of the peak is positively defined)."
-        " Set to None to disable.",
-    ),
-    strax.Option(
       's1_min_width', 
       default=10,
       help="Minimum (IQR) width of S1s"
@@ -33,40 +20,10 @@ export, __all__ = strax.exporter()
       help="Maximum (IQR) width of S1s"
     ),
     strax.Option(
-      's1_min_area',
-      default=10,
-      help="Minimum area (PE) for S1s"
-    ),
-    strax.Option(
-      's2_min_area',
-      default=10,
-      help="Minimum area (PE) for S2s"
-    ),
-    strax.Option(
       's2_min_width',
       default=225,
       help="Minimum width for S2s"
-    ),
-    strax.Option(
-      's1_min_channels',
-      default=5,
-      help="Minimum number of channels for S1s"
-    ),
-    strax.Option(
-      's2_min_channels',
-      default=5,
-      help="Minimum number of channels for S2s"
-    ),
-    strax.Option(
-      's2_min_area_fraction_top',
-      default=0,
-      help="Minimum area fraction top for S2s"
-    ),
-    strax.Option(
-      's1_max_area_fraction_top',
-      default=.2,
-      help="Maximum area fraction top for S1s"
-    ),
+    )
 )
 class PeakBasicsEXT(strax.Plugin):
     provides = ("peak_basics_ext",)
