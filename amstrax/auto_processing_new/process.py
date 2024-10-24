@@ -22,6 +22,7 @@ class RunProcessor:
         self.production = args.production
         self.amstrax_path = args.amstrax_path
         self.is_online = args.is_online
+        self.fix_targets = args.fix_targets
         
         if self.amstrax_path:
             self.amstrax_path = self.amstrax_path.rstrip("/")
@@ -262,7 +263,9 @@ class RunProcessor:
         )
         st.storage += [strax.DataDirectory(raw_records_folder, readonly=True)]
 
-        st = self.infer_special_modes(st)
+
+        if not self.fix_targets:
+            st = self.infer_special_modes(st)
 
         self.st = st
 
@@ -297,6 +300,8 @@ def parse_args():
     parser.add_argument("--amstrax_path", type=str, default=None, help="Version of amstrax to use.")
     parser.add_argument("--production", action="store_true", help="Update the production database.")
     parser.add_argument("--is_online", action="store_true", help="Process online data.")
+    parser.add_argument("--fix_targets", action="store_true", help="Fix the targets to process, do not allow special modes.")
+
     return parser.parse_args()
 
 
