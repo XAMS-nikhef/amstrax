@@ -13,6 +13,12 @@ export, __all__ = strax.exporter()
         default=30000,
         help="electron lifetime in [ns] (should be implemented in db soon)",
     ),
+    strax.Option(
+        "s1_naive_z_correction",
+        default=[-52, 0, 700, -7.69],
+        help="Parameters for the z-dependent S1 correction \
+            [zmin, zmax, y0, a] where y0 + a*z is the correction",
+    )
 )
 class CorrectedAreas(strax.Plugin):
     """Plugin which applies light collection efficiency maps and electron life time to the data.
@@ -28,7 +34,7 @@ class CorrectedAreas(strax.Plugin):
 
     """
 
-    __version__ = "0.5.1"
+    __version__ = "0.6.0"
 
     depends_on = ("event_basics", "event_positions")
 
@@ -48,6 +54,19 @@ class CorrectedAreas(strax.Plugin):
         return dtype
 
 
+    def s1_naive_z_correction(self, z):
+        """
+        Apply a naive z-dependent S1 correction.
+        Returns the correction factor for the S1 area.
+        """
+
+        s1_correction_function = lambda z: y0 + a * z
+        zmin, zmax, y0, a = self.config["s1_naive_z_correction"]
+        s1_correction_average = s1_correction_function((zmin + zmax) / 2)
+        correction = s1_correction_average/s1_correction_function(z)
+
+        return correction
+
     def compute(self, events):
         result = np.zeros(len(events), self.dtype)
         result["time"] = events["time"]
@@ -62,7 +81,7 @@ class CorrectedAreas(strax.Plugin):
 
         for peak_type in ["", "alt_"]:
 
-            result[f"{peak_type}cs1"] = events[f"{peak_type}s1_area"]
+            result[f"{peak_type}cs1"] = events[f"{peak_type}s1_area"]*self.s1_naive_z_correction(events["z"])
             result[f"{peak_type}cs2"] = events[f"{peak_type}s2_area"]*np.exp(events["drift_time"]/elife)
 
         return result
