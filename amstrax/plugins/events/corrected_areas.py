@@ -49,20 +49,7 @@ class CorrectedAreas(strax.Plugin):
 
         return dtype
 
-    def s1_naive_z_correction(self, z):
-        """
-        Apply a naive z-dependent S1 correction.
-        Returns the correction factor for the S1 area.
-        """
-
-        s1_correction_function = lambda z: y0 + a * z
-        zmin, zmax, y0, a = self.s1_naive_z_correction
-        s1_correction_average = s1_correction_function((zmin + zmax) / 2)
-        correction = s1_correction_average/s1_correction_function(z)
-
-        return correction
-
-    def s1_naive_z_correction(self, z):
+    def get_s1_naive_z_correction(self, z):
         """
         Apply a naive z-dependent S1 correction.
         Returns the correction factor for the S1 area.
@@ -87,7 +74,7 @@ class CorrectedAreas(strax.Plugin):
 
         for peak_type in ["", "alt_"]:
 
-            result[f"{peak_type}cs1"] = events[f"{peak_type}s1_area"] * self.s1_naive_z_correction(events["z"])
+            result[f"{peak_type}cs1"] = events[f"{peak_type}s1_area"] * self.get_s1_naive_z_correction(events["z"])
             result[f"{peak_type}cs2"] = events[f"{peak_type}s2_area"] * np.exp(events["drift_time"] / self.elife)
 
         return result
