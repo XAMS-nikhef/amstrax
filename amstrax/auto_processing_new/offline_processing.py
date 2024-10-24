@@ -29,7 +29,7 @@ def parse_args():
     parser.add_argument(
         "--targets",
         nargs="+",
-        default=["peak_basics", "event_info"],
+        default=["peak_basics", "event_info", "event_area_per_channel"],
         help="List of targets to process (e.g., raw_records, peaks, events).",
     )
     parser.add_argument("--output_folder", type=str, default=None, help="Path to output folder.")

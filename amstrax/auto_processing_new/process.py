@@ -112,6 +112,14 @@ class RunProcessor:
             self.targets = ["raw_records", "records_led", "led_calibration"]
             log.info(f"Overriding targets to {self.targets}")
         
+
+        if "_nai" in self.run_doc.get('mode'):
+            # Add the NAI plugin to the context
+            # All the _ext plugins should be already in the context
+            log.info("Detected NaI run.")
+            log.info("Adding peak_basics_ext to list of targets to process.")
+            self.targets.append("peak_basics_ext")          
+
         return st
 
     def setup_production(self):
