@@ -17,7 +17,7 @@ export, __all__ = strax.exporter()
         help="Sets the window as [511 - delta, 511 + delta] for the allowed energies that count as a 511 keV photon in the external detector",
         ),
 )
-class PeakCoincidences(strax.Plugin):
+class PeakCoincidences(strax.OverlapWindowPlugin):
     """
     Some runs are taken with a na-22 source. This source emits two 511keV photons in exactly opposite directions.
     For these runs, we placed an external detector next to XAMS that is good at detecting 511keV photons,
@@ -30,13 +30,17 @@ class PeakCoincidences(strax.Plugin):
     data_kind = "peaks"
     
     rechunk_on_save = False
-    __version__ = '1.0'
+    __version__ = '1.0.3'
     
     dtype = [
         ('time', np.int64, 'Start time of the peak (ns since unix epoch)'),
         ('endtime', np.int64, 'End time of the peak (ns since unix epoch)'),
         ('is_coinc', np.bool_, 'Whether a peak has an external match or not'),
     ]
+    
+    def get_window_size(self):
+        """Sets the overlap window to be twice the maximum distance between two matched peaks"""
+        return int(2 * self.config['max_delay'])
     
     def compute(self, peaks, peaks_ext):
         result = np.empty(len(peaks), dtype=self.dtype)

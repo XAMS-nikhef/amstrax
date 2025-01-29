@@ -20,7 +20,7 @@ export, __all__ = strax.exporter()
         ),
 )
 
-class EventCoincidences(strax.Plugin):
+class EventCoincidences(strax.OverlapWindowPlugin):
     """
     Some runs are taken with a na-22 source. This source emits two 511keV photons in exactly opposite directions.
     For these runs, we placed an external detector next to XAMS that is good at detecting 511keV photons,
@@ -32,7 +32,7 @@ class EventCoincidences(strax.Plugin):
     depends_on = ('event_basics', 'peaks_ext',)
     data_kind = "events"
 
-    __version__ = '1.0.6'
+    __version__ = '1.0.14'
 
     dtype = [
         ('time', np.int64, 'Start time of the event (ns since unix epoch)'),
@@ -40,18 +40,21 @@ class EventCoincidences(strax.Plugin):
         ('is_coinc', np.bool_, 'Whether an event has an external match or not'),
     ]
 
-    # def get_window_size(self):
-    #     return int(600 * 10**9)
+    def get_window_size(self):
+        """Sets the overlap window to be twice the maximum distance between two matched peaks"""
+        return int(2 * self.config['max_delay'])
 
     def compute(self, events, peaks_ext):
         result = np.empty(len(events), dtype=self.dtype)
         result['time'] = events['time']
         result['endtime'] = events['endtime']
         
-        print("events chunk", len(events['time']), events['time'])
-        print("peaks ext chunk", len(peaks_ext['time']), peaks_ext['time'])
+        # print("Things from plugin:")
+        # print("events chunk", len(events['s1_time']), events['s1_time'])
+        # print("peaks ext chunk", len(peaks_ext['time']), peaks_ext['time'])
         
         na22_peaks = peaks_ext[(peaks_ext['area'] > 511 - self.config['na_peak_delta']) & (peaks_ext['area'] < 511 + self.config['na_peak_delta'])]
+
         result['is_coinc'] = self.matching_peaks(events['s1_time'], na22_peaks['time'], self.config['max_delay'])
     
         return result
@@ -66,6 +69,10 @@ class EventCoincidences(strax.Plugin):
         So ext_peak_time > peak_time. It might be possible that this will be the other way around 
         if the experiment changes, in which case the time differences might need to be swapped.
         """
+
+        # print("XAMS_times: ", len(XAMS_times), XAMS_times)
+        # print("ext_times: ", len(ext_times), ext_times)
+        # print("max_delay: ", max_delay)
 
         num_XAMS = len(XAMS_times)
         num_ext = len(ext_times)
