@@ -12,9 +12,9 @@ export, __all__ = strax.exporter()
         help="Maximum allowed time difference between XAMS peaks and external peaks to count as a match, in ns",
         ),
         strax.Option(
-        "na_peak_delta",
+        "absorption_peak_delta",
         default=65,
-        help="Sets the window as [511 - delta, 511 + delta] for the allowed energies that count as a 511 keV photon in the external detector",
+        help="Sets the window as [511 - delta, 511 + delta] in keV for the allowed energies that count as an absorption event of a 511 keV photon in the external detector",
         ),
 )
 class PeakCoincidences(strax.OverlapWindowPlugin):
@@ -30,7 +30,7 @@ class PeakCoincidences(strax.OverlapWindowPlugin):
     data_kind = "peaks"
     
     rechunk_on_save = False
-    __version__ = '1.0.3'
+    __version__ = '1.0'
     
     dtype = [
         ('time', np.int64, 'Start time of the peak (ns since unix epoch)'),
@@ -47,7 +47,7 @@ class PeakCoincidences(strax.OverlapWindowPlugin):
         result['time'] = peaks['time']
         result['endtime'] = strax.endtime(peaks)
         
-        na22_peaks = peaks_ext[(peaks_ext['area'] > 511 - self.config['na_peak_delta']) & (peaks_ext['area'] < 511 + self.config['na_peak_delta'])]
+        na22_peaks = peaks_ext[(peaks_ext['area'] > 511 - self.config['absorption_peak_delta']) & (peaks_ext['area'] < 511 + self.config['absorption_peak_delta'])]
         result['is_coinc'] = self.matching_peaks(peaks['time'], na22_peaks['time'], self.config['max_delay'])
         
         return result
