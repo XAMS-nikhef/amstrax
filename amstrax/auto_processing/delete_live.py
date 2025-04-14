@@ -41,6 +41,8 @@ def get_old_runs(runsdb, days, args):
                 {'$elemMatch': {'type': 'live', 'host': 'dcache'}}
             ]}},
             {'tags': {'$elemMatch': {'name': 'abandon'}},
+            'data': {'$elemMatch': {'type': 'live', 'host': 'daq'}}},
+            {'tags': {'$elemMatch': {'name': 'delete_daq'}},
             'data': {'$elemMatch': {'type': 'live', 'host': 'daq'}}}
         ]
     }
@@ -56,27 +58,30 @@ def get_old_runs(runsdb, days, args):
                 {'$elemMatch': {'type': 'live', 'host': 'stbc'}},
             ]}},
             {'tags': {'$elemMatch': {'name': 'abandon'}},
+            'data': {'$elemMatch': {'type': 'live', 'host': 'daq'}}},
+            {'tags': {'$elemMatch': {'name': 'delete_daq'}},
             'data': {'$elemMatch': {'type': 'live', 'host': 'daq'}}}
         ]
-    }
-
-        
+    }   
 
     projection = {'number': 1, 'end': 1, 'data': 1, 'tags': 1}
     return list(runsdb.find(query, projection=projection))[0:args.max_runs]
 
+def check_delete_daq(run_doc):
+    """
+    Check if the run has a 'delete_daq' tag.
+    """
+    return 'delete_daq' in [tag['name'] for tag in run_doc['tags']]
+
 def check_data_safety(run_doc, ssh_host, args):
     """
     Perform checks to ensure that data can be safely deleted from DAQ.
+    If the run has a 'delete_daq' tag, check if data exists on both(!) dcache and stbc.
     Returns True if safe to delete, False otherwise.
     """
     run_id = str(run_doc['number']).zfill(6)
-
     result = {}
-    hosts_to_check = ['daq', 'stbc', 'dcache']
-
-    if args.only_stoomboot and not args.production:
-        hosts_to_check = ['daq', 'stbc']
+    hosts_to_check = ['daq', 'stbc', 'dcache'] if not (args.only_stoomboot and not args.production) else ['daq', 'stbc']
 
     for host in hosts_to_check:
         path = next((d['location'] for d in run_doc['data'] if d['host'] == host), None)
@@ -89,15 +94,23 @@ def check_data_safety(run_doc, ssh_host, args):
         log.info(f"Found {num_files} files in {path} on {host} for run {run_id}")
         result[host] = num_files
 
+    if check_delete_daq(run_doc):
+        log.info("Found delete_daq tag!")
+        if result.get('dcache') is None:
+            dcache_path = next((d['location'] for d in run_doc['data'] if d['host'] == 'dcache'), None)
+            result['dcache'] = count_files_in_directory(dcache_path, run_id, is_remote=True, ssh_host=ssh_host)
+        if result['dcache'] == result['stbc']:
+            log.info(f"Run {run_id} has a delete_daq tag and data exists on dcache and stbc, safe to delete")
+            return True
+        else:
+            log.info(f"Run {run_id} has a delete_daq tag and data does not exist on dcache and stbc! Not safe to delete")
+            return False
+
     # Check if the file counts match
     if (result['stbc'] != result.get('dcache', -9) and not args.only_stoomboot) or result['daq'] != result['stbc']:
         log.warning(f"Mismatch in file count for run {run_id}")
         return False
-
-
-    num_files_daq = result['daq']
-    log.info(f"File count is {num_files_daq} for run {run_id} on all hosts, safe to delete")
-
+    
     return True
 
 
@@ -180,7 +193,7 @@ def delete_data(runsdb, run_doc, production, we_are_really_sure):
 def main(args):
     runsdb = amstrax.get_mongo_collection()
     old_runs = get_old_runs(runsdb, args.days_old, args)
-    log.info(f"Found {len(old_runs)} runs with data older than {args.days_old} days or with abandon tag")
+    log.info(f"Found {len(old_runs)} runs with data older than {args.days_old} days or with abandon or delete_daq tag")
     for run_doc in old_runs:
         # if abandoned, delete immediately (tags.name == 'abandon')
         if 'abandon' in [tag['name'] for tag in run_doc.get('tags', [])]:
