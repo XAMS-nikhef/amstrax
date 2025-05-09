@@ -111,10 +111,12 @@ class DAQReader(strax.Plugin):
     Provides:
      - raw_records: (tpc)raw_records.
      - raw_records_ext: (external)raw_records.
+     - raw_records_sipm: (sipm)raw_records.
 
     """
 
     provides: Tuple[str, ...] = (
+        "raw_records_sipm",
         "raw_records_ext",  
         "raw_records", # raw_records has to be last due to lineage
     )
@@ -126,6 +128,7 @@ class DAQReader(strax.Plugin):
     rechunk_on_save = immutabledict(
         raw_records=False,
         raw_records_ext=False,
+        raw_records_sipm=False,
     )
     compressor = "lz4"
     __version__ = "0.0.0"
@@ -376,6 +379,11 @@ class DAQReader(strax.Plugin):
         else:
             channel_ranges['external'] = (-1, -1)
 
+        if 'sipm' in self.config['channel_map']:
+            channel_ranges['sipm'] = self.config['channel_map']['sipm']
+        else:
+            channel_ranges['sipm'] = (-2, -2)
+
         result_arrays = split_channel_ranges(
             records, np.asarray(list(channel_ranges.values()))
         )
@@ -395,6 +403,8 @@ class DAQReader(strax.Plugin):
             result_name = 'raw_records'
             if subd == 'external':
                 result_name += '_ext'
+            elif subd == 'sipm':
+                result_name += '_sipm'
             result[result_name] = self.chunk(
                 start=self.t0 + break_pre,
                 end=self.t0 + break_post,

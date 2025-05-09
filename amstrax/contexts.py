@@ -41,6 +41,11 @@ COMMON_OPT_XAMS = dict(
         ax.PulseProcessingEXT,
         ax.PeaksEXT,
         ax.PeakBasicsEXT,
+        # SiPMT plugins
+        ax.PulseProcessingSiPM,
+        ax.PeaksSiPM,
+        ax.PeakBasicsSiPM,
+        # Coincidences
         ax.PeakCoincidences,
         # LED plugins not default
         # ax.RecordsLED,
@@ -60,7 +65,8 @@ XAMS_COMMON_CONFIG = dict(
     channel_map=immutabledict(
         bottom=(0, 0),
         top=(1, 4),
-        external=(5,10),
+        external=(5,5),
+        sipm=(6, 6),
         aqmon=(40, 40),  # register strax deadtime
     ))
 
