@@ -151,6 +151,31 @@ def context_for_daq_reader(st: strax.Context,
     if not os.path.exists(input_dir):
         raise FileNotFoundError(f'No path at {input_dir}')
 
+    
+    def extract_channel_polarity(registers):
+        channel_polarity = dict()
+        for reg in registers:
+            reg_addr = reg['reg'].lower()
+            reg_val = reg['val'].lower()
+
+            if reg_addr.startswith('1') and reg_addr.endswith('80'):
+                try:
+                    chan_num = (int(reg_addr, 16) - 0x1080) // 0x100
+
+                    if reg_val == "110000":
+                        channel_polarity[chan_num] = -1
+                    elif reg_val == "100000":
+                        channel_polarity[chan_num] = 1
+                    else:
+                        raise ValueError(f"Unknown polarity config value '{reg_val}' for channel {chan_num}")
+
+                except Exception as e:
+                    print(f"Error parsing register {reg_addr} with value {reg_val}: {e}")
+        return channel_polarity
+
+    # Extract the mapping
+    channel_polarity_map = extract_channel_polarity(daq_config['registers'])
+
     st.set_context_config(dict(forbid_creation_of=tuple()))
     st.set_config(
         {'readout_threads': daq_config['processing_threads'],
@@ -160,7 +185,8 @@ def context_for_daq_reader(st: strax.Context,
          'run_start_time': run_doc['start'].replace(tzinfo=timezone.utc).timestamp(),
          'daq_chunk_duration': int(daq_config['strax_chunk_length'] * 1e9),
          'daq_overlap_chunk_duration': int(daq_config['strax_chunk_overlap'] * 1e9),
-         'compressor': daq_config.get('compressor', 'lz4')
+         'compressor': daq_config.get('compressor', 'lz4'),
+         'channels_polarity': channel_polarity_map,
          })
     UserWarning(f'You changed the context for {run_id}. Do not process any other run!')
     return st

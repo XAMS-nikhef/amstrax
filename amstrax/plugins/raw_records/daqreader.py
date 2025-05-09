@@ -71,6 +71,16 @@ class ArtificialDeadtimeInserted(UserWarning):
             "specify the reader and value the number of threads"
         ),
     ),
+    strax.Option(
+        "channels_polarity",
+        type=dict,
+        track=False,
+        default=immutabledict({}),
+        help=(
+            "Dictionary of the channels where the keys specify "
+            "the channel and value the polarity of the channel"
+        ),
+    ),
     strax.Option("daq_input_dir", type=str, track=False, help="Directory where readers put data"),
     # DAQReader settings
     strax.Option(
@@ -338,6 +348,21 @@ class DAQReader(strax.Plugin):
         # Concatenate the result.
         records = np.concatenate([x for x in (r_pre, r_main, r_post) if x is not None])
 
+        # print how many entries we have per channel
+        channel_counts = Counter(records["channel"])
+        print(f"Chunk {chunk_i:06d} contains {len(records)} records")
+        for channel, count in channel_counts.items():  
+            print(f"\tChannel {channel} has {count} records")        
+
+
+        for channel, polarity in self.config["channels_polarity"].items():
+            if polarity == 1:
+                # This means that the polarity of this channel is positive
+                # most likely a SiPM channel
+                # usually we work with PMTs with negative polarity
+                # so for convenience we invert the polarity here
+                records["data"][records["channel"] == channel] *= -1
+    
         # Split records by channel
         tpc_min = min(self.config['channel_map']['bottom'][0], self.config['channel_map']['top'][0])
         tpc_max = max(self.config['channel_map']['bottom'][1], self.config['channel_map']['top'][1])
