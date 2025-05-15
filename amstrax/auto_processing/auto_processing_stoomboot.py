@@ -176,7 +176,7 @@ def handle_running_jobs(runs_col, production=False):
 
         # Check for jobs running or submitted for more than 30 min
         if processing_status['status'] in ['running', 'submitted']:
-            if processing_status['time'] < datetime.now() - timedelta(hours=0, minutes=30):
+            if processing_status['time'] < datetime.now() - timedelta(hours=0, minutes=3):
                 new_status = 'failed'
                 log.info(f'Run {run_number} has a job {processing_status["status"]} for more than 1 hour, marking as {new_status}')
 

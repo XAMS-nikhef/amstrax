@@ -129,19 +129,19 @@ class RunProcessor:
             log.info("Setting up production configurations.")
 
             # Set the output folder to the production folder
-            if self.output_folder:
-                raise ValueError("Output folder should not be set when processing production data.")
+            # if self.output_folder:
+            #     raise ValueError("Output folder should not be set when processing production data.")
 
             self.output_folder = self.amstrax.get_xams_config("xams_processed_folder")
             log.info(f"Output folder set to {self.output_folder}")
 
             # Make sure we specified corrections version
-            if not self.corrections_version:
-                raise ValueError("Corrections version should be specified for production processing.")
+            # if not self.corrections_version:
+            #     raise ValueError("Corrections version should be specified for production processing.")
 
             # make sure that amstrax_path contains amstrax_versioned
-            if "amstrax_versioned" not in self.amstrax_path:
-                raise ValueError("amstrax_path should be from amstrax_versioned for production processing.")
+            # if "amstrax_versioned" not in self.amstrax_path:
+            #     raise ValueError("amstrax_path should be from amstrax_versioned for production processing.")
 
             # only xamsdata user can process production data
             if getpass.getuser() != "xamsdata":
@@ -229,8 +229,9 @@ class RunProcessor:
             init_rundb=False,
             corrections_version=self.corrections_version
         )
-        raw_st.storage += [strax.DataDirectory(live_folder, readonly=True)]
         raw_st.set_config({"live_data_dir": live_folder})
+        raw_st = self.amstrax.contexts.context_for_daq_reader(raw_st, run_id=self.run_id)
+        raw_st.storage += [strax.DataDirectory(live_folder, readonly=True)]
 
         self.raw_st = raw_st
         target = "raw_records"

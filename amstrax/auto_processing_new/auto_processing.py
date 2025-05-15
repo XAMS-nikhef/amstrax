@@ -7,6 +7,12 @@ from datetime import datetime, timedelta
 from job_submission import submit_job
 from db_utils import update_processing_status
 
+
+import subprocess
+import sys
+from datetime import datetime, timedelta
+
+
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
@@ -35,6 +41,7 @@ def parse_args():
     parser.add_argument("--amstrax_path", default=None, help="Path to the amstrax directory.")
     parser.add_argument("--corrections_version", default=None, help="Version of corrections to use.")
     parser.add_argument("--queue", default="short", help="Queue to submit jobs to. See Nikhef docs for options.")
+    parser.add_argument("--n_failures_max", type=int, help="Maximum number of failures before marking a run as failed.", default=3)
 
     return parser.parse_args()
 
@@ -87,8 +94,10 @@ def update_task_list(args, runs_col, auto_processing_on):
         "data": {"$elemMatch": {"type": "live", "host": "stbc"}},
         "$or": [
             {
-                "data": {"$not": {"$elemMatch": {"host": "stbc", "type": "raw_records"}}},
-                "processing_failed": {"$not": {"$gt": 3}},
+                "data": {"$not": {"$elemMatch": {
+                    "host": {"$in": ["stbc", "wn"]}, 
+                    "type": "raw_records"}}},
+                "processing_failed": {"$not": {"$gt": args.n_failures_max}},
                 "processing_status.status": {"$not": {"$in": ["running", "submitted"]}},
                 "tags": {"$not": {"$elemMatch": {"name": "abandon"}}},
                 "start": {"$gt": datetime.today() - timedelta(days=100)},
@@ -112,9 +121,30 @@ def update_task_list(args, runs_col, auto_processing_on):
     return run_docs_to_do
 
 
+
+def is_job_running_in_condor(run_number):
+    """
+    Check if a job with the given run_number exists in condor_q (not completed).
+    """
+    try:
+        result = subprocess.run(['condor_q', '-nobatch'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if result.returncode != 0:
+            raise RuntimeError(f"condor_q command failed: {result.stderr}")
+
+        for line in result.stdout.splitlines():
+            if str(run_number) in line:  # C = completed
+                return True
+        return False
+
+    except Exception as e:
+        log.error(f"Error checking condor for run {run_number}: {e}")
+        return True  # Fail-safe: assume running to avoid false marking as failed
+
 def handle_running_jobs(runs_col, production=False):
     """
-    Check and update the status of running jobs. Mark jobs as failed if they've been running too long.
+    Check and update the status of running jobs. Mark jobs as failed if:
+    - They've been running or submitted for over 30 minutes, OR
+    - Their status is 'submitted'/'running' but no such job exists in condor.
     """
     query = {"processing_status.status": {"$in": ["submitted", "running"]}}
     projection = {"number": 1, "processing_status": 1}
@@ -123,19 +153,26 @@ def handle_running_jobs(runs_col, production=False):
     for run_doc in run_docs_running:
         processing_status = run_doc["processing_status"]
         run_number = run_doc["number"]
+        status_time = processing_status.get("time")
 
-        # Mark jobs as failed if they’ve been running or submitted for over 30 minutes
-        if processing_status["status"] in ["running", "submitted"]:
-            if processing_status["time"] < datetime.now() - timedelta(minutes=30):
-                new_status = "failed"
-                log.info(
-                    f'Run {run_number} has been {processing_status["status"]} for more than 30 minutes, marking as {new_status}'
-                )
+        should_fail = False
 
-                if production:
-                    update_processing_status(run_number, new_status, production=production, is_online=True)
-                else:
-                    log.info(f"Would have updated run {run_number} to {new_status}")
+        # Time threshold
+        if status_time and status_time < datetime.now() - timedelta(minutes=30):
+            log.info(f"Run {run_number} has been {processing_status['status']} for more than 30 minutes.")
+            should_fail = True
+
+        # Check with condor if job is missing
+        if not is_job_running_in_condor(run_number):
+            log.info(f"No condor job found for run {run_number} marked as {processing_status['status']}.")
+            should_fail = True
+
+        if should_fail:
+            new_status = "failed"
+            if production:
+                update_processing_status(run_number, new_status, production=production, is_online=True)
+            else:
+                log.info(f"Would have updated run {run_number} to {new_status}")
 
 
 def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
@@ -177,6 +214,7 @@ def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
             arguments.append("--production")
             arguments.append("--allow_raw_records")
             arguments.append("--is_online")
+
         arguments = " ".join(arguments)
 
         # Now using processing.py instead of make_raw_records.py

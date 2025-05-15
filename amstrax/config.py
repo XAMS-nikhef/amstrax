@@ -9,8 +9,6 @@ export, __all__ = strax.exporter()
 def get_xams_config(key) -> Dict[str, Any]:
     """Get the configuration dictionary."""
 
-
-
     config_file_path = os.getenv('XAMS_CONFIG_FILE')
 
     if not config_file_path:
@@ -19,7 +17,6 @@ def get_xams_config(key) -> Dict[str, Any]:
 
     if not os.path.exists(config_file_path):
         raise FileNotFoundError(f'Could not find xams config file {config_file_path}, did you run setup.sh?')
-
     
     # we will check in the config file
     config_file = configparser.ConfigParser()

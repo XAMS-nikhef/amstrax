@@ -182,7 +182,7 @@ def main(args):
                         location=output_folder,
                         host=hostname,
                         by='make_raw_records.py',
-                        user=os.environ['USER'],
+                        user='xamsdata',
                         production=args.production)
 
     except Exception as e:
