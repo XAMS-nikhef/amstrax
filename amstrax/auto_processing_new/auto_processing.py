@@ -42,6 +42,7 @@ def parse_args():
     parser.add_argument("--corrections_version", default=None, help="Version of corrections to use.")
     parser.add_argument("--queue", default="short", help="Queue to submit jobs to. See Nikhef docs for options.")
     parser.add_argument("--n_failures_max", type=int, help="Maximum number of failures before marking a run as failed.", default=3)
+    parser.add_argument("--min_run_number", type=int, help="Minimum run number to process.", default=6000)
 
     return parser.parse_args()
 
@@ -101,6 +102,7 @@ def update_task_list(args, runs_col, auto_processing_on):
                 "processing_status.status": {"$not": {"$in": ["running", "submitted"]}},
                 "tags": {"$not": {"$elemMatch": {"name": "abandon"}}},
                 "start": {"$gt": datetime.today() - timedelta(days=100)},
+                "number": {"$gte": args.min_run_number},
             },
             {"tags": {"$elemMatch": {"name": "process"}}},
         ],
