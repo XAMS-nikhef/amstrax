@@ -9,3 +9,4 @@ iminuit
 matplotlib
 packaging
 gitpython
+requests

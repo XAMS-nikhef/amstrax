@@ -66,7 +66,7 @@ class PulseProcessing(strax.Plugin):
     overlap with any other pulse), or mean values of baseline and
     baseline rms channel.
     """
-    __version__ = '0.2.72'
+    __version__ = '0.3.0'
     
     parallel = 'process'
     rechunk_on_save = immutabledict(
@@ -79,9 +79,10 @@ class PulseProcessing(strax.Plugin):
     provides = ('records', 'pulse_counts')
     data_kind = {k: k for k in provides}
     
-    # I think in amstrax we can save everything
-    # default is ALWAYS
-    # save_when = strax.SaveWhen.TARGET
+    save_when = immutabledict(
+        records=strax.SaveWhen.TARGET,
+        pulse_counts=strax.SaveWhen.ALWAYS,
+    )
        
     def infer_dtype(self,):
         # The record_length is the same for both raw_records_v1724 and raw_records_v1730

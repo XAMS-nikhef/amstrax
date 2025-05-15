@@ -26,7 +26,6 @@ Content
     :caption: Reference
 
     reference/datastructure_xams
-    reference/datastructure_xams_little
 
 
 .. toctree::

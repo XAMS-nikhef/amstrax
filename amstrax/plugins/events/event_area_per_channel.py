@@ -25,7 +25,7 @@ class EventAreaPerChannel(strax.Plugin):
 
     compressor = "zstd"
     save_when = immutabledict({
-        "event_area_per_channel": strax.SaveWhen.EXPLICIT,
+        "event_area_per_channel": strax.SaveWhen.ALWAYS,
         "event_n_channel": strax.SaveWhen.ALWAYS,
     })
 
