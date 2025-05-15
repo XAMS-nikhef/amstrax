@@ -178,9 +178,9 @@ def context_for_daq_reader(
                 try:
                     chan_num = (int(reg_addr, 16) - 0x1080) // 0x100
 
-                    if reg_val == "110000":
+                    if (reg_val == "110000") or (reg_val == "1110000"):
                         channel_polarity[chan_num] = -1
-                    elif reg_val == "100000":
+                    elif (reg_val == "100000") or (reg_val == "1100000"):
                         channel_polarity[chan_num] = 1
                     else:
                         raise ValueError(f"Unknown polarity config value '{reg_val}' for channel {chan_num}")
