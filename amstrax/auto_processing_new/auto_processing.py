@@ -5,7 +5,7 @@ import logging
 from datetime import datetime, timedelta
 
 from job_submission import submit_job
-from db_utils import query_runs, update_processing_status
+from db_utils import update_processing_status
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
