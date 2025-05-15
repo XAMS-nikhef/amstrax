@@ -71,6 +71,16 @@ class ArtificialDeadtimeInserted(UserWarning):
             "specify the reader and value the number of threads"
         ),
     ),
+    strax.Option(
+        "channels_polarity",
+        type=dict,
+        track=False,
+        default=immutabledict({}),
+        help=(
+            "Dictionary of the channels where the keys specify "
+            "the channel and value the polarity of the channel"
+        ),
+    ),
     strax.Option("daq_input_dir", type=str, track=False, help="Directory where readers put data"),
     # DAQReader settings
     strax.Option(
@@ -101,10 +111,12 @@ class DAQReader(strax.Plugin):
     Provides:
      - raw_records: (tpc)raw_records.
      - raw_records_ext: (external)raw_records.
+     - raw_records_sipm: (sipm)raw_records.
 
     """
 
     provides: Tuple[str, ...] = (
+        "raw_records_sipm",
         "raw_records_ext",  
         "raw_records", # raw_records has to be last due to lineage
     )
@@ -116,6 +128,7 @@ class DAQReader(strax.Plugin):
     rechunk_on_save = immutabledict(
         raw_records=False,
         raw_records_ext=False,
+        raw_records_sipm=False,
     )
     compressor = "lz4"
     __version__ = "0.0.0"
@@ -338,6 +351,21 @@ class DAQReader(strax.Plugin):
         # Concatenate the result.
         records = np.concatenate([x for x in (r_pre, r_main, r_post) if x is not None])
 
+        # print how many entries we have per channel
+        channel_counts = Counter(records["channel"])
+        print(f"Chunk {chunk_i:06d} contains {len(records)} records")
+        for channel, count in channel_counts.items():  
+            print(f"\tChannel {channel} has {count} records")        
+
+
+        for channel, polarity in self.config["channels_polarity"].items():
+            if polarity == 1:
+                # This means that the polarity of this channel is positive
+                # most likely a SiPM channel
+                # usually we work with PMTs with negative polarity
+                # so for convenience we invert the polarity here
+                records["data"][records["channel"] == channel] *= -1
+    
         # Split records by channel
         tpc_min = min(self.config['channel_map']['bottom'][0], self.config['channel_map']['top'][0])
         tpc_max = max(self.config['channel_map']['bottom'][1], self.config['channel_map']['top'][1])
@@ -350,6 +378,11 @@ class DAQReader(strax.Plugin):
             channel_ranges['external'] = self.config['channel_map']['external']
         else:
             channel_ranges['external'] = (-1, -1)
+
+        if 'sipm' in self.config['channel_map']:
+            channel_ranges['sipm'] = self.config['channel_map']['sipm']
+        else:
+            channel_ranges['sipm'] = (-2, -2)
 
         result_arrays = split_channel_ranges(
             records, np.asarray(list(channel_ranges.values()))
@@ -370,6 +403,8 @@ class DAQReader(strax.Plugin):
             result_name = 'raw_records'
             if subd == 'external':
                 result_name += '_ext'
+            elif subd == 'sipm':
+                result_name += '_sipm'
             result[result_name] = self.chunk(
                 start=self.t0 + break_pre,
                 end=self.t0 + break_post,

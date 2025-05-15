@@ -34,6 +34,7 @@ COMMON_OPT_XAMS = dict(
         ax.Events,
         ax.EventBasics,
         ax.EventPositions,
+        ax.EventCoincidences,
         ax.CorrectedAreas,
         ax.EventInfo,
         ax.EventWaveform,
@@ -42,6 +43,12 @@ COMMON_OPT_XAMS = dict(
         ax.PulseProcessingEXT,
         ax.PeaksEXT,
         ax.PeakBasicsEXT,
+        # SiPMT plugins
+        ax.PulseProcessingSiPM,
+        ax.PeaksSiPM,
+        ax.PeakBasicsSiPM,
+        # Coincidences
+        ax.PeakCoincidences,
         # LED plugins not default
         # ax.RecordsLED,
         # ax.LEDCalibration,
@@ -56,7 +63,8 @@ XAMS_COMMON_CONFIG = dict(
     channel_map=immutabledict(
         bottom=(0, 0),
         top=(1, 4),
-        external=(5, 10),
+        external=(5,5),
+        sipm=(6, 6),
         aqmon=(40, 40),  # register strax deadtime
     ),
 )
@@ -159,20 +167,44 @@ def context_for_daq_reader(
     if not os.path.exists(input_dir):
         raise FileNotFoundError(f"No path at {input_dir}")
 
+    
+    def extract_channel_polarity(registers):
+        channel_polarity = dict()
+        for reg in registers:
+            reg_addr = reg['reg'].lower()
+            reg_val = reg['val'].lower()
+
+            if reg_addr.startswith('1') and reg_addr.endswith('80'):
+                try:
+                    chan_num = (int(reg_addr, 16) - 0x1080) // 0x100
+
+                    if reg_val == "110000":
+                        channel_polarity[chan_num] = -1
+                    elif reg_val == "100000":
+                        channel_polarity[chan_num] = 1
+                    else:
+                        raise ValueError(f"Unknown polarity config value '{reg_val}' for channel {chan_num}")
+
+                except Exception as e:
+                    print(f"Error parsing register {reg_addr} with value {reg_val}: {e}")
+        return channel_polarity
+
+    # Extract the mapping
+    channel_polarity_map = extract_channel_polarity(daq_config['registers'])
+
     st.set_context_config(dict(forbid_creation_of=tuple()))
     st.set_config(
-        {
-            "readout_threads": daq_config["processing_threads"],
-            "daq_input_dir": input_dir,
-            "record_length": daq_config["strax_fragment_payload_bytes"] // 2,
-            "max_digitizer_sampling_time": 10,
-            "run_start_time": run_doc["start"].replace(tzinfo=timezone.utc).timestamp(),
-            "daq_chunk_duration": int(daq_config["strax_chunk_length"] * 1e9),
-            "daq_overlap_chunk_duration": int(daq_config["strax_chunk_overlap"] * 1e9),
-            "compressor": daq_config.get("compressor", "lz4"),
-        }
-    )
-    UserWarning(f"You changed the context for {run_id}. Do not process any other run!")
+        {'readout_threads': daq_config['processing_threads'],
+         'daq_input_dir': input_dir,
+         'record_length': daq_config['strax_fragment_payload_bytes'] // 2,
+         'max_digitizer_sampling_time': 10,
+         'run_start_time': run_doc['start'].replace(tzinfo=timezone.utc).timestamp(),
+         'daq_chunk_duration': int(daq_config['strax_chunk_length'] * 1e9),
+         'daq_overlap_chunk_duration': int(daq_config['strax_chunk_overlap'] * 1e9),
+         'compressor': daq_config.get('compressor', 'lz4'),
+         'channels_polarity': channel_polarity_map,
+         })
+    UserWarning(f'You changed the context for {run_id}. Do not process any other run!')
     return st
 
 
