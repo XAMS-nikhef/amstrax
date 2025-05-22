@@ -1,6 +1,7 @@
 import numba
 import numpy as np
 import strax
+import amstrax
 
 export, __all__ = strax.exporter()
 
@@ -43,6 +44,11 @@ class PeaksSiPM(strax.Plugin):
     rechunk_on_save = True
 
     __version__ = '0.0.2'
+
+    gain_to_pe_array = amstrax.XAMSConfig(
+        default=None,
+        help="Gain to pe array"
+    )
 
     def infer_dtype(self):
     
