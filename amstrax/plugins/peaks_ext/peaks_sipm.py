@@ -63,7 +63,7 @@ class PeaksSiPM(strax.Plugin):
         if self.config['gain_to_pe_array'] is None:
             self.to_pe = np.ones(self.config['n_ext_pmts']+self.config['n_tpc_pmts']+self.config['n_sipms'], dtype=np.float32)
         else:
-            self.to_pe = self.config['gain_to_pe_array']
+            self.to_pe = self.gain_to_pe_array
 
         hits = strax.find_hits(r)
         hits = strax.sort_by_time(hits)
