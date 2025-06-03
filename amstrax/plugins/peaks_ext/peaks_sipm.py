@@ -53,6 +53,7 @@ class PeaksSiPM(strax.Plugin):
         r = records_sipm
   
         if self.config['gain_to_pe_array'] is None:
+            #FIXME -> numba doesn't like a NumPy array inside a NumPy array, so this will fail in strax.find_peaks()
             self.to_pe = np.ones(self.config['n_ext_pmts']+self.config['n_tpc_pmts']+self.config['n_sipms'], dtype=np.float32)
         else:
             self.to_pe = self.gain_to_pe_array
