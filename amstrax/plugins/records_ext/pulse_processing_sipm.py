@@ -8,7 +8,7 @@ export, __all__ = strax.exporter()
 @export
 @strax.takes_config(
     strax.Option(
-        'baseline_samples_sipm',
+        'baseline_samples',
         default=20, infer_type=False,
         help='Number of samples to use at the start of the SiPM pulse to determine '
              'the baseline'),
@@ -53,7 +53,7 @@ class PulseProcessingSiPM(strax.Plugin):
 
         r = strax.sort_by_time(r)
         strax.zero_out_of_bounds(r)
-        strax.baseline(r, baseline_samples=self.baseline_samples_sipm, flip=True)
+        strax.baseline(r, baseline_samples=self.baseline_samples, flip=True)
 
         strax.integrate(r)
 
