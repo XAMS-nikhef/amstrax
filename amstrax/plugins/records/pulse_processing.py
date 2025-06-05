@@ -21,7 +21,7 @@ HITFINDER_OPTIONS = tuple([
 @strax.takes_config(
     strax.Option(
         'baseline_samples',
-        default=40, infer_type=False,
+        default=20, infer_type=False,
         help='Number of samples to use at the start of the pulse to determine '
              'the baseline'),
     # PMT pulse processing options
