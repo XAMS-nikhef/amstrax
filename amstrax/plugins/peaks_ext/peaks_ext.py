@@ -33,7 +33,7 @@ class PeaksEXT(strax.Plugin):
     provides = ('peaks_ext')
     rechunk_on_save = True
 
-    __version__ = '0.0.2'
+    __version__ = '0.0.3'
 
     gain_to_pe_array = amstrax.XAMSConfig(
         default=None,
