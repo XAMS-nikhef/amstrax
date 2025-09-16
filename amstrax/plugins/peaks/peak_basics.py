@@ -46,6 +46,16 @@ export, __all__ = strax.exporter()
       's2_min_width',
       default=225,
       help="Minimum width for S2s"
+    ),  
+    strax.Option(
+      's1_max_risetime',
+      default=0,
+      help="Minimum area (PE) for S1s"
+    ),
+    strax.Option(
+      's2_min_risetime',
+      default=200,
+      help="Minimum area (PE) for S2s"
     ),
     strax.Option(
       's1_min_channels',
@@ -164,11 +174,13 @@ class PeakBasics(strax.Plugin):
         is_s1 &= r['range_50p_area'] < self.config['s1_max_width']
         is_s1 &= r['area_fraction_top'] <= self.config['s1_max_area_fraction_top']
         is_s1 &= r['n_channels'] >= self.config['s1_min_channels']
+        is_s1 &= r['rise_time'] <= self.config['s1_max_risetime']
         
         is_s2 = p['area'] > self.config['s2_min_area']
         is_s2 &= r['range_50p_area'] > self.config['s2_min_width']
         is_s2 &= r['area_fraction_top'] >= self.config['s2_min_area_fraction_top']
         is_s2 &= r['n_channels'] >= self.config['s2_min_channels']
+        is_s2 &= r['rise_time'] >= self.config['s2_min_risetime']
         
         # if both are true, then it's an unknown peak
         is_s1 &= ~is_s2
