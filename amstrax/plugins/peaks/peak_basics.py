@@ -85,7 +85,7 @@ class PeakBasics(strax.Plugin):
 
     parallel = "False"
     rechunk_on_save = False
-    __version__ = "2.1"
+    __version__ = "2.2"
     dtype = [
         (('Start time of the peak (ns since unix epoch)',
           'time'), np.int64),
