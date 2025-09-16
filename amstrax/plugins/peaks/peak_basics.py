@@ -50,12 +50,12 @@ export, __all__ = strax.exporter()
     strax.Option(
       's1_max_risetime',
       default=0,
-      help="Minimum area (PE) for S1s"
+      help="Maximum risetime (ns) for S1s"
     ),
     strax.Option(
       's2_min_risetime',
       default=200,
-      help="Minimum area (PE) for S2s"
+      help="Minimum risetime (ns) for S2s"
     ),
     strax.Option(
       's1_min_channels',
