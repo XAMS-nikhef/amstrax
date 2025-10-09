@@ -1,6 +1,7 @@
 # processing.py
 import os
 import sys
+import json
 import logging
 import argparse
 import strax
@@ -306,7 +307,7 @@ def parse_args():
     parser.add_argument("--production", action="store_true", help="Update the production database.")
     parser.add_argument("--is_online", action="store_true", help="Process online data.")
     parser.add_argument("--fix_targets", action="store_true", help="Fix the targets to process, do not allow special modes.")
-    parser.add_argument("--set_config_kwargs", type=dict, default="{}", help="Dictionary of kwargs to pass to set_config.")
+    parser.add_argument("--set_config_kwargs", type=json.loads, default="{}", help="Dictionary of kwargs to pass to set_config.")
 
     return parser.parse_args()
 
