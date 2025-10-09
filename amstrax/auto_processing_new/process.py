@@ -266,7 +266,7 @@ class RunProcessor:
         )
         st.storage += [strax.DataDirectory(raw_records_folder, readonly=True)]
 
-        if args.set_config_kwargs and isinstance(self.set_config_kwargs, dict):
+        if self.set_config_kwargs and isinstance(self.set_config_kwargs, dict):
             st.set_config(self.set_config_kwargs)
 
 
