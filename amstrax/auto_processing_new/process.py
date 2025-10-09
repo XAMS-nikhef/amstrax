@@ -2,6 +2,7 @@
 import os
 import sys
 import logging
+import json
 import argparse
 import strax
 import socket
@@ -23,6 +24,7 @@ class RunProcessor:
         self.amstrax_path = args.amstrax_path
         self.is_online = args.is_online
         self.fix_targets = args.fix_targets
+        self.set_config_kwargs = args.set_config_kwargs
         
         if self.amstrax_path:
             self.amstrax_path = self.amstrax_path.rstrip("/")
@@ -264,6 +266,9 @@ class RunProcessor:
         )
         st.storage += [strax.DataDirectory(raw_records_folder, readonly=True)]
 
+        if self.set_config_kwargs and isinstance(self.set_config_kwargs, dict):
+            st.set_config(self.set_config_kwargs)
+
 
         if not self.fix_targets:
             st = self.infer_special_modes(st)
@@ -302,6 +307,7 @@ def parse_args():
     parser.add_argument("--production", action="store_true", help="Update the production database.")
     parser.add_argument("--is_online", action="store_true", help="Process online data.")
     parser.add_argument("--fix_targets", action="store_true", help="Fix the targets to process, do not allow special modes.")
+    parser.add_argument("--set_config_kwargs", type=json.loads, default="{}", help="Dictionary of kwargs to pass to set_config.")
 
     return parser.parse_args()
 

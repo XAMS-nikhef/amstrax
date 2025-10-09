@@ -3,6 +3,7 @@ import time
 import os
 import logging
 from datetime import datetime, timedelta
+import json
 
 from job_submission import submit_job
 from db_utils import update_processing_status
@@ -37,7 +38,7 @@ def parse_args():
     parser.add_argument("--logs_path", default="/data/xenon/xams_v2/logs/", help="Path to save job logs.")
     parser.add_argument("--production", action="store_true", help="Run in production mode (will update the rundb).")
     parser.add_argument("--set_config_kwargs", default="{}", help="Dictionary of kwargs to pass to set_config.")
-    parser.add_argument("--set_context_kwargs", default="{}", help="Dictionary of kwargs to pass to set_context.")
+    parser.add_argument("--set_context_kwargs", type=json.loads, default="{}", help="Dictionary of kwargs to pass to set_context.")
     parser.add_argument("--amstrax_path", default=None, help="Path to the amstrax directory.")
     parser.add_argument("--corrections_version", default=None, help="Version of corrections to use.")
     parser.add_argument("--queue", default="short", help="Queue to submit jobs to. See Nikhef docs for options.")
@@ -216,6 +217,9 @@ def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
             arguments.append("--production")
             arguments.append("--allow_raw_records")
             arguments.append("--is_online")
+        if args.set_config_kwargs:
+            config_kwargs = json.dumps(args.set_config_kwargs, separators=(',',':'))
+            arguments.append(f"--set_config_kwargs {config_kwargs}")
 
         arguments = " ".join(arguments)
 
