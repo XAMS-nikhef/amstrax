@@ -218,7 +218,7 @@ def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
             arguments.append("--allow_raw_records")
             arguments.append("--is_online")
         if args.set_config_kwargs:
-            config_kwargs = json.loads(args.set_config_kwargs)
+            config_kwargs = json.dumps(args.set_config_kwargs, separators=(',',':')
             arguments.append(f"--set_config_kwargs {config_kwargs}")
 
         arguments = " ".join(arguments)
