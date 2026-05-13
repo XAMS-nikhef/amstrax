@@ -3,6 +3,7 @@ import os
 import sys
 import logging
 import argparse
+import json
 import strax
 import socket
 import getpass
@@ -23,6 +24,8 @@ class RunProcessor:
         self.amstrax_path = args.amstrax_path
         self.is_online = args.is_online
         self.fix_targets = args.fix_targets
+        self.set_config_kwargs = args.set_config_kwargs or {}
+        self.set_context_kwargs = args.set_context_kwargs or {}
         
         if self.amstrax_path:
             self.amstrax_path = self.amstrax_path.rstrip("/")
@@ -34,6 +37,8 @@ class RunProcessor:
         log.info(f" --Corrections version: {self.corrections_version}")
         log.info(f" --Production: {self.production}")
         log.info(f" --Amstrax path: {self.amstrax_path}")
+        log.info(f" --set_config_kwargs: {self.set_config_kwargs}")
+        log.info(f" --set_context_kwargs: {self.set_context_kwargs}")
         log.info(f" --This file: {__file__}")
         log.info(f" --Is online: {self.is_online}")
 
@@ -229,16 +234,26 @@ class RunProcessor:
             init_rundb=False,
             corrections_version=self.corrections_version
         )
-        raw_st.set_config({"live_data_dir": live_folder})
-        raw_st = self.amstrax.contexts.context_for_daq_reader(raw_st, run_id=self.run_id)
-        raw_st.storage += [strax.DataDirectory(live_folder, readonly=True)]
+        if self.set_context_kwargs:
+            raw_st.set_context_config(self.set_context_kwargs)
+        if self.set_config_kwargs:
+            raw_st.set_config(self.set_config_kwargs)
 
         self.raw_st = raw_st
         target = "raw_records"
 
+        # Fast path: if raw_records already exists, skip before trying live-data setup.
+        # This avoids failing reruns when live directory is gone or check_exists blocks.
         if self.raw_st.is_stored(self.run_id, target):
             log.info(f"Skipping {target} for run {self.run_id} as it is already processed.")
             return
+
+        raw_st.set_config({"live_data_dir": live_folder})
+        raw_st = self.amstrax.contexts.context_for_daq_reader(
+            raw_st, run_id=self.run_id, check_exists=False
+        )
+        raw_st.storage += [strax.DataDirectory(live_folder, readonly=True)]
+        self.raw_st = raw_st
 
         try:
             log.info(f"Processing raw_records for run {self.run_id}")
@@ -262,6 +277,10 @@ class RunProcessor:
             output_folder=self.output_folder,
             corrections_version=self.corrections_version
         )
+        if self.set_context_kwargs:
+            st.set_context_config(self.set_context_kwargs)
+        if self.set_config_kwargs:
+            st.set_config(self.set_config_kwargs)
         st.storage += [strax.DataDirectory(raw_records_folder, readonly=True)]
 
 
@@ -302,6 +321,18 @@ def parse_args():
     parser.add_argument("--production", action="store_true", help="Update the production database.")
     parser.add_argument("--is_online", action="store_true", help="Process online data.")
     parser.add_argument("--fix_targets", action="store_true", help="Fix the targets to process, do not allow special modes.")
+    parser.add_argument(
+        "--set_config_kwargs",
+        type=json.loads,
+        default={},
+        help="JSON dict of kwargs passed to st.set_config (legacy-compatible).",
+    )
+    parser.add_argument(
+        "--set_context_kwargs",
+        type=json.loads,
+        default={},
+        help="JSON dict of kwargs passed to st.set_context_config (legacy-compatible).",
+    )
 
     return parser.parse_args()
 
