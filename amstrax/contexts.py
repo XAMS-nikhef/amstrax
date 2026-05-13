@@ -153,6 +153,31 @@ def context_for_daq_reader(
         run_col = ax.get_mongo_collection(detector)
         run_doc = run_col.find_one({"number": int(run_id)})
     daq_config = run_doc["daq_config"]
+    xbk = run_doc.get("xams_bookkeeping") if isinstance(run_doc.get("xams_bookkeeping"), dict) else {}
+
+    def _normalize_channel_map(v):
+        if not isinstance(v, dict):
+            return None
+        out = {}
+        for k, vv in v.items():
+            if isinstance(vv, (list, tuple)) and len(vv) == 2:
+                out[str(k)] = (int(vv[0]), int(vv[1]))
+        return immutabledict(out) if out else None
+
+    # Optional per-run channel-map override.
+    # Preferred source order:
+    #   1) rundoc xams_bookkeeping.channel_map (explicit snapshot)
+    #   2) daq_config.channel_map
+    #   3) daq_config.xams_bookkeeping_defaults.channel_map
+    run_channel_map = _normalize_channel_map(xbk.get("channel_map"))
+    if run_channel_map is None:
+        run_channel_map = _normalize_channel_map(daq_config.get("channel_map"))
+    if run_channel_map is None:
+        defaults = daq_config.get("xams_bookkeeping_defaults")
+        if isinstance(defaults, dict):
+            run_channel_map = _normalize_channel_map(defaults.get("channel_map"))
+    if run_channel_map is not None:
+        st.set_config({"channel_map": run_channel_map})
 
     live_dir = daq_config["strax_output_path"]
 
