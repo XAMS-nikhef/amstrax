@@ -26,6 +26,7 @@ class RunProcessor:
         self.fix_targets = args.fix_targets
         self.set_config_kwargs = args.set_config_kwargs or {}
         self.set_context_kwargs = args.set_context_kwargs or {}
+        self.host = socket.gethostname().split("-")[0]
         
         if self.amstrax_path:
             self.amstrax_path = self.amstrax_path.rstrip("/")
@@ -46,6 +47,18 @@ class RunProcessor:
         self.setup_production()
         self.run_doc = self.db_utils.get_run_doc(self.run_id)
         self.get_run_doc_info()
+        self.db_utils.append_processing_history(
+            self.run_id,
+            action="process_run_start",
+            status="running",
+            production=self.production,
+            host=self.host,
+            is_online=self.is_online,
+            targets=list(self.targets),
+            corrections_version=self.corrections_version,
+            amstrax_path=self.amstrax_path,
+            amstrax_version=self.amstrax.__version__,
+        )
 
     def setup_amstrax(self):
 
@@ -175,15 +188,69 @@ class RunProcessor:
 
     def process(self):
         # Split targets into raw_records and others
+        raw_ok = True
         if "raw_records" in self.targets:
             if not self.allow_raw_records:
                 log.error("Raw records processing is not allowed. Use the --allow_raw_records flag.")
+                self.db_utils.update_processing_status(
+                    self.run_id,
+                    "failed",
+                    reason="raw_records requested without --allow_raw_records",
+                    production=self.production,
+                    is_online=self.is_online,
+                )
+                self.db_utils.append_processing_history(
+                    self.run_id,
+                    action="target_raw_records",
+                    status="failed",
+                    production=self.production,
+                    host=self.host,
+                    is_online=self.is_online,
+                    reason="raw_records requested without --allow_raw_records",
+                )
                 return
             self.targets.remove("raw_records")
-            self.process_raw_records()
+            raw_ok = self.process_raw_records()
 
-        if self.targets:
+        if self.targets and raw_ok:
             self.process_remaining_targets()
+        elif self.targets and not raw_ok:
+            reason = "raw_records stage failed; derived targets skipped"
+            for target in self.targets:
+                self.db_utils.update_target_processing_status(
+                    self.run_id,
+                    target,
+                    "skipped",
+                    reason=reason,
+                    production=self.production,
+                    is_online=self.is_online,
+                )
+            self.db_utils.append_processing_history(
+                self.run_id,
+                action="derived_targets_skipped",
+                status="skipped",
+                production=self.production,
+                host=self.host,
+                is_online=self.is_online,
+                reason=reason,
+                targets=list(self.targets),
+            )
+        elif raw_ok and not self.targets:
+            self.db_utils.update_processing_status(
+                self.run_id,
+                "done",
+                production=self.production,
+                is_online=self.is_online,
+            )
+            self.db_utils.append_processing_history(
+                self.run_id,
+                action="process_run_end",
+                status="done",
+                production=self.production,
+                host=self.host,
+                is_online=self.is_online,
+                targets=[],
+            )
 
     def get_info_from_processed_data(self, folder, target, st):
         # Logic for getting info from processed data (similar to the existing one)
@@ -246,7 +313,24 @@ class RunProcessor:
         # This avoids failing reruns when live directory is gone or check_exists blocks.
         if self.raw_st.is_stored(self.run_id, target):
             log.info(f"Skipping {target} for run {self.run_id} as it is already processed.")
-            return
+            self.db_utils.update_target_processing_status(
+                self.run_id,
+                target,
+                "skipped",
+                reason="already stored",
+                production=self.production,
+                is_online=self.is_online,
+            )
+            self.db_utils.append_processing_history(
+                self.run_id,
+                action="target_raw_records",
+                status="skipped",
+                production=self.production,
+                host=self.host,
+                is_online=self.is_online,
+                reason="already stored",
+            )
+            return True
 
         raw_st.set_config({"live_data_dir": live_folder})
         raw_st = self.amstrax.contexts.context_for_daq_reader(
@@ -256,15 +340,58 @@ class RunProcessor:
         self.raw_st = raw_st
 
         try:
+            self.db_utils.update_target_processing_status(
+                self.run_id,
+                target,
+                "running",
+                production=self.production,
+                is_online=self.is_online,
+            )
             log.info(f"Processing raw_records for run {self.run_id}")
             self.raw_st.make(self.run_id, target, progress_bar=True)
-            self.db_utils.update_processing_status(self.run_id, "done", production=self.production, is_online=self.is_online)
             info = self.get_info_from_processed_data(raw_records_folder, target, self.raw_st)
             self.add_data_entry(data_type=target, location=raw_records_folder, **info)
+            self.db_utils.update_target_processing_status(
+                self.run_id,
+                target,
+                "done",
+                production=self.production,
+                is_online=self.is_online,
+            )
+            self.db_utils.append_processing_history(
+                self.run_id,
+                action="target_raw_records",
+                status="done",
+                production=self.production,
+                host=self.host,
+                is_online=self.is_online,
+                n_chunks=info.get("n_chunks"),
+                size_mb=info.get("size_mb"),
+                lineage_hash=info.get("lineage_hash"),
+            )
+            return True
 
         except Exception as e:
             log.error(f"Failed to process raw_records for run {self.run_id}: {e}")
+            self.db_utils.update_target_processing_status(
+                self.run_id,
+                target,
+                "failed",
+                reason=str(e),
+                production=self.production,
+                is_online=self.is_online,
+            )
             self.db_utils.update_processing_status(self.run_id, "failed", reason=str(e), production=self.production, is_online=self.is_online)
+            self.db_utils.append_processing_history(
+                self.run_id,
+                action="target_raw_records",
+                status="failed",
+                production=self.production,
+                host=self.host,
+                is_online=self.is_online,
+                reason=str(e),
+            )
+            return False
 
 
     def process_remaining_targets(self):
@@ -293,21 +420,89 @@ class RunProcessor:
             for target in self.targets:
                 if self.st.is_stored(self.run_id, target):
                     log.info(f"Skipping {target} for run {self.run_id} as it is already processed.")
+                    self.db_utils.update_target_processing_status(
+                        self.run_id,
+                        target,
+                        "skipped",
+                        reason="already stored",
+                        production=self.production,
+                        is_online=self.is_online,
+                    )
+                    self.db_utils.append_processing_history(
+                        self.run_id,
+                        action=f"target_{target}",
+                        status="skipped",
+                        production=self.production,
+                        host=self.host,
+                        is_online=self.is_online,
+                        reason="already stored",
+                    )
                     continue
 
                 t = time.time()
                 log.info(f"Processing {target} for run {self.run_id}")
+                self.db_utils.update_target_processing_status(
+                    self.run_id,
+                    target,
+                    "running",
+                    production=self.production,
+                    is_online=self.is_online,
+                )
                 self.st.make(self.run_id, target, progress_bar=True)
                 log.info(f"Processing of {target} completed successfully ({time.time() - t:.2f}s).")
                 info = self.get_info_from_processed_data(self.output_folder, target, self.st)
                 self.add_data_entry(data_type=target, location=self.output_folder, **info)
+                self.db_utils.update_target_processing_status(
+                    self.run_id,
+                    target,
+                    "done",
+                    production=self.production,
+                    is_online=self.is_online,
+                )
+                self.db_utils.append_processing_history(
+                    self.run_id,
+                    action=f"target_{target}",
+                    status="done",
+                    production=self.production,
+                    host=self.host,
+                    is_online=self.is_online,
+                    n_chunks=info.get("n_chunks"),
+                    size_mb=info.get("size_mb"),
+                    lineage_hash=info.get("lineage_hash"),
+                )
 
             self.db_utils.update_processing_status(self.run_id, "done", production=self.production, is_online=self.is_online)
             log.info(f"Processing of run {self.run_id} completed successfully.")
+            self.db_utils.append_processing_history(
+                self.run_id,
+                action="process_run_end",
+                status="done",
+                production=self.production,
+                host=self.host,
+                is_online=self.is_online,
+                targets=list(self.targets),
+            )
 
         except Exception as e:
             log.error(f"Processing of targets failed for run {self.run_id}: {e}")
+            self.db_utils.update_target_processing_status(
+                self.run_id,
+                target,
+                "failed",
+                reason=str(e),
+                production=self.production,
+                is_online=self.is_online,
+            )
             self.db_utils.update_processing_status(self.run_id, "failed", reason=str(e), production=self.production, is_online=self.is_online)
+            self.db_utils.append_processing_history(
+                self.run_id,
+                action=f"target_{target}",
+                status="failed",
+                production=self.production,
+                host=self.host,
+                is_online=self.is_online,
+                reason=str(e),
+            )
 
 
 def parse_args():

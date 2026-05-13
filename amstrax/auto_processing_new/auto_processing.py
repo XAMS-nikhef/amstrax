@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import json
 
 from job_submission import submit_job
-from db_utils import update_processing_status
+from db_utils import update_processing_status, append_processing_history
 
 
 import subprocess
@@ -174,6 +174,15 @@ def handle_running_jobs(runs_col, production=False):
             new_status = "failed"
             if production:
                 update_processing_status(run_number, new_status, production=production, is_online=True)
+                append_processing_history(
+                    run_number,
+                    action="online_watchdog",
+                    status="failed",
+                    production=production,
+                    host="stbc",
+                    is_online=True,
+                    reason="marked failed by watchdog (timeout or missing condor job)",
+                )
             else:
                 log.info(f"Would have updated run {run_number} to {new_status}")
 
@@ -226,6 +235,15 @@ def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
         if isinstance(cfg_kwargs, dict) and cfg_kwargs:
             config_kwargs = json.dumps(cfg_kwargs, separators=(',',':'))
             arguments.append(f"--set_config_kwargs {config_kwargs}")
+        ctx_kwargs = args.set_context_kwargs
+        if isinstance(ctx_kwargs, str):
+            try:
+                ctx_kwargs = json.loads(ctx_kwargs)
+            except Exception:
+                ctx_kwargs = {}
+        if isinstance(ctx_kwargs, dict) and ctx_kwargs:
+            context_kwargs = json.dumps(ctx_kwargs, separators=(',',':'))
+            arguments.append(f"--set_context_kwargs {context_kwargs}")
 
         arguments = " ".join(arguments)
 
@@ -252,6 +270,20 @@ def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
 
             update_processing_status(
                 run_id, "submitted", pull={"tags": {"name": "process"}}, production=args.production, is_online=True
+            )
+            append_processing_history(
+                run_id,
+                action="online_submit",
+                status="submitted",
+                production=args.production,
+                host="stbc",
+                is_online=True,
+                job_name=job_name,
+                targets=list(args.target),
+                corrections_version=args.corrections_version,
+                amstrax_path=args.amstrax_path,
+                queue=args.queue,
+                mem=args.mem,
             )
         else:
             log.info(f"Would have submitted job for run {run_id}")
