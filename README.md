@@ -35,3 +35,10 @@ is fine. Once you have data you can try running the Tutorial notebook (although 
 make sure to change the output_folder to where you have data
 
 Test
+
+# STBC auto-processing (current)
+
+Current production scripts for STBC are documented in:
+
+- `amstrax/auto_processing_new/README.md`
+- `docs/source/auto_processing_stbc_v2.rst`

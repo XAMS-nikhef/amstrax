@@ -2,6 +2,11 @@
 Auto processing on stoomboot
 ============================
 
+.. warning::
+
+   This page documents a legacy workflow. For current XAMS STBC production
+   operations, use :doc:`auto_processing_stbc_v2`.
+
 This document describes the dataflow for XAMS and XAMSL data.
 
 ---------------

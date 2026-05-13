@@ -16,6 +16,7 @@ Content
     :caption: Setup and basics
 
     setup
+    auto_processing_stbc_v2
     auto_processing_on_stoomboot
     writing_documentation
     making_a_release
