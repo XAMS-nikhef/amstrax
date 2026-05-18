@@ -7,7 +7,6 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   amstrax.auto_processing
    amstrax.plugins
 
 Submodules
