@@ -10,6 +10,7 @@ from db_utils import update_processing_status, append_processing_history
 
 
 import subprocess
+import shutil
 import sys
 from datetime import datetime, timedelta
 
@@ -130,7 +131,10 @@ def is_job_running_in_condor(run_number):
     Check if a job with the given run_number exists in condor_q (not completed).
     """
     try:
-        result = subprocess.run(['condor_q', '-nobatch'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        condor_q_bin = shutil.which("condor_q")
+        if not condor_q_bin:
+            raise RuntimeError("condor_q not found in PATH")
+        result = subprocess.run([condor_q_bin, '-nobatch'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         if result.returncode != 0:
             raise RuntimeError(f"condor_q command failed: {result.stderr}")
 
