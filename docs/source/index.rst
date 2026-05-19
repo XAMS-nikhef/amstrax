@@ -16,7 +16,7 @@ Content
     :caption: Setup and basics
 
     setup
-    auto_processing_on_stoomboot
+    auto_processing_stbc_v2
     writing_documentation
     making_a_release
     tutorials/xamsl_data_access.ipynb
@@ -34,7 +34,6 @@ Content
 
     reference/amstrax
     reference/amstrax.plugins
-    reference/amstrax.auto_processing
 
 
 Indices and tables

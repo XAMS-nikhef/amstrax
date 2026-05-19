@@ -3,12 +3,14 @@ import time
 import os
 import logging
 from datetime import datetime, timedelta
+import json
 
 from job_submission import submit_job
-from db_utils import update_processing_status
+from db_utils import update_processing_status, append_processing_history
 
 
 import subprocess
+import shutil
 import sys
 from datetime import datetime, timedelta
 
@@ -36,8 +38,8 @@ def parse_args():
     parser.add_argument("--mem", default=8000, type=int, help="Memory per CPU in MB.")
     parser.add_argument("--logs_path", default="/data/xenon/xams_v2/logs/", help="Path to save job logs.")
     parser.add_argument("--production", action="store_true", help="Run in production mode (will update the rundb).")
-    parser.add_argument("--set_config_kwargs", default="{}", help="Dictionary of kwargs to pass to set_config.")
-    parser.add_argument("--set_context_kwargs", default="{}", help="Dictionary of kwargs to pass to set_context.")
+    parser.add_argument("--set_config_kwargs", type=json.loads, default={}, help="Dictionary of kwargs to pass to set_config.")
+    parser.add_argument("--set_context_kwargs", type=json.loads, default={}, help="Dictionary of kwargs to pass to set_context.")
     parser.add_argument("--amstrax_path", default=None, help="Path to the amstrax directory.")
     parser.add_argument("--corrections_version", default=None, help="Version of corrections to use.")
     parser.add_argument("--queue", default="short", help="Queue to submit jobs to. See Nikhef docs for options.")
@@ -129,7 +131,10 @@ def is_job_running_in_condor(run_number):
     Check if a job with the given run_number exists in condor_q (not completed).
     """
     try:
-        result = subprocess.run(['condor_q', '-nobatch'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        condor_q_bin = shutil.which("condor_q")
+        if not condor_q_bin:
+            raise RuntimeError("condor_q not found in PATH")
+        result = subprocess.run([condor_q_bin, '-nobatch'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         if result.returncode != 0:
             raise RuntimeError(f"condor_q command failed: {result.stderr}")
 
@@ -173,6 +178,15 @@ def handle_running_jobs(runs_col, production=False):
             new_status = "failed"
             if production:
                 update_processing_status(run_number, new_status, production=production, is_online=True)
+                append_processing_history(
+                    run_number,
+                    action="online_watchdog",
+                    status="failed",
+                    production=production,
+                    host="stbc",
+                    is_online=True,
+                    reason="marked failed by watchdog (timeout or missing condor job)",
+                )
             else:
                 log.info(f"Would have updated run {run_number} to {new_status}")
 
@@ -216,6 +230,24 @@ def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
             arguments.append("--production")
             arguments.append("--allow_raw_records")
             arguments.append("--is_online")
+        cfg_kwargs = args.set_config_kwargs
+        if isinstance(cfg_kwargs, str):
+            try:
+                cfg_kwargs = json.loads(cfg_kwargs)
+            except Exception:
+                cfg_kwargs = {}
+        if isinstance(cfg_kwargs, dict) and cfg_kwargs:
+            config_kwargs = json.dumps(cfg_kwargs, separators=(',',':'))
+            arguments.append(f"--set_config_kwargs {config_kwargs}")
+        ctx_kwargs = args.set_context_kwargs
+        if isinstance(ctx_kwargs, str):
+            try:
+                ctx_kwargs = json.loads(ctx_kwargs)
+            except Exception:
+                ctx_kwargs = {}
+        if isinstance(ctx_kwargs, dict) and ctx_kwargs:
+            context_kwargs = json.dumps(ctx_kwargs, separators=(',',':'))
+            arguments.append(f"--set_context_kwargs {context_kwargs}")
 
         arguments = " ".join(arguments)
 
@@ -242,6 +274,20 @@ def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
 
             update_processing_status(
                 run_id, "submitted", pull={"tags": {"name": "process"}}, production=args.production, is_online=True
+            )
+            append_processing_history(
+                run_id,
+                action="online_submit",
+                status="submitted",
+                production=args.production,
+                host="stbc",
+                is_online=True,
+                job_name=job_name,
+                targets=list(args.target),
+                corrections_version=args.corrections_version,
+                amstrax_path=args.amstrax_path,
+                queue=args.queue,
+                mem=args.mem,
             )
         else:
             log.info(f"Would have submitted job for run {run_id}")

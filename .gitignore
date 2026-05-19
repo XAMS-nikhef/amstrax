@@ -3,6 +3,7 @@
 
 # Gedit junk
 *~
+.DS_Store
 
 # Data (temporary?)
 *.bz2

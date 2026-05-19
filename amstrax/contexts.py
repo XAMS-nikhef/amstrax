@@ -5,7 +5,6 @@ import strax
 from immutabledict import immutabledict
 
 
-import sys
 import amstrax as ax
 
 # Configuration
@@ -60,6 +59,10 @@ COMMON_OPT_XAMS = dict(
 
 XAMS_COMMON_CONFIG = dict(
     n_tpc_pmts=5,
+    # Fallback-only channel map.
+    # Authoritative per-run channel maps should come from rundoc
+    # (xams_bookkeeping.channel_map, or daq_config.channel_map as legacy fallback)
+    # and override this default at runtime.
     channel_map=immutabledict(
         bottom=(0, 0),
         top=(1, 4),
@@ -146,66 +149,95 @@ def context_for_daq_reader(
         live-data
     """
     if check_exists and _check_raw_records_exists(st, run_id):
-        raise ValueError(f"raw data is stored for {run_id} disable check by " f'setting "check_exists=False"')
-    if runs_col_kwargs is None:
-        runs_col_kwargs = {}
-    if run_doc is None:
-        run_col = ax.get_mongo_collection(detector)
-        run_doc = run_col.find_one({"number": int(run_id)})
+        raise ValueError(f'raw data is stored for {run_id} disable check by setting "check_exists=False"')
+
+    run_doc = _get_run_doc_for_daq_reader(run_doc=run_doc, run_id=run_id, detector=detector)
     daq_config = run_doc["daq_config"]
+    _set_optional_channel_map(st=st, run_doc=run_doc)
+    input_dir = _resolve_input_dir_for_daq_reader(st=st, run_id=run_id, daq_config=daq_config)
+    channel_polarity_map = _extract_channel_polarity(daq_config['registers'])
 
+    st.set_context_config(dict(forbid_creation_of=tuple()))
+    st.set_config(_build_daq_reader_config(run_doc=run_doc, daq_config=daq_config, input_dir=input_dir, channel_polarity_map=channel_polarity_map))
+    UserWarning(f'You changed the context for {run_id}. Do not process any other run!')
+    return st
+
+
+def _get_run_doc_for_daq_reader(run_doc: dict, run_id: str, detector: str) -> dict:
+    if run_doc is not None:
+        return run_doc
+    run_col = ax.get_mongo_collection(detector)
+    return run_col.find_one({"number": int(run_id)})
+
+
+def _normalize_channel_map(value):
+    if not isinstance(value, dict):
+        return None
+    out = {}
+    for key, val in value.items():
+        if isinstance(val, (list, tuple)) and len(val) == 2:
+            out[str(key)] = (int(val[0]), int(val[1]))
+    return immutabledict(out) if out else None
+
+
+def _resolve_run_channel_map(run_doc: dict):
+    xbk = run_doc.get("xams_bookkeeping") if isinstance(run_doc.get("xams_bookkeeping"), dict) else {}
+    run_channel_map = _normalize_channel_map(xbk.get("channel_map"))
+    if run_channel_map is not None:
+        return run_channel_map
+    daq_cfg = run_doc.get("daq_config") if isinstance(run_doc.get("daq_config"), dict) else {}
+    return _normalize_channel_map(daq_cfg.get("channel_map"))
+
+
+def _set_optional_channel_map(st: strax.Context, run_doc: dict) -> None:
+    run_channel_map = _resolve_run_channel_map(run_doc=run_doc)
+    if run_channel_map is not None:
+        st.set_config({"channel_map": run_channel_map})
+
+
+def _resolve_input_dir_for_daq_reader(st: strax.Context, run_id: str, daq_config: dict) -> str:
     live_dir = daq_config["strax_output_path"]
-
-    # Check if live dir is set in the config, in case it is, set it
-    # to the live dir in the config
     if "live_data_dir" in st.config:
         live_dir = st.config["live_data_dir"]
-        # Print a UserWarning that the live_data_dir is overwritten
         UserWarning(f"live_data_dir is overwritten to {live_dir}")
-
     input_dir = os.path.join(live_dir, run_id)
     if not os.path.exists(input_dir):
         raise FileNotFoundError(f"No path at {input_dir}")
+    return input_dir
 
-    
-    def extract_channel_polarity(registers):
-        channel_polarity = dict()
-        for reg in registers:
-            reg_addr = reg['reg'].lower()
-            reg_val = reg['val'].lower()
 
-            if reg_addr.startswith('1') and reg_addr.endswith('80'):
-                try:
-                    chan_num = (int(reg_addr, 16) - 0x1080) // 0x100
+def _extract_channel_polarity(registers) -> dict:
+    channel_polarity = {}
+    for reg in registers:
+        reg_addr = reg['reg'].lower()
+        reg_val = reg['val'].lower()
+        if not (reg_addr.startswith('1') and reg_addr.endswith('80')):
+            continue
+        try:
+            chan_num = (int(reg_addr, 16) - 0x1080) // 0x100
+            if reg_val in ("110000", "1110000"):
+                channel_polarity[chan_num] = -1
+            elif reg_val in ("100000", "1100000"):
+                channel_polarity[chan_num] = 1
+            else:
+                raise ValueError(f"Unknown polarity config value '{reg_val}' for channel {chan_num}")
+        except Exception as err:
+            print(f"Error parsing register {reg_addr} with value {reg_val}: {err}")
+    return channel_polarity
 
-                    if (reg_val == "110000") or (reg_val == "1110000"):
-                        channel_polarity[chan_num] = -1
-                    elif (reg_val == "100000") or (reg_val == "1100000"):
-                        channel_polarity[chan_num] = 1
-                    else:
-                        raise ValueError(f"Unknown polarity config value '{reg_val}' for channel {chan_num}")
 
-                except Exception as e:
-                    print(f"Error parsing register {reg_addr} with value {reg_val}: {e}")
-        return channel_polarity
-
-    # Extract the mapping
-    channel_polarity_map = extract_channel_polarity(daq_config['registers'])
-
-    st.set_context_config(dict(forbid_creation_of=tuple()))
-    st.set_config(
-        {'readout_threads': daq_config['processing_threads'],
-         'daq_input_dir': input_dir,
-         'record_length': daq_config['strax_fragment_payload_bytes'] // 2,
-         'max_digitizer_sampling_time': 10,
-         'run_start_time': run_doc['start'].replace(tzinfo=timezone.utc).timestamp(),
-         'daq_chunk_duration': int(daq_config['strax_chunk_length'] * 1e9),
-         'daq_overlap_chunk_duration': int(daq_config['strax_chunk_overlap'] * 1e9),
-         'compressor': daq_config.get('compressor', 'lz4'),
-         'channels_polarity': channel_polarity_map,
-         })
-    UserWarning(f'You changed the context for {run_id}. Do not process any other run!')
-    return st
+def _build_daq_reader_config(run_doc: dict, daq_config: dict, input_dir: str, channel_polarity_map: dict) -> dict:
+    return {
+        'readout_threads': daq_config['processing_threads'],
+        'daq_input_dir': input_dir,
+        'record_length': daq_config['strax_fragment_payload_bytes'] // 2,
+        'max_digitizer_sampling_time': 10,
+        'run_start_time': run_doc['start'].replace(tzinfo=timezone.utc).timestamp(),
+        'daq_chunk_duration': int(daq_config['strax_chunk_length'] * 1e9),
+        'daq_overlap_chunk_duration': int(daq_config['strax_chunk_overlap'] * 1e9),
+        'compressor': daq_config.get('compressor', 'lz4'),
+        'channels_polarity': channel_polarity_map,
+    }
 
 
 def xams_led(**kwargs):

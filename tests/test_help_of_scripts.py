@@ -7,7 +7,7 @@ from amstrax import amstrax_dir
 class TestHelpOfScripts(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.base = os.path.join(amstrax_dir, "auto_processing")
+        cls.base = os.path.join(amstrax_dir, "auto_processing_new")
 
     def _test_help_of(self, script_name: str):
         target_script = os.path.join(self.base, script_name)
@@ -16,8 +16,8 @@ class TestHelpOfScripts(unittest.TestCase):
         return_code = os.system(command)
         assert return_code == 0
 
-    def test_amstraxer(self):
-        self._test_help_of("amstraxer.py")
-
     def test_autoprocess(self):
         self._test_help_of("auto_processing.py")
+
+    def test_process(self):
+        self._test_help_of("process.py")
