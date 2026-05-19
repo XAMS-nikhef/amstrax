@@ -2,9 +2,32 @@ import strax
 import typing as ty
 from strax import Config
 from urllib.parse import urlparse, parse_qs
+from immutabledict import immutabledict
 import amstrax
 
 export, __all__ = strax.exporter()
+
+DEFAULT_CHANNEL_MAP = immutabledict(
+    bottom=(0, 0),
+    top=(1, 4),
+    external=(5, 5),
+    sipm=(6, 6),
+    aqmon=(40, 40),
+)
+
+
+def _as_immutabledict_channel_map(value):
+    if isinstance(value, immutabledict):
+        return value
+    if not isinstance(value, dict):
+        return value
+    out = {}
+    for k, v in value.items():
+        if isinstance(v, (list, tuple)) and len(v) == 2:
+            out[str(k)] = (int(v[0]), int(v[1]))
+        else:
+            out[str(k)] = v
+    return immutabledict(out)
 
 
 @export
@@ -104,12 +127,15 @@ class XAMSConfig(Config):
         query_params = parse_qs(parsed_url.query)
         path = query_params.get("path", [None])[0]
         detector = query_params.get("detector", ["xams"])[0]
+        fallback = query_params.get("fallback", [""])[0]
         if not path:
             raise ValueError(f"Invalid rundoc:// URL, missing path: {config_value}")
         value = get_rundoc_value(run_id=plugin.run_id, path=path, detector=detector, default=None)
         if value is None:
+            if fallback == "xams_default":
+                return DEFAULT_CHANNEL_MAP
             raise ValueError(f"No rundoc value found for path '{path}' and run {plugin.run_id}")
-        return value
+        return _as_immutabledict_channel_map(value)
 
     def find_correction_value(self, correction_data, run_id):
         run_id = run_id.zfill(6)  # Ensure run_id is always 6 digits

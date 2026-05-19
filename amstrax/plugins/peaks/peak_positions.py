@@ -10,11 +10,12 @@ DEFAULT_POSREC_ALGO = 'corr'
 
 @export
 @strax.takes_config(
-    strax.Option(
-        "channel_map",
+    amstrax.XAMSConfig(
+        name="channel_map",
+        default="rundoc://?path=xams_bookkeeping.channel_map&fallback=xams_default",
         type=immutabledict,
         track=False,
-        help="Map of channel numbers to top, bottom and aqmon, to be defined in the context",
+        help="Map of channel groups loaded from rundoc xams_bookkeeping.channel_map",
     ),
     strax.Option('default_reconstruction_algorithm',
                  default=DEFAULT_POSREC_ALGO,

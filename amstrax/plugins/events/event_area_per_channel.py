@@ -8,11 +8,12 @@ export, __all__ = strax.exporter()
 
 @export
 @strax.takes_config(
-    strax.Option(
-        "channel_map",
+    amstrax.XAMSConfig(
+        name="channel_map",
+        default="rundoc://?path=xams_bookkeeping.channel_map&fallback=xams_default",
         track=False,
         type=immutabledict,
-        help="immutabledict mapping subdetector to (min, max) "
+        help="immutabledict mapping subdetector to (min, max), loaded from rundoc",
     ),
 )
 class EventAreaPerChannel(strax.Plugin):

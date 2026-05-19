@@ -8,6 +8,7 @@ from immutabledict import immutabledict
 import numpy as np
 import numba
 import strax
+import amstrax
 
 export, __all__ = strax.exporter()
 __all__.extend(["ARTIFICIAL_DEADTIME_CHANNEL"])
@@ -94,12 +95,13 @@ class ArtificialDeadtimeInserted(UserWarning):
             "interior to peaklets."
         ),
     ),
-    strax.Option(
-        "channel_map",
+    amstrax.XAMSConfig(
+        name="channel_map",
+        default="rundoc://?path=xams_bookkeeping.channel_map&fallback=xams_default",
         track=False,
         type=immutabledict,
         infer_type=False,
-        help="immutabledict mapping subdetector to (min, max) channel number.",
+        help="immutabledict mapping subdetector to (min, max), loaded from rundoc",
     ),
 )
 class DAQReader(strax.Plugin):

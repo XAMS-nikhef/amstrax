@@ -2,6 +2,7 @@ import numba
 import numpy as np
 import strax
 from immutabledict import immutabledict
+import amstrax
 
 export, __all__ = strax.exporter()
 
@@ -9,11 +10,12 @@ export, __all__ = strax.exporter()
 # For n_competing, which is temporarily added to PeakBasics
 @export
 @strax.takes_config(
-    strax.Option(
-        "channel_map",
+    amstrax.XAMSConfig(
+        name="channel_map",
+        default="rundoc://?path=xams_bookkeeping.channel_map&fallback=xams_default",
         type=immutabledict,
         track=False,
-        help="Map of channel numbers to top, bottom and aqmon, to be defined in the context",
+        help="Map of channel groups loaded from rundoc xams_bookkeeping.channel_map",
     ),
     strax.Option(
         "check_peak_sum_area_rtol",
