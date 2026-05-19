@@ -5,7 +5,6 @@ import strax
 from immutabledict import immutabledict
 
 
-import sys
 import amstrax as ax
 
 # Configuration
@@ -150,7 +149,7 @@ def context_for_daq_reader(
 
     run_doc = _get_run_doc_for_daq_reader(run_doc=run_doc, run_id=run_id, detector=detector)
     daq_config = run_doc["daq_config"]
-    _set_optional_channel_map(st=st, run_doc=run_doc, daq_config=daq_config)
+    _set_optional_channel_map(st=st, run_doc=run_doc)
     input_dir = _resolve_input_dir_for_daq_reader(st=st, run_id=run_id, daq_config=daq_config)
     channel_polarity_map = _extract_channel_polarity(daq_config['registers'])
 
@@ -177,22 +176,14 @@ def _normalize_channel_map(value):
     return immutabledict(out) if out else None
 
 
-def _resolve_run_channel_map(run_doc: dict, daq_config: dict):
+def _resolve_run_channel_map(run_doc: dict):
     xbk = run_doc.get("xams_bookkeeping") if isinstance(run_doc.get("xams_bookkeeping"), dict) else {}
     run_channel_map = _normalize_channel_map(xbk.get("channel_map"))
-    if run_channel_map is not None:
-        return run_channel_map
-    run_channel_map = _normalize_channel_map(daq_config.get("channel_map"))
-    if run_channel_map is not None:
-        return run_channel_map
-    defaults = daq_config.get("xams_bookkeeping_defaults")
-    if isinstance(defaults, dict):
-        return _normalize_channel_map(defaults.get("channel_map"))
-    return None
+    return run_channel_map
 
 
-def _set_optional_channel_map(st: strax.Context, run_doc: dict, daq_config: dict) -> None:
-    run_channel_map = _resolve_run_channel_map(run_doc=run_doc, daq_config=daq_config)
+def _set_optional_channel_map(st: strax.Context, run_doc: dict) -> None:
+    run_channel_map = _resolve_run_channel_map(run_doc=run_doc)
     if run_channel_map is not None:
         st.set_config({"channel_map": run_channel_map})
 

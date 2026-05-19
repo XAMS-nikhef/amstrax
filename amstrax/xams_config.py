@@ -1,7 +1,6 @@
 import strax
 import typing as ty
 from strax import Config
-from immutabledict import immutabledict
 from urllib.parse import urlparse, parse_qs
 import amstrax
 
@@ -34,6 +33,8 @@ class XAMSConfig(Config):
                 self._cached_value = self._fetch_from_cmt(plugin, config_value)
             elif config_value.startswith("file://"):
                 self._cached_value = self._fetch_from_file_url(plugin, config_value)
+            elif config_value.startswith("rundoc://"):
+                self._cached_value = self._fetch_from_rundoc_url(plugin, config_value)
         else:
             # Cache the default value if no URL is provided
             self._cached_value = config_value
@@ -92,6 +93,24 @@ class XAMSConfig(Config):
 
         return value
 
+    def _fetch_from_rundoc_url(self, plugin, config_value):
+        """
+        Fetch value from rundoc.
+        URL format:
+            rundoc://?path=xams_bookkeeping.channel_map
+            rundoc://?path=xams_bookkeeping.source_type&detector=xams
+        """
+        parsed_url = urlparse(config_value)
+        query_params = parse_qs(parsed_url.query)
+        path = query_params.get("path", [None])[0]
+        detector = query_params.get("detector", ["xams"])[0]
+        if not path:
+            raise ValueError(f"Invalid rundoc:// URL, missing path: {config_value}")
+        value = get_rundoc_value(run_id=plugin.run_id, path=path, detector=detector, default=None)
+        if value is None:
+            raise ValueError(f"No rundoc value found for path '{path}' and run {plugin.run_id}")
+        return value
+
     def find_correction_value(self, correction_data, run_id):
         run_id = run_id.zfill(6)  # Ensure run_id is always 6 digits
         value = None
@@ -128,3 +147,31 @@ class XAMSConfig(Config):
             raise ValueError(f"No valid correction found for run_id {run_id} and no fallback is allowed.")
 
         return value
+
+
+@export
+def get_rundoc_value(
+    run_id: ty.Union[str, int],
+    path: str,
+    detector: str = "xams",
+    default: ty.Any = None,
+):
+    """
+    Read a nested value from rundoc by dotted path.
+
+    Example:
+        get_rundoc_value("007346", "xams_bookkeeping.channel_map")
+    """
+    run_col = amstrax.get_mongo_collection(detector)
+    doc = run_col.find_one({"number": int(run_id)})
+    if not isinstance(doc, dict):
+        return default
+
+    current = doc
+    for key in str(path).split("."):
+        if not isinstance(current, dict):
+            return default
+        if key not in current:
+            return default
+        current = current.get(key)
+    return current
