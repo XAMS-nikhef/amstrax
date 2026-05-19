@@ -179,7 +179,10 @@ def _normalize_channel_map(value):
 def _resolve_run_channel_map(run_doc: dict):
     xbk = run_doc.get("xams_bookkeeping") if isinstance(run_doc.get("xams_bookkeeping"), dict) else {}
     run_channel_map = _normalize_channel_map(xbk.get("channel_map"))
-    return run_channel_map
+    if run_channel_map is not None:
+        return run_channel_map
+    daq_cfg = run_doc.get("daq_config") if isinstance(run_doc.get("daq_config"), dict) else {}
+    return _normalize_channel_map(daq_cfg.get("channel_map"))
 
 
 def _set_optional_channel_map(st: strax.Context, run_doc: dict) -> None:
