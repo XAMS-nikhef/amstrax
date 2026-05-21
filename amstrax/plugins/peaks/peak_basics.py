@@ -12,10 +12,10 @@ export, __all__ = strax.exporter()
 @strax.takes_config(
     amstrax.XAMSConfig(
         name="channel_map",
-        default="rundoc://?path=xams_bookkeeping.channel_map&fallback=xams_default",
+        default="rundoc://?path=daq_config.channel_map&fallback=xams_default",
         type=immutabledict,
         track=False,
-        help="Map of channel groups loaded from rundoc xams_bookkeeping.channel_map",
+        help="Map of channel groups loaded from rundoc daq_config.channel_map",
     ),
     strax.Option(
         "check_peak_sum_area_rtol",

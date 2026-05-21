@@ -10,7 +10,7 @@ export, __all__ = strax.exporter()
 @strax.takes_config(
     amstrax.XAMSConfig(
         name="channel_map",
-        default="rundoc://?path=xams_bookkeeping.channel_map&fallback=xams_default",
+        default="rundoc://?path=daq_config.channel_map&fallback=xams_default",
         track=False,
         type=immutabledict,
         help="immutabledict mapping subdetector to (min, max), loaded from rundoc",

@@ -120,7 +120,7 @@ class XAMSConfig(Config):
         """
         Fetch value from rundoc.
         URL format:
-            rundoc://?path=xams_bookkeeping.channel_map
+            rundoc://?path=daq_config.channel_map
             rundoc://?path=xams_bookkeeping.source_type&detector=xams
         """
         parsed_url = urlparse(config_value)
@@ -186,7 +186,7 @@ def get_rundoc_value(
     Read a nested value from rundoc by dotted path.
 
     Example:
-        get_rundoc_value("007346", "xams_bookkeeping.channel_map")
+        get_rundoc_value("007346", "daq_config.channel_map")
     """
     run_col = amstrax.get_mongo_collection(detector)
     doc = run_col.find_one({"number": int(run_id)})

@@ -97,7 +97,7 @@ class ArtificialDeadtimeInserted(UserWarning):
     ),
     amstrax.XAMSConfig(
         name="channel_map",
-        default="rundoc://?path=xams_bookkeeping.channel_map&fallback=xams_default",
+        default="rundoc://?path=daq_config.channel_map&fallback=xams_default",
         track=False,
         type=immutabledict,
         infer_type=False,
