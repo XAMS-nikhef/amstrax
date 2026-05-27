@@ -115,12 +115,12 @@ class RunProcessor:
 
     def infer_special_modes(self, st):
 
-        # Check if there is led in the run_doc
-        if "ledcalibration" in self.run_doc.get('mode'):
+        ax = self.amstrax
+
+        if ax.is_led_run(self.run_doc):
             # Add the LEDCalibration plugin to the context
-            log.info("Detected LED calibration run.")
+            log.info(f"Detected LED calibration run from {ax.run_class_source(self.run_doc)}.")
             log.info("Adding LEDCalibration plugin to the context.")
-            ax = self.amstrax
             st.register([
                 ax.DAQReader,
                 ax.RecordsLED,
@@ -132,12 +132,13 @@ class RunProcessor:
             log.info(f"Overriding targets to {self.targets}")
         
 
-        if "_nai" in self.run_doc.get('mode'):
+        if ax.has_nai_source(self.run_doc):
             # Add the NAI plugin to the context
             # All the _ext plugins should be already in the context
-            log.info("Detected NaI run.")
+            log.info(f"Detected NaI run from {ax.source_type_source(self.run_doc)}.")
             log.info("Adding peak_basics_ext to list of targets to process.")
-            self.targets.append("peak_basics_ext")          
+            if "peak_basics_ext" not in self.targets:
+                self.targets.append("peak_basics_ext")
 
         return st
 
