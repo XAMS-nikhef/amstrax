@@ -155,10 +155,9 @@ def context_for_daq_reader(
     daq_config = run_doc["daq_config"]
     _set_optional_channel_map(st=st, run_doc=run_doc)
     input_dir = _resolve_input_dir_for_daq_reader(st=st, run_id=run_id, daq_config=daq_config)
-    channel_polarity_map = _extract_channel_polarity(daq_config['registers'])
 
     st.set_context_config(dict(forbid_creation_of=tuple()))
-    st.set_config(_build_daq_reader_config(run_doc=run_doc, daq_config=daq_config, input_dir=input_dir, channel_polarity_map=channel_polarity_map))
+    st.set_config(_build_daq_reader_config(run_doc=run_doc, daq_config=daq_config, input_dir=input_dir))
     UserWarning(f'You changed the context for {run_id}. Do not process any other run!')
     return st
 
@@ -206,27 +205,7 @@ def _resolve_input_dir_for_daq_reader(st: strax.Context, run_id: str, daq_config
     return input_dir
 
 
-def _extract_channel_polarity(registers) -> dict:
-    channel_polarity = {}
-    for reg in registers:
-        reg_addr = reg['reg'].lower()
-        reg_val = reg['val'].lower()
-        if not (reg_addr.startswith('1') and reg_addr.endswith('80')):
-            continue
-        try:
-            chan_num = (int(reg_addr, 16) - 0x1080) // 0x100
-            if reg_val in ("110000", "1110000"):
-                channel_polarity[chan_num] = -1
-            elif reg_val in ("100000", "1100000"):
-                channel_polarity[chan_num] = 1
-            else:
-                raise ValueError(f"Unknown polarity config value '{reg_val}' for channel {chan_num}")
-        except Exception as err:
-            print(f"Error parsing register {reg_addr} with value {reg_val}: {err}")
-    return channel_polarity
-
-
-def _build_daq_reader_config(run_doc: dict, daq_config: dict, input_dir: str, channel_polarity_map: dict) -> dict:
+def _build_daq_reader_config(run_doc: dict, daq_config: dict, input_dir: str) -> dict:
     return {
         'readout_threads': daq_config['processing_threads'],
         'daq_input_dir': input_dir,
@@ -236,13 +215,12 @@ def _build_daq_reader_config(run_doc: dict, daq_config: dict, input_dir: str, ch
         'daq_chunk_duration': int(daq_config['strax_chunk_length'] * 1e9),
         'daq_overlap_chunk_duration': int(daq_config['strax_chunk_overlap'] * 1e9),
         'compressor': daq_config.get('compressor', 'lz4'),
-        'channels_polarity': channel_polarity_map,
     }
 
 
 def xams_led(**kwargs):
     st = xams(**kwargs)
-    st.set_context_config({"check_available": ("raw_records", "records_led", "led_calibration")})
+    st.set_context_config({"check_available": ("raw_records", "raw_records_sipm", "records_led", "led_calibration")})
     # Return a new context with only raw_records and led_calibration registered
     st = st.new_context(replace=True, config=st.config, storage=st.storage, **st.context_config)
     st.register([ax.DAQReader, ax.RecordsLED, ax.LEDCalibration])

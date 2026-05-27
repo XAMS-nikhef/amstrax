@@ -23,7 +23,7 @@ class PulseProcessingSiPM(strax.Plugin):
     5. Pulse length and area calculation
 
     """
-    __version__ = '0.0.1'
+    __version__ = '0.0.2'
     
     parallel = 'process'
     rechunk_on_save = False
@@ -53,7 +53,7 @@ class PulseProcessingSiPM(strax.Plugin):
 
         r = strax.sort_by_time(r)
         strax.zero_out_of_bounds(r)
-        strax.baseline(r, baseline_samples=self.baseline_samples, flip=True)
+        strax.baseline(r, baseline_samples=self.baseline_samples, flip=False)
 
         strax.integrate(r)
 

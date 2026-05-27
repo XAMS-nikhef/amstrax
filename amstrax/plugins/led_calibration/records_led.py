@@ -1,6 +1,8 @@
 import strax
 import numpy as np
 
+import amstrax
+
 export, __all__ = strax.exporter()
 
 @export
@@ -16,15 +18,24 @@ export, __all__ = strax.exporter()
     strax.Option('n_records_per_pulse',
         default=2, type=int,
         help="how many samples per pulse"),
+
+    amstrax.XAMSConfig(
+        name="daq_registers",
+        default="rundoc://?path=daq_config.registers&fallback=empty",
+        track=False,
+        infer_type=False,
+        help="DAQ register list from rundoc, used to infer channel polarity.",
+    ),
+
 )
 class RecordsLED(strax.Plugin):
     """
     Carlo needs to explain
     """
 
-    __version__ = '1.0.0'
+    __version__ = '1.1.0'
 
-    depends_on = ('raw_records',)
+    depends_on = ('raw_records', 'raw_records_sipm')
     data_kind = 'records_led'
     provides = 'records_led'
     compressor = 'zstd'
@@ -38,6 +49,8 @@ class RecordsLED(strax.Plugin):
         self.record_length = self.config['record_length']
         self.baseline_window = self.config['baseline_window']
         self.n_records_per_pulse = self.config['n_records_per_pulse']
+        daq_registers = self.takes_config["daq_registers"].__get__(self)
+        self.channel_polarity = amstrax.extract_channel_polarity(daq_registers)
 
     def infer_dtype(self):
 
@@ -51,10 +64,11 @@ class RecordsLED(strax.Plugin):
             
         return dtype 
 
-    def compute(self, raw_records):
+    def compute(self, raw_records, raw_records_sipm):
         '''
         Carlo needs to explain
         '''
+        raw_records = self._combine_raw_records(raw_records, raw_records_sipm)
         if len(raw_records) == 0:
             return np.zeros(0, dtype=self.dtype)
 
@@ -111,7 +125,26 @@ class RecordsLED(strax.Plugin):
         bl_hi = min(records["data"].shape[1], int(bl_hi))
         if bl_hi <= bl_lo:
             bl_lo, bl_hi = 0, min(50, records["data"].shape[1])
-        bl = records["data"][:, bl_lo:bl_hi].mean(axis=1)
-        records["data"] = -1.0 * (records["data"].transpose() - bl[:]).transpose()
+        self._baseline_and_flip(records, bl_lo=bl_lo, bl_hi=bl_hi)
 
         return records
+
+    @staticmethod
+    def _combine_raw_records(*raw_records):
+        arrays = [r for r in raw_records if len(r)]
+        if not arrays:
+            return raw_records[0]
+        if len(arrays) == 1:
+            return arrays[0]
+        return strax.sort_by_time(np.concatenate(arrays))
+
+    def _baseline_and_flip(self, records, bl_lo, bl_hi):
+        """Baseline records and flip only channels configured as negative polarity."""
+        for record in records:
+            length = int(max(0, min(record["length"], len(record["data"]))))
+            if length == 0:
+                continue
+            baseline = record["data"][bl_lo:bl_hi].mean()
+            sign = -1.0 if self.channel_polarity.get(int(record["channel"]), -1) == -1 else 1.0
+            record["data"][:length] = sign * (record["data"][:length] - baseline)
+            record["data"][length:] = 0.0
