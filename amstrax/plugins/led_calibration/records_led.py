@@ -49,7 +49,8 @@ class RecordsLED(strax.Plugin):
         self.record_length = self.config['record_length']
         self.baseline_window = self.config['baseline_window']
         self.n_records_per_pulse = self.config['n_records_per_pulse']
-        self.channel_polarity = amstrax.extract_channel_polarity(self.daq_registers)
+        daq_registers = self.takes_config["daq_registers"].__get__(self)
+        self.channel_polarity = amstrax.extract_channel_polarity(daq_registers)
 
     def infer_dtype(self):
 
