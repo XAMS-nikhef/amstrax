@@ -1,3 +1,4 @@
+import amstrax
 from immutabledict import immutabledict
 import strax
 import numba

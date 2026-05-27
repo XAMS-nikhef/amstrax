@@ -1,3 +1,4 @@
+import amstrax
 import numba
 import numpy as np
 import strax
