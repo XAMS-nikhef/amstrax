@@ -6,13 +6,6 @@ from immutabledict import immutabledict
 export, __all__ = strax.exporter()
 
 @export
-@strax.takes_config(
-    strax.Option(
-        'baseline_samples',
-        default=20, infer_type=False,
-        help='Number of samples to use at the start of the SiPM pulse to determine '
-             'the baseline'),
-)
 class PulseProcessingSiPM(strax.Plugin):
     """
     Plugin which performs the pulse processing steps:
@@ -23,6 +16,12 @@ class PulseProcessingSiPM(strax.Plugin):
     5. Pulse length and area calculation
 
     """
+    baseline_samples = strax.Option(
+        'baseline_samples',
+        default=20, infer_type=False,
+        help='Number of samples to use at the start of the SiPM pulse to determine '
+             'the baseline')
+
     __version__ = '0.0.2'
     
     parallel = 'process'

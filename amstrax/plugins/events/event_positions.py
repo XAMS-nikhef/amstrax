@@ -10,21 +10,6 @@ export, __all__ = strax.exporter()
 
 
 @export
-@strax.takes_config(
-    strax.Option('default_reconstruction_algorithm',
-                 default=DEFAULT_POSREC_ALGO,
-                 help="default reconstruction algorithm that provides (x,y)"),
-    strax.Option('drift_time_gate',
-                 default=3000,
-                 help='Drift time belonging to the gate in ns'),
-    strax.Option('drift_time_cathode',
-                 default=39500,
-                 help='Drift time belonging to the cathode in ns'),
-    strax.Option('gate_cathode_distance',
-                 default=50.5,
-                 help='Distance between gate and cathode in mm'),    
-)
-
 class EventPositions(strax.Plugin):
     """
     Computes the observed and corrected position for the main S1/S2
@@ -38,6 +23,22 @@ class EventPositions(strax.Plugin):
 
     __version__ = '1.1.20'
 
+    default_reconstruction_algorithm = strax.Option(
+        'default_reconstruction_algorithm',
+        default=DEFAULT_POSREC_ALGO,
+        help="default reconstruction algorithm that provides (x,y)")
+    drift_time_gate = strax.Option(
+        'drift_time_gate',
+        default=3000,
+        help='Drift time belonging to the gate in ns')
+    drift_time_cathode = strax.Option(
+        'drift_time_cathode',
+        default=39500,
+        help='Drift time belonging to the cathode in ns')
+    gate_cathode_distance = strax.Option(
+        'gate_cathode_distance',
+        default=50.5,
+        help='Distance between gate and cathode in mm')
 
     def infer_dtype(self):
         dtype = []
@@ -54,13 +55,6 @@ class EventPositions(strax.Plugin):
         
         return dtype + strax.time_fields
 
-    def setup(self):
-
-        self.default_reconstruction_algorithm = self.config['default_reconstruction_algorithm']
-        self.drift_time_gate = self.config['drift_time_gate']
-        self.drift_time_cathode = self.config['drift_time_cathode']
-        self.gate_cathode_distance = self.config['gate_cathode_distance']
-        
     def compute(self, events):
 
         result = {'time': events['time'],

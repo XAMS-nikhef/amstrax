@@ -4,18 +4,17 @@ import strax
 export, __all__ = strax.exporter()
 
 @export
-@strax.takes_config(
-    strax.Option('trigger_min_area', default=10,
-                 help='Peaks must have more area (PE) than this to '
-                      'cause events'),
-    strax.Option('left_event_extension', default=int(5e5),
-                 help='Extend events this many ns to the left from each '
-                      'triggering peak'),
-    strax.Option('right_event_extension', default=int(5e4),
-                 help='Extend events this many ns to the right from each '
-                      'triggering peak'),
-)
 class Events(strax.OverlapWindowPlugin):
+    trigger_min_area = strax.Option(
+        'trigger_min_area', default=10,
+        help='Peaks must have more area (PE) than this to cause events')
+    left_event_extension = strax.Option(
+        'left_event_extension', default=int(5e5),
+        help='Extend events this many ns to the left from each triggering peak')
+    right_event_extension = strax.Option(
+        'right_event_extension', default=int(5e4),
+        help='Extend events this many ns to the right from each triggering peak')
+
     depends_on = ['peaks', 
                   'peak_basics',
                   ]
@@ -67,4 +66,3 @@ class Events(strax.OverlapWindowPlugin):
         self.events_seen += len(result)
 
         return result
-
