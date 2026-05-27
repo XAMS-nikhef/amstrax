@@ -61,4 +61,3 @@ def test_missing_or_malformed_metadata_is_safe():
     assert run_metadata.get_source_type(run_doc) == "none"
     assert not run_metadata.is_led_run(run_doc)
     assert not run_metadata.has_nai_source(run_doc)
-

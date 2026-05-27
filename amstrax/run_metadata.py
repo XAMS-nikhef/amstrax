@@ -84,4 +84,3 @@ def source_type_source(run_doc):
     if _lower_string(bookkeeping.get("source_type")):
         return "xams_bookkeeping.source_type"
     return "legacy mode fallback"
-
