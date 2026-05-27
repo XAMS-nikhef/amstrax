@@ -1,6 +1,5 @@
 import strax
 import numpy as np
-from immutabledict import immutabledict
 
 import amstrax
 
@@ -28,14 +27,6 @@ export, __all__ = strax.exporter()
         help="DAQ register list from rundoc, used to infer channel polarity.",
     ),
 
-    amstrax.XAMSConfig(
-        name="channel_map",
-        default="rundoc://?path=xams_bookkeeping.channel_map&fallback=xams_default",
-        track=False,
-        type=immutabledict,
-        infer_type=False,
-        help="Channel map loaded from rundoc.",
-    ),
 )
 class RecordsLED(strax.Plugin):
     """
@@ -59,7 +50,6 @@ class RecordsLED(strax.Plugin):
         self.baseline_window = self.config['baseline_window']
         self.n_records_per_pulse = self.config['n_records_per_pulse']
         self.channel_polarity = amstrax.extract_channel_polarity(self.config['daq_registers'])
-        self.sipm_channels = amstrax.channels_in_map_group(self.config['channel_map'], 'sipm')
 
     def infer_dtype(self):
 
@@ -134,9 +124,7 @@ class RecordsLED(strax.Plugin):
         bl_hi = min(records["data"].shape[1], int(bl_hi))
         if bl_hi <= bl_lo:
             bl_lo, bl_hi = 0, min(50, records["data"].shape[1])
-        bl = records["data"][:, bl_lo:bl_hi].mean(axis=1)
-        records["data"] = -1.0 * (records["data"].transpose() - bl[:]).transpose()
-        self._restore_positive_polarity_channels(records)
+        self._baseline_and_flip(records, bl_lo=bl_lo, bl_hi=bl_hi)
 
         return records
 
@@ -149,13 +137,13 @@ class RecordsLED(strax.Plugin):
             return arrays[0]
         return strax.sort_by_time(np.concatenate(arrays))
 
-    def _restore_positive_polarity_channels(self, records):
-        """
-        records_led historically flips all channels after baselining.
-        Keep that PMT convention, but undo it for positive-polarity channels
-        and for channels explicitly marked as SiPM in the channel map.
-        """
-        for channel in np.unique(records["channel"]):
-            ch = int(channel)
-            if self.channel_polarity.get(ch) == 1 or ch in self.sipm_channels:
-                records["data"][records["channel"] == channel] *= -1.0
+    def _baseline_and_flip(self, records, bl_lo, bl_hi):
+        """Baseline records and flip only channels configured as negative polarity."""
+        for record in records:
+            length = int(max(0, min(record["length"], len(record["data"]))))
+            if length == 0:
+                continue
+            baseline = record["data"][bl_lo:bl_hi].mean()
+            sign = -1.0 if self.channel_polarity.get(int(record["channel"]), -1) == -1 else 1.0
+            record["data"][:length] = sign * (record["data"][:length] - baseline)
+            record["data"][length:] = 0.0
