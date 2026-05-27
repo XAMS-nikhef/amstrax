@@ -4,6 +4,8 @@ from .common import *
 from .rundb import *
 from .logging_utils import *
 
+from .run_metadata import *
+
 from . import xams_config
 from .xams_config import *
 
