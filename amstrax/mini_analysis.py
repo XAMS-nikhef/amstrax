@@ -60,7 +60,7 @@ def mini_analysis(
 
                 to_pe = context.config["gain_model"]
                 if isinstance(to_pe, str):
-                    to_pe = strax.Config.evaluate_dry(to_pe, run_id=run_id)
+                    to_pe = amstrax.XAMSConfig.evaluate_dry(to_pe, run_id=run_id)
                 kwargs["to_pe"] = to_pe
 
             # Prepare selection arguments

@@ -13,20 +13,20 @@ class RecordsLED(strax.Plugin):
 
     __version__ = '1.1.0'
 
-    record_length = strax.Config(
+    record_length = amstrax.XAMSConfig(
         "record_length",
         default=110,
         track=False,
         type=int,
         help="Number of samples per raw_record",
     )
-    baseline_window = strax.Config(
+    baseline_window = amstrax.XAMSConfig(
         "baseline_window",
         default=(0, 50),
         infer_type=False,
         help="Window (samples) for baseline calculation.",
     )
-    n_records_per_pulse = strax.Config(
+    n_records_per_pulse = amstrax.XAMSConfig(
         "n_records_per_pulse",
         default=2,
         type=int,

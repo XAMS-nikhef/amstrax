@@ -43,7 +43,7 @@ class PeakPositions(strax.Plugin):
         track=False,
         help="Map of channel groups loaded from rundoc xams_bookkeeping.channel_map",
     )
-    default_reconstruction_algorithm = strax.Config(
+    default_reconstruction_algorithm = amstrax.XAMSConfig(
         'default_reconstruction_algorithm',
         default=DEFAULT_POSREC_ALGO,
         help="default reconstruction algorithm that provides (x,y)"

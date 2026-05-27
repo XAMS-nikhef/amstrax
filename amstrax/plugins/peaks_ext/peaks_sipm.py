@@ -15,33 +15,33 @@ class PeaksSiPM(strax.Plugin):
 
     __version__ = '0.0.2'
 
-    peak_gap_threshold = strax.Config(
+    peak_gap_threshold = amstrax.XAMSConfig(
         'peak_gap_threshold', default=300,
         help="No hits for this many ns triggers a new peak")
-    peak_left_extension = strax.Config(
+    peak_left_extension = amstrax.XAMSConfig(
         'peak_left_extension', default=10,
         help="Include this many ns left of hits in peaks")
-    peak_right_extension = strax.Config(
+    peak_right_extension = amstrax.XAMSConfig(
         'peak_right_extension', default=10,
         help="Include this many ns right of hits in peaks")
-    peak_min_area = strax.Config(
+    peak_min_area = amstrax.XAMSConfig(
         'peak_min_area', default=10,
         help="Minimum contributing PMTs needed to define a peak")
-    peak_split_min_height = strax.Config(
+    peak_split_min_height = amstrax.XAMSConfig(
         'peak_split_min_height', default=25,
         help="Minimum height in PE above a local sum waveform"
         "minimum, on either side, to trigger a split")
-    peak_split_min_ratio = strax.Config(
+    peak_split_min_ratio = amstrax.XAMSConfig(
         'peak_split_min_ratio', default=4,
         help="Minimum ratio between local sum waveform"
         "minimum and maxima on either side, to trigger a split")
-    n_tpc_pmts = strax.Config(
+    n_tpc_pmts = amstrax.XAMSConfig(
         'n_tpc_pmts', track=False, default=False,
         help="Number of channels")
-    n_ext_pmts = strax.Config(
+    n_ext_pmts = amstrax.XAMSConfig(
         'n_ext_pmts', track=True, default=1,
         help="Number of external channels")
-    n_sipms = strax.Config(
+    n_sipms = amstrax.XAMSConfig(
         'n_sipms', track=True, default=1,
         help="Number of external channels")
     gain_to_pe_array = amstrax.XAMSConfig(

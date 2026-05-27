@@ -16,7 +16,7 @@ class PulseProcessingSiPM(strax.Plugin):
     5. Pulse length and area calculation
 
     """
-    baseline_samples = strax.Config(
+    baseline_samples = amstrax.XAMSConfig(
         'baseline_samples',
         default=20, infer_type=False,
         help='Number of samples to use at the start of the SiPM pulse to determine '

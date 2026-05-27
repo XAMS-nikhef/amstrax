@@ -20,32 +20,32 @@ class EventBasics(strax.Plugin):
     """
     __version__ = '1.6'
 
-    electron_drift_velocity = strax.Config(
+    electron_drift_velocity = amstrax.XAMSConfig(
         'electron_drift_velocity',
         default=1.6e-6,
         track=True,
         help='Vertical electron drift velocity in cm/ns (1e4 m/ms)')
-    allow_posts2_s1s = strax.Config(
+    allow_posts2_s1s = amstrax.XAMSConfig(
         'allow_posts2_s1s',
         default=False,
         infer_type=False,
         help="Allow S1s past the main S2 to become the main S1 and S2")
-    force_main_before_alt = strax.Config(
+    force_main_before_alt = amstrax.XAMSConfig(
         'force_main_before_alt',
         default=False,
         infer_type=False,
         help="Make the alternate S1 (and likewise S2) the main S1 if occurs before the main S1.")
-    force_alt_s2_in_max_drift_time = strax.Config(
+    force_alt_s2_in_max_drift_time = amstrax.XAMSConfig(
         'force_alt_s2_in_max_drift_time',
         default=True,
         infer_type=False,
         help="Make sure alt_s2 is in max drift time starting from main S1")
-    event_s1_min_coincidence = strax.Config(
+    event_s1_min_coincidence = amstrax.XAMSConfig(
         'event_s1_min_coincidence',
         default=0,
         infer_type=False,
         help="Event level S1 min coincidence. Should be >= s1_min_coincidence in the peaklet classification")
-    max_drift_length = strax.Config(
+    max_drift_length = amstrax.XAMSConfig(
         'max_drift_length',
         default=amstrax.tpc_z,
         infer_type=False,

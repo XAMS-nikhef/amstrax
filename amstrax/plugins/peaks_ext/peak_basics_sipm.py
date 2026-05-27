@@ -24,25 +24,25 @@ class PeakBasicsSiPM(strax.Plugin):
         track=False,
         help="Map of channel groups loaded from rundoc xams_bookkeeping.channel_map",
     )
-    check_peak_sum_area_rtol = strax.Config(
+    check_peak_sum_area_rtol = amstrax.XAMSConfig(
         "check_peak_sum_area_rtol",
         default=1e-4,
         help="Check if the area of the sum-wf is the same as the total area"
         " (if the area of the peak is positively defined)."
         " Set to None to disable.",
     )
-    s1_min_width = strax.Config('s1_min_width', default=10, help="Minimum (IQR) width of S1s")
-    s1_max_width = strax.Config('s1_max_width', default=225, help="Maximum (IQR) width of S1s")
-    s1_min_area = strax.Config('s1_min_area', default=10, help="Minimum area (PE) for S1s")
-    s2_min_area = strax.Config('s2_min_area', default=10, help="Minimum area (PE) for S2s")
-    s2_min_width = strax.Config('s2_min_width', default=225, help="Minimum width for S2s")
-    s1_min_channels = strax.Config(
+    s1_min_width = amstrax.XAMSConfig('s1_min_width', default=10, help="Minimum (IQR) width of S1s")
+    s1_max_width = amstrax.XAMSConfig('s1_max_width', default=225, help="Maximum (IQR) width of S1s")
+    s1_min_area = amstrax.XAMSConfig('s1_min_area', default=10, help="Minimum area (PE) for S1s")
+    s2_min_area = amstrax.XAMSConfig('s2_min_area', default=10, help="Minimum area (PE) for S2s")
+    s2_min_width = amstrax.XAMSConfig('s2_min_width', default=225, help="Minimum width for S2s")
+    s1_min_channels = amstrax.XAMSConfig(
         's1_min_channels', default=5, help="Minimum number of channels for S1s")
-    s2_min_channels = strax.Config(
+    s2_min_channels = amstrax.XAMSConfig(
         's2_min_channels', default=5, help="Minimum number of channels for S2s")
-    s2_min_area_fraction_top = strax.Config(
+    s2_min_area_fraction_top = amstrax.XAMSConfig(
         's2_min_area_fraction_top', default=0, help="Minimum area fraction top for S2s")
-    s1_max_area_fraction_top = strax.Config(
+    s1_max_area_fraction_top = amstrax.XAMSConfig(
         's1_max_area_fraction_top', default=.2, help="Maximum area fraction top for S1s")
     dtype = [
         (('Start time of the peak (ns since unix epoch)',

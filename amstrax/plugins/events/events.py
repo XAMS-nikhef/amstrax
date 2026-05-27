@@ -5,13 +5,13 @@ export, __all__ = strax.exporter()
 
 @export
 class Events(strax.OverlapWindowPlugin):
-    trigger_min_area = strax.Config(
+    trigger_min_area = amstrax.XAMSConfig(
         'trigger_min_area', default=10,
         help='Peaks must have more area (PE) than this to cause events')
-    left_event_extension = strax.Config(
+    left_event_extension = amstrax.XAMSConfig(
         'left_event_extension', default=int(5e5),
         help='Extend events this many ns to the left from each triggering peak')
-    right_event_extension = strax.Config(
+    right_event_extension = amstrax.XAMSConfig(
         'right_event_extension', default=int(5e4),
         help='Extend events this many ns to the right from each triggering peak')
 
