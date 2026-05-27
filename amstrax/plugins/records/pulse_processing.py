@@ -9,7 +9,7 @@ export, __all__ = strax.exporter()
 __all__ += ['NO_PULSE_COUNTS']
 
 HITFINDER_OPTIONS = tuple([
-    strax.Option(
+    strax.Config(
         'hit_min_amplitude',
         default='xams_thresholds',
         help='Minimum hit amplitude in ADC counts above baseline. '
@@ -38,29 +38,29 @@ class PulseProcessing(strax.Plugin):
     baseline rms channel.
     """
     __version__ = '0.3.0'
-    baseline_samples = strax.Option(
+    baseline_samples = strax.Config(
         'baseline_samples',
         default=20,
         infer_type=False,
         help='Number of samples to use at the start of the pulse to determine the baseline')
-    pmt_pulse_filter = strax.Option(
+    pmt_pulse_filter = strax.Config(
         'pmt_pulse_filter',
         default=None,
         infer_type=False,
         help='Linear filter to apply to pulses, will be normalized.')
-    save_outside_hits = strax.Option(
+    save_outside_hits = strax.Config(
         'save_outside_hits',
         default=(3, 20),
         infer_type=False,
         help='Save (left, right) samples besides hits; cut the rest')
-    n_tpc_pmts = strax.Option('n_tpc_pmts', type=int, help='Number of TPC channels')
-    check_raw_record_overlaps = strax.Option(
+    n_tpc_pmts = strax.Config('n_tpc_pmts', type=int, help='Number of TPC channels')
+    check_raw_record_overlaps = strax.Config(
         'check_raw_record_overlaps',
         default=True,
         track=False,
         infer_type=False,
         help='Crash if any of the pulses in raw_records overlap with others in the same channel')
-    allow_sloppy_chunking = strax.Option(
+    allow_sloppy_chunking = strax.Config(
         'allow_sloppy_chunking',
         default=True,
         track=False,
