@@ -1,4 +1,5 @@
 import typing as ty
+import json
 
 import numpy as np
 import strax
@@ -9,8 +10,21 @@ export, __all__ = strax.exporter()
 @export
 def extract_channel_polarity(registers: ty.Iterable[dict]) -> dict:
     """Extract CAEN channel polarity from per-channel DPP control registers."""
+    if isinstance(registers, str):
+        try:
+            registers = json.loads(registers)
+        except json.JSONDecodeError as err:
+            raise TypeError(
+                "DAQ registers must be a list of register dictionaries, not an unresolved string. "
+                "If this is a rundoc:// config, access it through the XAMSConfig descriptor."
+            ) from err
+    if isinstance(registers, dict):
+        registers = registers.values()
+
     channel_polarity = {}
     for reg in registers or []:
+        if not isinstance(reg, dict):
+            raise TypeError(f"DAQ register entries must be dictionaries, got {type(reg).__name__}: {reg!r}")
         reg_addr = str(reg.get("reg", "")).lower()
         reg_val = str(reg.get("val", "")).lower()
         if not (reg_addr.startswith("1") and reg_addr.endswith("80")):
