@@ -12,6 +12,9 @@ from .xams_config import *
 from . import corrections_services
 from .corrections_services import *
 
+from . import daq_config
+from .daq_config import *
+
 from . import plugins
 from .plugins import *
 

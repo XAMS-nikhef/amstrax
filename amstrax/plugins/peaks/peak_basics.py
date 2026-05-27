@@ -9,67 +9,6 @@ export, __all__ = strax.exporter()
 
 # For n_competing, which is temporarily added to PeakBasics
 @export
-@strax.takes_config(
-    amstrax.XAMSConfig(
-        name="channel_map",
-        default="rundoc://?path=xams_bookkeeping.channel_map&fallback=xams_default",
-        type=immutabledict,
-        track=False,
-        help="Map of channel groups loaded from rundoc xams_bookkeeping.channel_map",
-    ),
-    strax.Option(
-        "check_peak_sum_area_rtol",
-        default=1e-4,
-        help="Check if the area of the sum-wf is the same as the total area"
-        " (if the area of the peak is positively defined)."
-        " Set to None to disable.",
-    ),
-    strax.Option(
-      's1_min_width', 
-      default=10,
-      help="Minimum (IQR) width of S1s"
-    ),
-    strax.Option(
-      's1_max_width',
-      default=225,
-      help="Maximum (IQR) width of S1s"
-    ),
-    strax.Option(
-      's1_min_area',
-      default=10,
-      help="Minimum area (PE) for S1s"
-    ),
-    strax.Option(
-      's2_min_area',
-      default=10,
-      help="Minimum area (PE) for S2s"
-    ),
-    strax.Option(
-      's2_min_width',
-      default=225,
-      help="Minimum width for S2s"
-    ),
-    strax.Option(
-      's1_min_channels',
-      default=5,
-      help="Minimum number of channels for S1s"
-    ),
-    strax.Option(
-      's2_min_channels',
-      default=5,
-      help="Minimum number of channels for S2s"
-    ),
-    strax.Option(
-      's2_min_area_fraction_top',
-      default=0,
-      help="Minimum area fraction top for S2s"
-    ),
-    strax.Option(
-      's1_max_area_fraction_top',
-      default=.2,
-      help="Maximum area fraction top for S1s"
-    ),
-)
 class PeakBasics(strax.Plugin):
     provides = ("peak_basics",)
     depends_on = ("peaks", )
@@ -78,6 +17,31 @@ class PeakBasics(strax.Plugin):
     parallel = "False"
     rechunk_on_save = False
     __version__ = "2.1"
+    channel_map = amstrax.XAMSConfig(
+        default="rundoc://?path=xams_bookkeeping.channel_map&fallback=xams_default",
+        type=immutabledict,
+        track=False,
+        help="Map of channel groups loaded from rundoc xams_bookkeeping.channel_map",
+    )
+    check_peak_sum_area_rtol = amstrax.XAMSConfig(
+        default=1e-4,
+        help="Check if the area of the sum-wf is the same as the total area"
+        " (if the area of the peak is positively defined)."
+        " Set to None to disable.",
+    )
+    s1_min_width = amstrax.XAMSConfig(default=10, help="Minimum (IQR) width of S1s")
+    s1_max_width = amstrax.XAMSConfig(default=225, help="Maximum (IQR) width of S1s")
+    s1_min_area = amstrax.XAMSConfig(default=10, help="Minimum area (PE) for S1s")
+    s2_min_area = amstrax.XAMSConfig(default=10, help="Minimum area (PE) for S2s")
+    s2_min_width = amstrax.XAMSConfig(default=225, help="Minimum width for S2s")
+    s1_min_channels = amstrax.XAMSConfig(
+        default=5, help="Minimum number of channels for S1s")
+    s2_min_channels = amstrax.XAMSConfig(
+        default=5, help="Minimum number of channels for S2s")
+    s2_min_area_fraction_top = amstrax.XAMSConfig(
+        default=0, help="Minimum area fraction top for S2s")
+    s1_max_area_fraction_top = amstrax.XAMSConfig(
+        default=.2, help="Maximum area fraction top for S1s")
     dtype = [
         (('Start time of the peak (ns since unix epoch)',
           'time'), np.int64),
@@ -135,7 +99,7 @@ class PeakBasics(strax.Plugin):
 
         # channel map is something like this
         # {'bottom': (0, 0), 'top': (1, 4), 'aqmon': (40, 40)}
-        channel_map = self.config['channel_map']
+        channel_map = self.channel_map
         top_pmt_indices = channel_map['top']
         bottom_pmt_indices = channel_map['bottom']
 

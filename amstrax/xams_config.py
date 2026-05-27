@@ -36,33 +36,35 @@ class XAMSConfig(Config):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._cached_value = None  # Initialize cache for the fetched value
+        self._cache = {}
 
     def fetch(self, plugin):
         """
         Overrides the fetch method to load corrections from JSON or CMT files.
         Handles both 'cmt://' and 'file://' URLs. Otherwise, returns default.
         """
-
-        # Check if the value has already been cached
-        if self._cached_value is not None:
-            return self._cached_value
-
         config_value = plugin.config.get(self.name, self.default)
+        run_id = getattr(plugin, "run_id", None)
 
         # Check if the config is a cmt URL or file URL
         if isinstance(config_value, str):
-            if config_value.startswith("cmt://"):
-                self._cached_value = self._fetch_from_cmt(plugin, config_value)
-            elif config_value.startswith("file://"):
-                self._cached_value = self._fetch_from_file_url(plugin, config_value)
-            elif config_value.startswith("rundoc://"):
-                self._cached_value = self._fetch_from_rundoc_url(plugin, config_value)
-        else:
-            # Cache the default value if no URL is provided
-            self._cached_value = config_value
+            cache_key = (config_value, str(run_id))
+            if cache_key in self._cache:
+                return self._cache[cache_key]
 
-        return self._cached_value
+            if config_value.startswith("cmt://"):
+                value = self._fetch_from_cmt(plugin, config_value)
+            elif config_value.startswith("file://"):
+                value = self._fetch_from_file_url(plugin, config_value)
+            elif config_value.startswith("rundoc://"):
+                value = self._fetch_from_rundoc_url(plugin, config_value)
+            else:
+                value = config_value
+
+            self._cache[cache_key] = value
+            return value
+
+        return config_value
 
     def _fetch_from_cmt(self, plugin, config_value):
         """Fetch correction from a cmt:// URL."""
@@ -89,7 +91,7 @@ class XAMSConfig(Config):
         # Load the correction data (e.g., {'001200': 5500, '001300': 6000})
         correction_data = amstrax.get_correction(correction_file, branch=github_branch)
 
-        value = self.find_correction_value(correction_data, run_id)
+        value = self.find_correction_value(correction_data, run_id, correction_file=correction_file)
 
         return value
 
@@ -103,8 +105,6 @@ class XAMSConfig(Config):
 
         github_branch = query_params.get("github_branch", ["master"])[0]
 
-        self.filename = filename
-
         if not filename:
             raise ValueError(f"Invalid file:// URL, missing filename: {config_value}")
 
@@ -112,7 +112,7 @@ class XAMSConfig(Config):
         correction_data = amstrax.get_correction(filename, branch=github_branch)
 
         # Find the correction value based on the run_id
-        value = self.find_correction_value(correction_data, run_id)
+        value = self.find_correction_value(correction_data, run_id, correction_file=filename)
 
         return value
 
@@ -134,11 +134,13 @@ class XAMSConfig(Config):
         if value is None:
             if fallback == "xams_default":
                 return DEFAULT_CHANNEL_MAP
+            if fallback == "empty":
+                return []
             raise ValueError(f"No rundoc value found for path '{path}' and run {plugin.run_id}")
         return _as_immutabledict_channel_map(value)
 
-    def find_correction_value(self, correction_data, run_id):
-        run_id = run_id.zfill(6)  # Ensure run_id is always 6 digits
+    def find_correction_value(self, correction_data, run_id, correction_file=None):
+        run_id = str(run_id).zfill(6)  # Ensure run_id is always 6 digits
         value = None
 
         for run_range in correction_data.keys():
@@ -148,14 +150,14 @@ class XAMSConfig(Config):
                 if end_run == "*":
                     # Only allow * for online corrections
                     # check if there is _dev in the filename
-                    if "_dev" not in self.filename:
+                    if "_dev" not in str(correction_file):
                         raise ValueError(f"Wildcard '*' is only allowed for online corrections")
                     end_run = "999999"  # Treat * as the highest possible run ID
 
                 if start_run == "*":
                     # Only allow * for online corrections
                     # check if there is _dev in the filename
-                    if "_dev" not in self.filename:
+                    if "_dev" not in str(correction_file):
                         raise ValueError(f"Wildcard '*' is only allowed for online corrections")
                     start_run = "000000"
 

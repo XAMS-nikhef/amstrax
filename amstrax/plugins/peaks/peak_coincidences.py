@@ -1,3 +1,4 @@
+import amstrax
 import numba
 import numpy as np
 import strax
@@ -5,18 +6,6 @@ from immutabledict import immutabledict
 export, __all__ = strax.exporter()
 
 @export
-@strax.takes_config(
-        strax.Option(
-        "max_delay",
-        default=100,
-        help="Maximum allowed time difference between XAMS peaks and external peaks to count as a match, in ns",
-        ),
-        strax.Option(
-        "absorption_peak_delta",
-        default=65,
-        help="Sets the window as [511 - delta, 511 + delta] in keV for the allowed energies that count as an absorption event of a 511 keV photon in the external detector",
-        ),
-)
 class PeakCoincidences(strax.OverlapWindowPlugin):
     """
     Some runs are taken with a na-22 source. This source emits two 511keV photons in exactly opposite directions.
@@ -24,6 +13,14 @@ class PeakCoincidences(strax.OverlapWindowPlugin):
     which allows us to tag the XAMS peaks that are coincident with the external detector.
     This plugin provides a bool 'is_coinc' that is True if the peak is coincident with that external detector.
     """
+    max_delay = amstrax.XAMSConfig(
+        default=100,
+        help="Maximum allowed time difference between XAMS peaks and external peaks to count as a match, in ns",
+    )
+    absorption_peak_delta = amstrax.XAMSConfig(
+        default=65,
+        help="Sets the window as [511 - delta, 511 + delta] in keV for the allowed energies that count as an absorption event of a 511 keV photon in the external detector",
+    )
 
     provides = ('peak_coincidences',)
     depends_on = ('peaks', 'peaks_ext',)

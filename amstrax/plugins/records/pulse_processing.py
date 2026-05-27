@@ -9,8 +9,7 @@ export, __all__ = strax.exporter()
 __all__ += ['NO_PULSE_COUNTS']
 
 HITFINDER_OPTIONS = tuple([
-    strax.Option(
-        'hit_min_amplitude',
+    amstrax.XAMSConfig(
         default='xams_thresholds',
         help='Minimum hit amplitude in ADC counts above baseline. '
              'See amstrax.hit_min_amplitude in hitfinder_thresholds.py for options.'
@@ -18,35 +17,6 @@ HITFINDER_OPTIONS = tuple([
 
 
 @export
-@strax.takes_config(
-    strax.Option(
-        'baseline_samples',
-        default=20, infer_type=False,
-        help='Number of samples to use at the start of the pulse to determine '
-             'the baseline'),
-    # PMT pulse processing options
-    strax.Option(
-        'pmt_pulse_filter',
-        default=None, infer_type=False,
-        help='Linear filter to apply to pulses, will be normalized.'),   
-    strax.Option(
-        'save_outside_hits',
-        default=(3, 20), infer_type=False,
-        help='Save (left, right) samples besides hits; cut the rest'),
-    strax.Option(
-        'n_tpc_pmts', type=int,
-        help='Number of TPC channels'),
-    strax.Option(
-        'check_raw_record_overlaps',
-        default=True, track=False, infer_type=False,
-        help='Crash if any of the pulses in raw_records overlap with others '
-             'in the same channel'),
-    strax.Option(
-        'allow_sloppy_chunking',
-        default=True, track=False, infer_type=False,
-        help=('Use a default baseline for incorrectly chunked fragments. '
-              'This is a kludge for improperly converted XENON1T data.')),
-    *HITFINDER_OPTIONS)
 class PulseProcessing(strax.Plugin):
     """
     Get the specific raw_records of the measurements 
@@ -67,6 +37,31 @@ class PulseProcessing(strax.Plugin):
     baseline rms channel.
     """
     __version__ = '0.3.0'
+    baseline_samples = amstrax.XAMSConfig(
+        default=20,
+        infer_type=False,
+        help='Number of samples to use at the start of the pulse to determine the baseline')
+    pmt_pulse_filter = amstrax.XAMSConfig(
+        default=None,
+        infer_type=False,
+        help='Linear filter to apply to pulses, will be normalized.')
+    save_outside_hits = amstrax.XAMSConfig(
+        default=(3, 20),
+        infer_type=False,
+        help='Save (left, right) samples besides hits; cut the rest')
+    n_tpc_pmts = amstrax.XAMSConfig(type=int, help='Number of TPC channels')
+    check_raw_record_overlaps = amstrax.XAMSConfig(
+        default=True,
+        track=False,
+        infer_type=False,
+        help='Crash if any of the pulses in raw_records overlap with others in the same channel')
+    allow_sloppy_chunking = amstrax.XAMSConfig(
+        default=True,
+        track=False,
+        infer_type=False,
+        help=('Use a default baseline for incorrectly chunked fragments. '
+              'This is a kludge for improperly converted XENON1T data.'))
+    hit_min_amplitude = HITFINDER_OPTIONS[0]
     
     parallel = 'process'
     rechunk_on_save = immutabledict(

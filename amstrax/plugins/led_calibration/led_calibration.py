@@ -1,3 +1,4 @@
+import amstrax
 from immutabledict import immutabledict
 import strax
 import numba
@@ -7,16 +8,6 @@ export, __all__ = strax.exporter()
 
 
 @export
-@strax.takes_config(
-    strax.Option(
-        "led_window",
-        default=(80, 110),
-        help="Window (samples) where we expect the signal in LED calibration",
-    ),
-    strax.Option(
-        "noise_window", default=(0, 10), help="Window (samples) to analysis the noise"
-    ),
-)
 class LEDCalibration(strax.Plugin):
     """
     Preliminary version, several parameters to set during commissioning.
@@ -31,6 +22,13 @@ class LEDCalibration(strax.Plugin):
         - amplitudeNOISE: amplitude of the LED on run in a window far
           from the signal one.
     """
+    led_window = amstrax.XAMSConfig(
+        default=(80, 110),
+        help="Window (samples) where we expect the signal in LED calibration",
+    )
+    noise_window = amstrax.XAMSConfig(
+        default=(0, 10), help="Window (samples) to analysis the noise"
+    )
 
     __version__ = "1.0.0"
 
@@ -49,10 +47,6 @@ class LEDCalibration(strax.Plugin):
         ("dt", np.int16, "Time resolution in ns"),
         ("length", np.int32, "Length of the interval in samples"),
     ]
-
-    def setup(self):
-        self.led_window = self.config["led_window"]
-        self.noise_window = self.config["noise_window"]
 
     def compute(self, records_led):
         """

@@ -6,28 +6,6 @@ import amstrax
 export, __all__ = strax.exporter()
 
 
-@strax.takes_config(
-    strax.Option('electron_drift_velocity', default=1.6e-6, track=True,
-                  help='Vertical electron drift velocity in cm/ns (1e4 m/ms)'),
-    strax.Option('allow_posts2_s1s',
-                  default=False, infer_type=False,
-                  help="Allow S1s past the main S2 to become the main S1 and S2"),
-    strax.Option('force_main_before_alt',
-                  default=False, infer_type=False,
-                  help="Make the alternate S1 (and likewise S2) the main S1 if "
-                       "occurs before the main S1."),
-    strax.Option('force_alt_s2_in_max_drift_time',
-                  default=True, infer_type=False,
-                  help="Make sure alt_s2 is in max drift time starting from main S1"),
-    strax.Option('event_s1_min_coincidence',
-                  default=0, infer_type=False,
-                  help="Event level S1 min coincidence. Should be >= s1_min_coincidence "
-                       "in the peaklet classification"),
-    strax.Option('max_drift_length',
-                  default=amstrax.tpc_z, infer_type=False,
-                  help='Total length of the TPC from the bottom of gate to the '
-                       'top of cathode wires [cm]'),
-)
 @export
 class EventBasics(strax.Plugin):
     """
@@ -41,6 +19,31 @@ class EventBasics(strax.Plugin):
     in the time window [main S1 time, main S1 time + max drift time].
     """
     __version__ = '1.6'
+
+    electron_drift_velocity = amstrax.XAMSConfig(
+        default=1.6e-6,
+        track=True,
+        help='Vertical electron drift velocity in cm/ns (1e4 m/ms)')
+    allow_posts2_s1s = amstrax.XAMSConfig(
+        default=False,
+        infer_type=False,
+        help="Allow S1s past the main S2 to become the main S1 and S2")
+    force_main_before_alt = amstrax.XAMSConfig(
+        default=False,
+        infer_type=False,
+        help="Make the alternate S1 (and likewise S2) the main S1 if occurs before the main S1.")
+    force_alt_s2_in_max_drift_time = amstrax.XAMSConfig(
+        default=True,
+        infer_type=False,
+        help="Make sure alt_s2 is in max drift time starting from main S1")
+    event_s1_min_coincidence = amstrax.XAMSConfig(
+        default=0,
+        infer_type=False,
+        help="Event level S1 min coincidence. Should be >= s1_min_coincidence in the peaklet classification")
+    max_drift_length = amstrax.XAMSConfig(
+        default=amstrax.tpc_z,
+        infer_type=False,
+        help='Total length of the TPC from the bottom of gate to the top of cathode wires [cm]')
 
     depends_on = ('events',
                   'peak_basics',
@@ -115,14 +118,6 @@ class EventBasics(strax.Plugin):
         )
 
     def setup(self):
-        
-        self.electron_drift_velocity = self.config['electron_drift_velocity']
-        self.allow_posts2_s1s = self.config['allow_posts2_s1s']
-        self.force_main_before_alt = self.config['force_main_before_alt']
-        self.force_alt_s2_in_max_drift_time = self.config['force_alt_s2_in_max_drift_time']
-        self.event_s1_min_coincidence = self.config['event_s1_min_coincidence']
-        self.max_drift_length = self.config['max_drift_length']
-        
         self.drift_time_max = int(self.max_drift_length / self.electron_drift_velocity)
 
         
@@ -379,4 +374,3 @@ class EventBasics(strax.Plugin):
             res['s2_index'] = s2_idx[0]
             if len(s2_idx) > 1:
                 res['alt_s2_index'] = s2_idx[1]
-

@@ -1,3 +1,4 @@
+import amstrax
 import numba
 import numpy as np
 import strax
@@ -6,13 +7,6 @@ from immutabledict import immutabledict
 export, __all__ = strax.exporter()
 
 @export
-@strax.takes_config(
-    strax.Option(
-        'baseline_samples',
-        default=20, infer_type=False,
-        help='Number of samples to use at the start of the SiPM pulse to determine '
-             'the baseline'),
-)
 class PulseProcessingSiPM(strax.Plugin):
     """
     Plugin which performs the pulse processing steps:
@@ -23,7 +17,12 @@ class PulseProcessingSiPM(strax.Plugin):
     5. Pulse length and area calculation
 
     """
-    __version__ = '0.0.1'
+    baseline_samples = amstrax.XAMSConfig(
+        default=20, infer_type=False,
+        help='Number of samples to use at the start of the SiPM pulse to determine '
+             'the baseline')
+
+    __version__ = '0.0.2'
     
     parallel = 'process'
     rechunk_on_save = False
@@ -53,7 +52,7 @@ class PulseProcessingSiPM(strax.Plugin):
 
         r = strax.sort_by_time(r)
         strax.zero_out_of_bounds(r)
-        strax.baseline(r, baseline_samples=self.baseline_samples, flip=True)
+        strax.baseline(r, baseline_samples=self.baseline_samples, flip=False)
 
         strax.integrate(r)
 
