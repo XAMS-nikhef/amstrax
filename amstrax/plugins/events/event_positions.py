@@ -24,19 +24,15 @@ class EventPositions(strax.Plugin):
     __version__ = '1.1.20'
 
     default_reconstruction_algorithm = amstrax.XAMSConfig(
-        'default_reconstruction_algorithm',
         default=DEFAULT_POSREC_ALGO,
         help="default reconstruction algorithm that provides (x,y)")
     drift_time_gate = amstrax.XAMSConfig(
-        'drift_time_gate',
         default=3000,
         help='Drift time belonging to the gate in ns')
     drift_time_cathode = amstrax.XAMSConfig(
-        'drift_time_cathode',
         default=39500,
         help='Drift time belonging to the cathode in ns')
     gate_cathode_distance = amstrax.XAMSConfig(
-        'gate_cathode_distance',
         default=50.5,
         help='Distance between gate and cathode in mm')
 

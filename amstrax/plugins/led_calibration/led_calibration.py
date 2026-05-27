@@ -22,12 +22,11 @@ class LEDCalibration(strax.Plugin):
           from the signal one.
     """
     led_window = amstrax.XAMSConfig(
-        "led_window",
         default=(80, 110),
         help="Window (samples) where we expect the signal in LED calibration",
     )
     noise_window = amstrax.XAMSConfig(
-        "noise_window", default=(0, 10), help="Window (samples) to analysis the noise"
+        default=(0, 10), help="Window (samples) to analysis the noise"
     )
 
     __version__ = "1.0.0"

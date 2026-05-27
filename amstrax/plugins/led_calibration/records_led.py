@@ -14,26 +14,22 @@ class RecordsLED(strax.Plugin):
     __version__ = '1.1.0'
 
     record_length = amstrax.XAMSConfig(
-        "record_length",
         default=110,
         track=False,
         type=int,
         help="Number of samples per raw_record",
     )
     baseline_window = amstrax.XAMSConfig(
-        "baseline_window",
         default=(0, 50),
         infer_type=False,
         help="Window (samples) for baseline calculation.",
     )
     n_records_per_pulse = amstrax.XAMSConfig(
-        "n_records_per_pulse",
         default=2,
         type=int,
         help="how many samples per pulse",
     )
     daq_registers = amstrax.XAMSConfig(
-        name="daq_registers",
         default="rundoc://?path=daq_config.registers&fallback=empty",
         track=False,
         infer_type=False,

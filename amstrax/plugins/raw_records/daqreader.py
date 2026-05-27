@@ -58,44 +58,38 @@ class DAQReader(strax.Plugin):
     # All these must have track=False, so the raw_records hash never changes.
     # DAQ settings should match settings given to redax.
     record_length = amstrax.XAMSConfig(
-        "record_length", default=110, track=False, type=int, help="Number of samples per raw_record"
+        default=110, track=False, type=int, help="Number of samples per raw_record"
     )
     max_digitizer_sampling_time = amstrax.XAMSConfig(
-        "max_digitizer_sampling_time",
         default=10,
         track=False,
         type=int,
         help="Highest interval time of the digitizer sampling times(s) used.",
     )
     run_start_time = amstrax.XAMSConfig(
-        "run_start_time",
         type=float,
         track=False,
         default=0,
         help="time of start run (s since unix epoch)",
     )
     daq_chunk_duration = amstrax.XAMSConfig(
-        "daq_chunk_duration",
         track=False,
         default=int(5e9),
         type=int,
         help="Duration of regular chunks in ns",
     )
     daq_overlap_chunk_duration = amstrax.XAMSConfig(
-        "daq_overlap_chunk_duration",
         track=False,
         default=int(5e8),
         type=int,
         help="Duration of intermediate/overlap chunks in ns",
     )
     daq_compressor = amstrax.XAMSConfig(
-        "daq_compressor",
         default="lz4",
         track=False,
         help="Algorithm used for (de)compressing the live data",
     )
     readout_threads = amstrax.XAMSConfig(
-        "readout_threads",
         type=dict,
         track=False,
         help=(
@@ -104,9 +98,8 @@ class DAQReader(strax.Plugin):
         ),
     )
     daq_input_dir = amstrax.XAMSConfig(
-        "daq_input_dir", type=str, track=False, help="Directory where readers put data")
+        type=str, track=False, help="Directory where readers put data")
     safe_break_in_pulses = amstrax.XAMSConfig(
-        "safe_break_in_pulses",
         default=1000,
         track=False,
         infer_type=False,
@@ -117,7 +110,6 @@ class DAQReader(strax.Plugin):
         ),
     )
     channel_map = amstrax.XAMSConfig(
-        name="channel_map",
         default="rundoc://?path=xams_bookkeeping.channel_map&fallback=xams_default",
         track=False,
         type=immutabledict,

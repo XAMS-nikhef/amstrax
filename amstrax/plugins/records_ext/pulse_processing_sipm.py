@@ -17,7 +17,6 @@ class PulseProcessingSiPM(strax.Plugin):
 
     """
     baseline_samples = amstrax.XAMSConfig(
-        'baseline_samples',
         default=20, infer_type=False,
         help='Number of samples to use at the start of the SiPM pulse to determine '
              'the baseline')

@@ -8,7 +8,6 @@ export, __all__ = strax.exporter()
 # These are also needed in peaklets, since hitfinding is repeated
 HITFINDER_OPTIONS = tuple([
     amstrax.XAMSConfig(
-        'hit_min_amplitude',
         default='pmt_commissioning_initial',
         help='Minimum hit amplitude in ADC counts above baseline. '
              'See straxen.hit_min_amplitude for options.'
@@ -26,30 +25,30 @@ class Peaks(strax.Plugin):
     __version__ = '0.1.50'
 
     peak_gap_threshold = amstrax.XAMSConfig(
-        'peak_gap_threshold', default=300,
+        default=300,
         help="No hits for this many ns triggers a new peak")
     peak_left_extension = amstrax.XAMSConfig(
-        'peak_left_extension', default=10,
+        default=10,
         help="Include this many ns left of hits in peaks")
     peak_right_extension = amstrax.XAMSConfig(
-        'peak_right_extension', default=10,
+        default=10,
         help="Include this many ns right of hits in peaks")
     peak_min_area = amstrax.XAMSConfig(
-        'peak_min_area', default=10,
+        default=10,
         help="Minimum contributing PMTs needed to define a peak")
     peak_min_pmts = amstrax.XAMSConfig(
-        'peak_min_pmts', default=1,
+        default=1,
         help="Minimum contributing PMTs needed to define a peak")
     peak_split_min_height = amstrax.XAMSConfig(
-        'peak_split_min_height', default=25,
+        default=25,
         help="Minimum height in PE above a local sum waveform"
         "minimum, on either side, to trigger a split")
     peak_split_min_ratio = amstrax.XAMSConfig(
-        'peak_split_min_ratio', default=4,
+        default=4,
         help="Minimum ratio between local sum waveform"
         "minimum and maxima on either side, to trigger a split")
     n_tpc_pmts = amstrax.XAMSConfig(
-        'n_tpc_pmts', track=False, default=False,
+        track=False, default=False,
         help="Number of channels")
     gain_to_pe_array = amstrax.XAMSConfig(
         default=None,

@@ -47,7 +47,6 @@ class TestXAMSConfigCaching(unittest.TestCase):
         Rundoc-backed config values must not be reused across run IDs.
         """
         cfg = amstrax.XAMSConfig(
-            name="channel_map",
             default="rundoc://?path=daq_config.channel_map",
         )
         calls = []

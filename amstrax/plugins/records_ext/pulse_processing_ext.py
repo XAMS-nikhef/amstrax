@@ -17,7 +17,6 @@ class PulseProcessingEXT(strax.Plugin):
 
     """
     baseline_samples = amstrax.XAMSConfig(
-        'baseline_samples',
         default=20, infer_type=False,
         help='Number of samples to use at the start of the pulse to determine '
              'the baseline')

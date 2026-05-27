@@ -11,7 +11,6 @@ class EventAreaPerChannel(strax.Plugin):
     """Simple plugin that provides area per channel for main and alternative S1/S2 in the event."""
 
     channel_map = amstrax.XAMSConfig(
-        name="channel_map",
         default="rundoc://?path=xams_bookkeeping.channel_map&fallback=xams_default",
         track=False,
         type=immutabledict,

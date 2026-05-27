@@ -16,9 +16,9 @@ class PeakBasicsEXT(strax.Plugin):
     parallel = "False"
     rechunk_on_save = False
     __version__ = "2.1"
-    s1_min_width = amstrax.XAMSConfig('s1_min_width', default=10, help="Minimum (IQR) width of S1s")
-    s1_max_width = amstrax.XAMSConfig('s1_max_width', default=225, help="Maximum (IQR) width of S1s")
-    s2_min_width = amstrax.XAMSConfig('s2_min_width', default=225, help="Minimum width for S2s")
+    s1_min_width = amstrax.XAMSConfig(default=10, help="Minimum (IQR) width of S1s")
+    s1_max_width = amstrax.XAMSConfig(default=225, help="Maximum (IQR) width of S1s")
+    s2_min_width = amstrax.XAMSConfig(default=225, help="Minimum width for S2s")
     dtype = [
         (('Start time of the peak (ns since unix epoch)',
           'time'), np.int64),
