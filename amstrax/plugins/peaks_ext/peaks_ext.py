@@ -6,26 +6,6 @@ import amstrax
 export, __all__ = strax.exporter()
 
 @export
-@strax.takes_config(
-    strax.Option('peak_gap_threshold', default=300,
-                 help="No hits for this many ns triggers a new peak"),
-    strax.Option('peak_left_extension', default=10,
-                 help="Include this many ns left of hits in peaks"),
-    strax.Option('peak_right_extension', default=10,
-                 help="Include this many ns right of hits in peaks"),
-    strax.Option('peak_min_area', default=10,
-                 help="Minimum contributing PMTs needed to define a peak"),
-    strax.Option('peak_split_min_height', default=25,
-                 help="Minimum height in PE above a local sum waveform"
-                      "minimum, on either side, to trigger a split"),
-    strax.Option('peak_split_min_ratio', default=4,
-                 help="Minimum ratio between local sum waveform"
-                      "minimum and maxima on either side, to trigger a split"),
-    strax.Option('n_tpc_pmts', track=False, default=False,
-                 help="Number of channels"), 
-    strax.Option('n_ext_pmts', track=True, default=1,
-                    help="Number of external channels"),
-)
 class PeaksEXT(strax.Plugin):
     depends_on = ('records_ext',)
     data_kind = 'peaks_ext'
@@ -35,6 +15,32 @@ class PeaksEXT(strax.Plugin):
 
     __version__ = '0.0.3'
 
+    peak_gap_threshold = strax.Option(
+        'peak_gap_threshold', default=300,
+        help="No hits for this many ns triggers a new peak")
+    peak_left_extension = strax.Option(
+        'peak_left_extension', default=10,
+        help="Include this many ns left of hits in peaks")
+    peak_right_extension = strax.Option(
+        'peak_right_extension', default=10,
+        help="Include this many ns right of hits in peaks")
+    peak_min_area = strax.Option(
+        'peak_min_area', default=10,
+        help="Minimum contributing PMTs needed to define a peak")
+    peak_split_min_height = strax.Option(
+        'peak_split_min_height', default=25,
+        help="Minimum height in PE above a local sum waveform"
+        "minimum, on either side, to trigger a split")
+    peak_split_min_ratio = strax.Option(
+        'peak_split_min_ratio', default=4,
+        help="Minimum ratio between local sum waveform"
+        "minimum and maxima on either side, to trigger a split")
+    n_tpc_pmts = strax.Option(
+        'n_tpc_pmts', track=False, default=False,
+        help="Number of channels")
+    n_ext_pmts = strax.Option(
+        'n_ext_pmts', track=True, default=1,
+        help="Number of external channels")
     gain_to_pe_array = amstrax.XAMSConfig(
         default=None,
         help="Gain to pe array"
@@ -50,7 +56,7 @@ class PeaksEXT(strax.Plugin):
 
         r = records_ext
   
-        if self.config['gain_to_pe_array'] is None:
+        if self.gain_to_pe_array is None:
             self.to_pe = np.ones(self.config['n_ext_pmts']+self.config['n_tpc_pmts'])
         else:
             self.to_pe = self.gain_to_pe_array

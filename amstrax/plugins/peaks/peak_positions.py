@@ -9,19 +9,6 @@ export, __all__ = strax.exporter()
 DEFAULT_POSREC_ALGO = 'corr'
 
 @export
-@strax.takes_config(
-    amstrax.XAMSConfig(
-        name="channel_map",
-        default="rundoc://?path=xams_bookkeeping.channel_map&fallback=xams_default",
-        type=immutabledict,
-        track=False,
-        help="Map of channel groups loaded from rundoc xams_bookkeeping.channel_map",
-    ),
-    strax.Option('default_reconstruction_algorithm',
-                 default=DEFAULT_POSREC_ALGO,
-                 help="default reconstruction algorithm that provides (x,y)"
-    )
-)
 class PeakPositions(strax.Plugin):
     depends_on = ('peaks', 'peak_basics')
     rechunk_on_save = False
@@ -49,6 +36,18 @@ class PeakPositions(strax.Plugin):
         ('endtime', np.int64, 'End time of the peak (ns since unix epoch)')
     ]
 
+    channel_map = amstrax.XAMSConfig(
+        name="channel_map",
+        default="rundoc://?path=xams_bookkeeping.channel_map&fallback=xams_default",
+        type=immutabledict,
+        track=False,
+        help="Map of channel groups loaded from rundoc xams_bookkeeping.channel_map",
+    )
+    default_reconstruction_algorithm = strax.Option(
+        'default_reconstruction_algorithm',
+        default=DEFAULT_POSREC_ALGO,
+        help="default reconstruction algorithm that provides (x,y)"
+    )
     pos_rec_params = amstrax.XAMSConfig(
         default=[
             [212.89988642, -320.95097295, 198.71830514, -46.03953999],
@@ -56,10 +55,6 @@ class PeakPositions(strax.Plugin):
         ],
         help="Parameters for a correction function to go from x_cgr to true x and y_cgr to true y"
     )
-
-    def setup(self):
-        
-        self.default_reconstruction_algorithm = self.config['default_reconstruction_algorithm']
 
     def compute(self, peaks):
                 
@@ -70,7 +65,7 @@ class PeakPositions(strax.Plugin):
         top_sum = peaks['area']*peaks['area_fraction_top']
 
         # top is going to be (1,4)
-        top_map = self.config['channel_map']['top']
+        top_map = self.channel_map['top']
         top_indeces = np.arange(top_map[0], top_map[1]+1)
 
         # a bit convoluted, but necessary to avoid division by zero
