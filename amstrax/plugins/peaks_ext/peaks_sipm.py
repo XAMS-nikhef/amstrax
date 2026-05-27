@@ -6,28 +6,6 @@ import amstrax
 export, __all__ = strax.exporter()
 
 @export
-@strax.takes_config(
-    strax.Option('peak_gap_threshold', default=300,
-                 help="No hits for this many ns triggers a new peak"),
-    strax.Option('peak_left_extension', default=10,
-                 help="Include this many ns left of hits in peaks"),
-    strax.Option('peak_right_extension', default=10,
-                 help="Include this many ns right of hits in peaks"),
-    strax.Option('peak_min_area', default=10,
-                 help="Minimum contributing PMTs needed to define a peak"),
-    strax.Option('peak_split_min_height', default=25,
-                 help="Minimum height in PE above a local sum waveform"
-                      "minimum, on either side, to trigger a split"),
-    strax.Option('peak_split_min_ratio', default=4,
-                 help="Minimum ratio between local sum waveform"
-                      "minimum and maxima on either side, to trigger a split"),
-    strax.Option('n_tpc_pmts', track=False, default=False,
-                 help="Number of channels"), 
-    strax.Option('n_ext_pmts', track=True, default=1,
-                    help="Number of external channels"),
-    strax.Option('n_sipms', track=True, default=1,
-                    help="Number of external channels"),
-)
 class PeaksSiPM(strax.Plugin):
     depends_on = ('records_sipm',)
     data_kind = 'peaks_sipm'
@@ -37,6 +15,35 @@ class PeaksSiPM(strax.Plugin):
 
     __version__ = '0.0.2'
 
+    peak_gap_threshold = amstrax.XAMSConfig(
+        default=300,
+        help="No hits for this many ns triggers a new peak")
+    peak_left_extension = amstrax.XAMSConfig(
+        default=10,
+        help="Include this many ns left of hits in peaks")
+    peak_right_extension = amstrax.XAMSConfig(
+        default=10,
+        help="Include this many ns right of hits in peaks")
+    peak_min_area = amstrax.XAMSConfig(
+        default=10,
+        help="Minimum contributing PMTs needed to define a peak")
+    peak_split_min_height = amstrax.XAMSConfig(
+        default=25,
+        help="Minimum height in PE above a local sum waveform"
+        "minimum, on either side, to trigger a split")
+    peak_split_min_ratio = amstrax.XAMSConfig(
+        default=4,
+        help="Minimum ratio between local sum waveform"
+        "minimum and maxima on either side, to trigger a split")
+    n_tpc_pmts = amstrax.XAMSConfig(
+        track=False, default=False,
+        help="Number of channels")
+    n_ext_pmts = amstrax.XAMSConfig(
+        track=True, default=1,
+        help="Number of external channels")
+    n_sipms = amstrax.XAMSConfig(
+        track=True, default=1,
+        help="Number of external channels")
     gain_to_pe_array = amstrax.XAMSConfig(
         default=None,
         help="Gain to pe array"
@@ -52,7 +59,7 @@ class PeaksSiPM(strax.Plugin):
 
         r = records_sipm
   
-        if self.config['gain_to_pe_array'] is None:
+        if self.gain_to_pe_array is None:
             #FIXME -> numba doesn't like a NumPy array inside a NumPy array, so this will fail in strax.find_peaks()
             self.to_pe = np.ones(self.config['n_ext_pmts']+self.config['n_tpc_pmts']+self.config['n_sipms'], dtype=np.float32)
         else:

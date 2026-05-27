@@ -1,3 +1,4 @@
+import amstrax
 import numba
 import numpy as np
 import strax
@@ -8,23 +9,6 @@ export, __all__ = strax.exporter()
 
 # For n_competing, which is temporarily added to PeakBasics
 @export
-@strax.takes_config(
-    strax.Option(
-      's1_min_width', 
-      default=10,
-      help="Minimum (IQR) width of S1s"
-    ),
-    strax.Option(
-      's1_max_width',
-      default=225,
-      help="Maximum (IQR) width of S1s"
-    ),
-    strax.Option(
-      's2_min_width',
-      default=225,
-      help="Minimum width for S2s"
-    )
-)
 class PeakBasicsEXT(strax.Plugin):
     provides = ("peak_basics_ext",)
     depends_on = ("peaks_ext", )
@@ -33,6 +17,9 @@ class PeakBasicsEXT(strax.Plugin):
     parallel = "False"
     rechunk_on_save = False
     __version__ = "2.1"
+    s1_min_width = amstrax.XAMSConfig(default=10, help="Minimum (IQR) width of S1s")
+    s1_max_width = amstrax.XAMSConfig(default=225, help="Maximum (IQR) width of S1s")
+    s2_min_width = amstrax.XAMSConfig(default=225, help="Minimum width for S2s")
     dtype = [
         (('Start time of the peak (ns since unix epoch)',
           'time'), np.int64),

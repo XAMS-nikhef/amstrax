@@ -6,34 +6,35 @@ import amstrax
 export, __all__ = strax.exporter()
 
 @export
-@strax.takes_config(
-
-    strax.Option('record_length', default=110, track=False, type=int,
-                 help="Number of samples per raw_record"),
-
-    strax.Option('baseline_window',
-        default=(0, 50), infer_type=False,
-        help="Window (samples) for baseline calculation."),
-
-    strax.Option('n_records_per_pulse',
-        default=2, type=int,
-        help="how many samples per pulse"),
-
-    amstrax.XAMSConfig(
-        name="daq_registers",
-        default="rundoc://?path=daq_config.registers&fallback=empty",
-        track=False,
-        infer_type=False,
-        help="DAQ register list from rundoc, used to infer channel polarity.",
-    ),
-
-)
 class RecordsLED(strax.Plugin):
     """
     Carlo needs to explain
     """
 
     __version__ = '1.1.0'
+
+    record_length = amstrax.XAMSConfig(
+        default=110,
+        track=False,
+        type=int,
+        help="Number of samples per raw_record",
+    )
+    baseline_window = amstrax.XAMSConfig(
+        default=(0, 50),
+        infer_type=False,
+        help="Window (samples) for baseline calculation.",
+    )
+    n_records_per_pulse = amstrax.XAMSConfig(
+        default=2,
+        type=int,
+        help="how many samples per pulse",
+    )
+    daq_registers = amstrax.XAMSConfig(
+        default="rundoc://?path=daq_config.registers&fallback=empty",
+        track=False,
+        infer_type=False,
+        help="DAQ register list from rundoc, used to infer channel polarity.",
+    )
 
     depends_on = ('raw_records', 'raw_records_sipm')
     data_kind = 'records_led'
@@ -46,11 +47,7 @@ class RecordsLED(strax.Plugin):
   
     def setup(self):
 
-        self.record_length = self.config['record_length']
-        self.baseline_window = self.config['baseline_window']
-        self.n_records_per_pulse = self.config['n_records_per_pulse']
-        daq_registers = self.takes_config["daq_registers"].__get__(self)
-        self.channel_polarity = amstrax.extract_channel_polarity(daq_registers)
+        self.channel_polarity = amstrax.extract_channel_polarity(self.daq_registers)
 
     def infer_dtype(self):
 

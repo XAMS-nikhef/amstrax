@@ -23,77 +23,6 @@ class ArtificialDeadtimeInserted(UserWarning):
 
 
 @export
-@strax.takes_config(
-    # All these must have track=False, so the raw_records hash never changes!
-    # DAQ settings -- should match settings given to redax
-    strax.Option(
-        "record_length", default=110, track=False, type=int, help="Number of samples per raw_record"
-    ),
-    strax.Option(
-        "max_digitizer_sampling_time",
-        default=10,
-        track=False,
-        type=int,
-        help="Highest interval time of the digitizer sampling times(s) used.",
-    ),
-    strax.Option(
-        "run_start_time",
-        type=float,
-        track=False,
-        default=0,
-        help="time of start run (s since unix epoch)",
-    ),
-    strax.Option(
-        "daq_chunk_duration",
-        track=False,
-        default=int(5e9),
-        type=int,
-        help="Duration of regular chunks in ns",
-    ),
-    strax.Option(
-        "daq_overlap_chunk_duration",
-        track=False,
-        default=int(5e8),
-        type=int,
-        help="Duration of intermediate/overlap chunks in ns",
-    ),
-    strax.Option(
-        "daq_compressor",
-        default="lz4",
-        track=False,
-        help="Algorithm used for (de)compressing the live data",
-    ),
-    strax.Option(
-        "readout_threads",
-        type=dict,
-        track=False,
-        help=(
-            "Dictionary of the readout threads where the keys "
-            "specify the reader and value the number of threads"
-        ),
-    ),
-    strax.Option("daq_input_dir", type=str, track=False, help="Directory where readers put data"),
-    # DAQReader settings
-    strax.Option(
-        "safe_break_in_pulses",
-        default=1000,
-        track=False,
-        infer_type=False,
-        help=(
-            "Time (ns) between pulses indicating a safe break "
-            "in the datastream -- gaps of this size cannot be "
-            "interior to peaklets."
-        ),
-    ),
-    amstrax.XAMSConfig(
-        name="channel_map",
-        default="rundoc://?path=xams_bookkeeping.channel_map&fallback=xams_default",
-        track=False,
-        type=immutabledict,
-        infer_type=False,
-        help="immutabledict mapping subdetector to (min, max), loaded from rundoc",
-    ),
-)
 class DAQReader(strax.Plugin):
     """Read the XENONnT DAQ-live_data from redax and split it to the appropriate raw_record data-
     types based on the channel-map.
@@ -109,7 +38,7 @@ class DAQReader(strax.Plugin):
 
     provides: Tuple[str, ...] = (
         "raw_records_sipm",
-        "raw_records_ext",  
+        "raw_records_ext",
         "raw_records", # raw_records has to be last due to lineage
     )
 
@@ -126,6 +55,67 @@ class DAQReader(strax.Plugin):
     __version__ = "0.1.0"
     input_timeout = 300
 
+    # All these must have track=False, so the raw_records hash never changes.
+    # DAQ settings should match settings given to redax.
+    record_length = amstrax.XAMSConfig(
+        default=110, track=False, type=int, help="Number of samples per raw_record"
+    )
+    max_digitizer_sampling_time = amstrax.XAMSConfig(
+        default=10,
+        track=False,
+        type=int,
+        help="Highest interval time of the digitizer sampling times(s) used.",
+    )
+    run_start_time = amstrax.XAMSConfig(
+        type=float,
+        track=False,
+        default=0,
+        help="time of start run (s since unix epoch)",
+    )
+    daq_chunk_duration = amstrax.XAMSConfig(
+        track=False,
+        default=int(5e9),
+        type=int,
+        help="Duration of regular chunks in ns",
+    )
+    daq_overlap_chunk_duration = amstrax.XAMSConfig(
+        track=False,
+        default=int(5e8),
+        type=int,
+        help="Duration of intermediate/overlap chunks in ns",
+    )
+    daq_compressor = amstrax.XAMSConfig(
+        default="lz4",
+        track=False,
+        help="Algorithm used for (de)compressing the live data",
+    )
+    readout_threads = amstrax.XAMSConfig(
+        type=dict,
+        track=False,
+        help=(
+            "Dictionary of the readout threads where the keys "
+            "specify the reader and value the number of threads"
+        ),
+    )
+    daq_input_dir = amstrax.XAMSConfig(
+        type=str, track=False, help="Directory where readers put data")
+    safe_break_in_pulses = amstrax.XAMSConfig(
+        default=1000,
+        track=False,
+        infer_type=False,
+        help=(
+            "Time (ns) between pulses indicating a safe break "
+            "in the datastream -- gaps of this size cannot be "
+            "interior to peaklets."
+        ),
+    )
+    channel_map = amstrax.XAMSConfig(
+        default="rundoc://?path=xams_bookkeeping.channel_map&fallback=xams_default",
+        track=False,
+        type=immutabledict,
+        infer_type=False,
+        help="immutabledict mapping subdetector to (min, max), loaded from rundoc",
+    )
 
 
     def infer_dtype(self):
@@ -230,7 +220,7 @@ class DAQReader(strax.Plugin):
             # Records are sorted by (start)time and are of variable length.
             # Their end-times can differ. In the most pessimistic case we have
             # to look back one record length for each channel.
-            tot_channels = np.sum([np.diff(x) + 1 for x in self.config["channel_map"].values()])
+            tot_channels = np.sum([np.diff(x) + 1 for x in self.channel_map.values()])
             look_n_samples = self.config["record_length"] * tot_channels
             last_end = strax.endtime(records[-look_n_samples:]).max()
             if first_start < start or last_start >= end:
@@ -351,20 +341,20 @@ class DAQReader(strax.Plugin):
 
 
         # Split records by channel
-        tpc_min = min(self.config['channel_map']['bottom'][0], self.config['channel_map']['top'][0])
-        tpc_max = max(self.config['channel_map']['bottom'][1], self.config['channel_map']['top'][1])
+        tpc_min = min(self.channel_map['bottom'][0], self.channel_map['top'][0])
+        tpc_max = max(self.channel_map['bottom'][1], self.channel_map['top'][1])
 
         channel_ranges = {
             'tpc': (tpc_min, tpc_max),
         }
 
-        if 'external' in self.config['channel_map']:
-            channel_ranges['external'] = self.config['channel_map']['external']
+        if 'external' in self.channel_map:
+            channel_ranges['external'] = self.channel_map['external']
         else:
             channel_ranges['external'] = (-1, -1)
 
-        if 'sipm' in self.config['channel_map']:
-            channel_ranges['sipm'] = self.config['channel_map']['sipm']
+        if 'sipm' in self.channel_map:
+            channel_ranges['sipm'] = self.channel_map['sipm']
         else:
             channel_ranges['sipm'] = (-2, -2)
 
