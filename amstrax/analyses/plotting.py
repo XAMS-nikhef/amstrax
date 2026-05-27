@@ -323,7 +323,7 @@ def plot_led_records(context, run_id, records_led, n_records=100, **kwargs):
         **kwargs: Unknown.
 
     Raises:
-        ValueError: If the run ID is not found in the database or if the run is not an external trigger run.
+        ValueError: If the run ID is not found in the database or if the run is not an LED run.
 
     Returns:
         None
@@ -332,14 +332,14 @@ def plot_led_records(context, run_id, records_led, n_records=100, **kwargs):
 
     rd = db.find_one({"number": int(run_id)})
 
-    print(rd["mode"])
-
     if not rd:
         raise ValueError(f"Run {run_id} not found in the database.")
 
-    if "ext_trig" not in rd["mode"]:
+    print(amstrax.get_run_mode(rd))
+
+    if not amstrax.is_led_run(rd):
         raise ValueError(
-            "This run doesn't look like an external trigger run, so better to avoid this plot."
+            "This run doesn't look like an LED run, so better to avoid this plot."
         )
 
     st = context
@@ -442,14 +442,14 @@ def plot_led_areas(context, run_id, led_calibration, **kwargs):
 
     rd = db.find_one({"number": int(run_id)})
 
-    print(rd["mode"])
-
     if not rd:
         raise ValueError(f"Run {run_id} not found in the database.")
 
-    if "ext_trig" not in rd["mode"]:
+    print(amstrax.get_run_mode(rd))
+
+    if not amstrax.is_led_run(rd):
         raise ValueError(
-            "This run doesn't look like an external trigger run, so better to avoid this plot."
+            "This run doesn't look like an LED run, so better to avoid this plot."
         )
 
     fig, ax = plt.subplots(figsize=(15, 5))
