@@ -134,6 +134,8 @@ class XAMSConfig(Config):
         if value is None:
             if fallback == "xams_default":
                 return DEFAULT_CHANNEL_MAP
+            if fallback == "empty":
+                return []
             raise ValueError(f"No rundoc value found for path '{path}' and run {plugin.run_id}")
         return _as_immutabledict_channel_map(value)
 

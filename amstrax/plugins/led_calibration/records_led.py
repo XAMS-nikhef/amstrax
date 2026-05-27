@@ -1,5 +1,8 @@
 import strax
 import numpy as np
+from immutabledict import immutabledict
+
+import amstrax
 
 export, __all__ = strax.exporter()
 
@@ -16,15 +19,32 @@ export, __all__ = strax.exporter()
     strax.Option('n_records_per_pulse',
         default=2, type=int,
         help="how many samples per pulse"),
+
+    amstrax.XAMSConfig(
+        name="daq_registers",
+        default="rundoc://?path=daq_config.registers&fallback=empty",
+        track=False,
+        infer_type=False,
+        help="DAQ register list from rundoc, used to infer channel polarity.",
+    ),
+
+    amstrax.XAMSConfig(
+        name="channel_map",
+        default="rundoc://?path=xams_bookkeeping.channel_map&fallback=xams_default",
+        track=False,
+        type=immutabledict,
+        infer_type=False,
+        help="Channel map loaded from rundoc.",
+    ),
 )
 class RecordsLED(strax.Plugin):
     """
     Carlo needs to explain
     """
 
-    __version__ = '1.0.0'
+    __version__ = '1.1.0'
 
-    depends_on = ('raw_records',)
+    depends_on = ('raw_records', 'raw_records_sipm')
     data_kind = 'records_led'
     provides = 'records_led'
     compressor = 'zstd'
@@ -38,6 +58,8 @@ class RecordsLED(strax.Plugin):
         self.record_length = self.config['record_length']
         self.baseline_window = self.config['baseline_window']
         self.n_records_per_pulse = self.config['n_records_per_pulse']
+        self.channel_polarity = amstrax.extract_channel_polarity(self.config['daq_registers'])
+        self.sipm_channels = amstrax.channels_in_map_group(self.config['channel_map'], 'sipm')
 
     def infer_dtype(self):
 
@@ -51,10 +73,11 @@ class RecordsLED(strax.Plugin):
             
         return dtype 
 
-    def compute(self, raw_records):
+    def compute(self, raw_records, raw_records_sipm):
         '''
         Carlo needs to explain
         '''
+        raw_records = self._combine_raw_records(raw_records, raw_records_sipm)
         if len(raw_records) == 0:
             return np.zeros(0, dtype=self.dtype)
 
@@ -113,5 +136,26 @@ class RecordsLED(strax.Plugin):
             bl_lo, bl_hi = 0, min(50, records["data"].shape[1])
         bl = records["data"][:, bl_lo:bl_hi].mean(axis=1)
         records["data"] = -1.0 * (records["data"].transpose() - bl[:]).transpose()
+        self._restore_positive_polarity_channels(records)
 
         return records
+
+    @staticmethod
+    def _combine_raw_records(*raw_records):
+        arrays = [r for r in raw_records if len(r)]
+        if not arrays:
+            return raw_records[0]
+        if len(arrays) == 1:
+            return arrays[0]
+        return strax.sort_by_time(np.concatenate(arrays))
+
+    def _restore_positive_polarity_channels(self, records):
+        """
+        records_led historically flips all channels after baselining.
+        Keep that PMT convention, but undo it for positive-polarity channels
+        and for channels explicitly marked as SiPM in the channel map.
+        """
+        for channel in np.unique(records["channel"]):
+            ch = int(channel)
+            if self.channel_polarity.get(ch) == 1 or ch in self.sipm_channels:
+                records["data"][records["channel"] == channel] *= -1.0
