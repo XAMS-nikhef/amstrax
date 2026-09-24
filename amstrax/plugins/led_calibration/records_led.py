@@ -11,7 +11,7 @@ class RecordsLED(strax.Plugin):
     Carlo needs to explain
     """
 
-    __version__ = '1.1.0'
+    __version__ = '1.2.0'
 
     record_length = amstrax.XAMSConfig(
         default=110,
@@ -29,11 +29,11 @@ class RecordsLED(strax.Plugin):
         type=int,
         help="how many samples per pulse",
     )
-    daq_registers = amstrax.XAMSConfig(
-        default="rundoc://?path=daq_config.registers&fallback=empty",
-        track=False,
+    negative_polarity_channels = amstrax.XAMSConfig(
+        default=(0, 1, 2, 3, 4, 5),
         infer_type=False,
-        help="DAQ register list from rundoc, used to infer channel polarity.",
+        help="Channels with negative pulses (PMTs and external NaI) that are flipped. "
+             "All other channels (SiPMs) are not flipped.",
     )
 
     depends_on = ('raw_records', 'raw_records_sipm')
@@ -47,7 +47,7 @@ class RecordsLED(strax.Plugin):
   
     def setup(self):
 
-        self.channel_polarity = amstrax.extract_channel_polarity(self.daq_registers)
+        self.flip_channels = set(int(ch) for ch in self.negative_polarity_channels)
 
     def infer_dtype(self):
 
@@ -136,12 +136,12 @@ class RecordsLED(strax.Plugin):
         return strax.sort_by_time(np.concatenate(arrays))
 
     def _baseline_and_flip(self, records, bl_lo, bl_hi):
-        """Baseline records and flip only channels configured as negative polarity."""
+        """Baseline records and flip only the channels in negative_polarity_channels."""
         for record in records:
             length = int(max(0, min(record["length"], len(record["data"]))))
             if length == 0:
                 continue
             baseline = record["data"][bl_lo:bl_hi].mean()
-            sign = -1.0 if self.channel_polarity.get(int(record["channel"]), -1) == -1 else 1.0
+            sign = -1.0 if int(record["channel"]) in self.flip_channels else 1.0
             record["data"][:length] = sign * (record["data"][:length] - baseline)
             record["data"][length:] = 0.0
