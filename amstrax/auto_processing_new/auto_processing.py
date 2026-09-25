@@ -19,6 +19,7 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 SETUP_FILE = "/data/xenon/xams_v2/setup.sh"
+LIVE_DATA_HOST = "dcache"
 
 def parse_args():
     """
@@ -94,7 +95,7 @@ def update_task_list(args, runs_col, auto_processing_on):
     Update and return the list of tasks to be processed based on MongoDB queries.
     """
     query = {
-        "data": {"$elemMatch": {"type": "live", "host": "stbc"}},
+        "data": {"$elemMatch": {"type": "live", "host": LIVE_DATA_HOST}},
         "$or": [
             {
                 "data": {"$not": {"$elemMatch": {
@@ -111,7 +112,10 @@ def update_task_list(args, runs_col, auto_processing_on):
     }
 
     if not auto_processing_on:
-        query = {"data": {"$elemMatch": {"type": "live", "host": "stbc"}}, "tags": {"$elemMatch": {"name": "process"}}}
+        query = {
+            "data": {"$elemMatch": {"type": "live", "host": LIVE_DATA_HOST}},
+            "tags": {"$elemMatch": {"name": "process"}},
+        }
 
     projection = {"number": 1, "start": 1, "end": 1, "data": 1, "processing_status": 1, "processing_failed": 1}
     sort = [("number", -1)]
