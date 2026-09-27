@@ -132,10 +132,12 @@ class RunProcessor:
             log.info(f"Overriding targets to {self.targets}")
         
 
-        if ax.has_nai_source(self.run_doc):
-            # Add the NAI plugin to the context
+        if ax.has_nai_detector(self.run_doc):
+            # External NaI detector channel enabled in the run's DAQ config (not tied to the Na-22 source)
             # All the _ext plugins should be already in the context
-            log.info(f"Detected NaI run from {ax.source_type_source(self.run_doc)}.")
+            enabled = ax.nai_channel_enabled(self.run_doc)
+            log.info("NaI detector channel " + ("enabled in the DAQ config." if enabled
+                     else "not decidable from the DAQ config; channel map has an external group (empty output if no data)."))
             log.info("Adding peak_basics_ext to list of targets to process.")
             if "peak_basics_ext" not in self.targets:
                 self.targets.append("peak_basics_ext")
