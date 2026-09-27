@@ -9,10 +9,11 @@ LED_RUN_CLASSES = ("led",)
 # The Na-22 source used to be called "nai22" in the web UI (a misspelling, not the NaI detector).
 SOURCE_TYPE_ALIASES = {"nai22": "na22"}
 LEGACY_LED_MODE_MARKERS = ("ledcalibration", "led_calibration", "led")
-LEGACY_NAI_MODE_MARKERS = ("_nai", "nai22")
-# Legacy fallback for runs without a usable DAQ config: these source types meant "process the NaI data".
-LEGACY_NAI_SOURCE_TYPES = ("nai", "na22")
+LEGACY_NA22_MODE_MARKERS = ("nai22", "na22")
+# The source is only a tag of the run: no processing decision may depend on it.
 NAI_CHANNEL_MAP_KEY = "external"     # channel_map group of the external NaI detector (-> raw_records_ext)
+# Channel map the DAQReader uses when the run doc has none (keep equal to xams_config.DEFAULT_CHANNEL_MAP)
+DEFAULT_CHANNEL_MAP = {"bottom": (0, 0), "top": (1, 4), "external": (5, 5), "sipm": (6, 6), "aqmon": (40, 40)}
 
 
 def _clean_string(value):
@@ -62,7 +63,7 @@ def get_source_type(run_doc):
         return SOURCE_TYPE_ALIASES.get(source_type, source_type)
 
     mode = _lower_string(get_run_mode(run_doc))
-    if any(marker in mode for marker in LEGACY_NAI_MODE_MARKERS):
+    if any(marker in mode for marker in LEGACY_NA22_MODE_MARKERS):
         return "na22"
     return "none"
 
@@ -84,16 +85,17 @@ def _last_register_value(registers, board, addr):
     return value
 
 
+def reader_channel_map(run_doc):
+    """The channel map the DAQReader uses: xams_bookkeeping.channel_map, else the XAMS default."""
+    channel_map = get_xams_bookkeeping(run_doc).get("channel_map")
+    return channel_map if isinstance(channel_map, dict) and channel_map else DEFAULT_CHANNEL_MAP
+
+
 def nai_channel_enabled(run_doc):
     """True/False if the run's DAQ config enables/disables the external NaI detector channel(s)
     (channel_map "external" group, channel enable mask 0x8120 per board); None if it cannot be decided."""
     daq_config = _nested_dict(run_doc, "daq_config")
-    channel_map = daq_config.get("channel_map")
-    if not isinstance(channel_map, dict):
-        channel_map = get_xams_bookkeeping(run_doc).get("channel_map")
-    if not isinstance(channel_map, dict):
-        return None
-    ext = channel_map.get(NAI_CHANNEL_MAP_KEY)
+    ext = reader_channel_map(run_doc).get(NAI_CHANNEL_MAP_KEY)
     if not ext:
         return False
     try:
@@ -117,12 +119,13 @@ def nai_channel_enabled(run_doc):
 
 def has_nai_detector(run_doc):
     """Should the external NaI detector data (raw_records_ext -> peak_basics_ext) be processed?
-    Decided by the run's DAQ config (NaI channel enabled), independent of the source. Runs without a usable
-    DAQ config fall back to the legacy rule (source type / mode string)."""
+    Only the data decide, never the source (a tag): processed when the run's DAQ config enables the NaI
+    channel. If the config cannot tell (no channel mask), it is processed whenever the channel map has an
+    "external" group — without NaI data the output is simply empty."""
     enabled = nai_channel_enabled(run_doc)
     if enabled is not None:
         return enabled
-    return get_source_type(run_doc) in LEGACY_NAI_SOURCE_TYPES
+    return bool(reader_channel_map(run_doc).get(NAI_CHANNEL_MAP_KEY))
 
 
 def has_nai_source(run_doc):

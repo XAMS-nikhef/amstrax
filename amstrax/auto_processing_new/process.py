@@ -136,8 +136,8 @@ class RunProcessor:
             # External NaI detector channel enabled in the run's DAQ config (not tied to the Na-22 source)
             # All the _ext plugins should be already in the context
             enabled = ax.nai_channel_enabled(self.run_doc)
-            log.info("Detected NaI detector run from "
-                     + ("the DAQ config (NaI channel enabled)." if enabled else f"the legacy rule ({ax.source_type_source(self.run_doc)})."))
+            log.info("NaI detector channel " + ("enabled in the DAQ config." if enabled
+                     else "not decidable from the DAQ config; channel map has an external group (empty output if no data)."))
             log.info("Adding peak_basics_ext to list of targets to process.")
             if "peak_basics_ext" not in self.targets:
                 self.targets.append("peak_basics_ext")
