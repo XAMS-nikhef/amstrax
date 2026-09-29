@@ -7,6 +7,9 @@ from .event_basics import *
 from . import event_positions
 from .event_positions import *
 
+from . import event_positions_map
+from .event_positions_map import *
+
 from . import corrected_areas
 from .corrected_areas import *
 
