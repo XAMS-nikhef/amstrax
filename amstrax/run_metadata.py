@@ -86,9 +86,12 @@ def _last_register_value(registers, board, addr):
 
 
 def reader_channel_map(run_doc):
-    """The channel map the DAQReader uses: xams_bookkeeping.channel_map, else the XAMS default."""
-    channel_map = get_xams_bookkeeping(run_doc).get("channel_map")
-    return channel_map if isinstance(channel_map, dict) and channel_map else DEFAULT_CHANNEL_MAP
+    """The channel map the DAQReader uses: xams_bookkeeping.channel_map, else the DAQ config's own channel_map
+    (daq_config.channel_map, stored in every run doc), else the XAMS default."""
+    for channel_map in (get_xams_bookkeeping(run_doc).get("channel_map"), _nested_dict(run_doc, "daq_config").get("channel_map")):
+        if isinstance(channel_map, dict) and channel_map:
+            return channel_map
+    return DEFAULT_CHANNEL_MAP
 
 
 def nai_channel_enabled(run_doc):

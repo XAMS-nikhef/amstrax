@@ -122,6 +122,8 @@ class XAMSConfig(Config):
         URL format:
             rundoc://?path=xams_bookkeeping.channel_map
             rundoc://?path=xams_bookkeeping.source_type&detector=xams
+            rundoc://?path=xams_bookkeeping.channel_map,daq_config.channel_map&fallback=xams_default
+        Several comma-separated paths are tried in order; the first one present in the run doc is used.
         """
         parsed_url = urlparse(config_value)
         query_params = parse_qs(parsed_url.query)
@@ -130,7 +132,11 @@ class XAMSConfig(Config):
         fallback = query_params.get("fallback", [""])[0]
         if not path:
             raise ValueError(f"Invalid rundoc:// URL, missing path: {config_value}")
-        value = get_rundoc_value(run_id=plugin.run_id, path=path, detector=detector, default=None)
+        value = None
+        for p in path.split(","):
+            value = get_rundoc_value(run_id=plugin.run_id, path=p.strip(), detector=detector, default=None)
+            if value is not None:
+                break
         if value is None:
             if fallback == "xams_default":
                 return DEFAULT_CHANNEL_MAP

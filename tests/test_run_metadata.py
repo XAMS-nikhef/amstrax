@@ -114,3 +114,12 @@ def test_no_external_group_means_no_nai():
     run = _run_with_mask("ff", source="na22")
     del run["xams_bookkeeping"]["channel_map"]["external"]
     assert run_metadata.nai_channel_enabled(run) is False
+
+
+def test_reader_channel_map_falls_back_to_the_daq_config():
+    """Run docs have no xams_bookkeeping.channel_map; the DAQ config's own map (both SiPMs) must win over the default (ch6 only)."""
+    run = {"xams_bookkeeping": {"source_type": "cs137"},
+           "daq_config": {"channel_map": {"bottom": [0, 0], "top": [1, 4], "external": [5, 5], "sipm": [6, 7]}}}
+    assert run_metadata.reader_channel_map(run)["sipm"] == [6, 7]
+    run["xams_bookkeeping"]["channel_map"] = {"bottom": [0, 0], "top": [1, 4], "sipm": [6, 6]}
+    assert run_metadata.reader_channel_map(run)["sipm"] == [6, 6]          # explicit bookkeeping map still first

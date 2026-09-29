@@ -18,7 +18,7 @@ class PeakBasics(strax.Plugin):
     rechunk_on_save = False
     __version__ = "2.1"
     channel_map = amstrax.XAMSConfig(
-        default="rundoc://?path=xams_bookkeeping.channel_map&fallback=xams_default",
+        default="rundoc://?path=xams_bookkeeping.channel_map,daq_config.channel_map&fallback=xams_default",
         type=immutabledict,
         track=False,
         help="Map of channel groups loaded from rundoc xams_bookkeeping.channel_map",
