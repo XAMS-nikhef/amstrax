@@ -72,6 +72,30 @@ class TestXAMSConfigCaching(unittest.TestCase):
         finally:
             amstrax.xams_config.get_rundoc_value = original
 
+    def test_rundoc_paths_are_tried_in_order(self):
+        """xams_bookkeeping.channel_map first, then daq_config.channel_map, then the XAMS default."""
+        cfg = amstrax.XAMSConfig(
+            default="rundoc://?path=xams_bookkeeping.channel_map,daq_config.channel_map&fallback=xams_default",
+        )
+        docs = {
+            "1": {"xams_bookkeeping.channel_map": {"bottom": [0, 0], "top": [1, 4], "sipm": [6, 6]},
+                  "daq_config.channel_map": {"bottom": [0, 0], "top": [1, 4], "sipm": [6, 7]}},
+            "2": {"daq_config.channel_map": {"bottom": [0, 0], "top": [1, 4], "sipm": [6, 7]}},
+            "3": {},
+        }
+        original = amstrax.xams_config.get_rundoc_value
+
+        def fake_get_rundoc_value(run_id, path, detector="xams", default=None):
+            return docs[str(run_id)].get(path, default)
+
+        try:
+            amstrax.xams_config.get_rundoc_value = fake_get_rundoc_value
+            self.assertEqual(cfg.fetch(SimpleNamespace(run_id="1", config={}))["sipm"], (6, 6))
+            self.assertEqual(cfg.fetch(SimpleNamespace(run_id="2", config={}))["sipm"], (6, 7))
+            self.assertEqual(cfg.fetch(SimpleNamespace(run_id="3", config={}))["sipm"], (6, 6))   # XAMS default
+        finally:
+            amstrax.xams_config.get_rundoc_value = original
+
     def test_online_wildcard_correction_does_not_require_mutable_filename_state(self):
         cfg = amstrax.XAMSConfig(default=1)
         correction_data = {"1-*": 42}

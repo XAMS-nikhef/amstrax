@@ -110,7 +110,7 @@ class DAQReader(strax.Plugin):
         ),
     )
     channel_map = amstrax.XAMSConfig(
-        default="rundoc://?path=xams_bookkeeping.channel_map&fallback=xams_default",
+        default="rundoc://?path=xams_bookkeeping.channel_map,daq_config.channel_map&fallback=xams_default",
         track=False,
         type=immutabledict,
         infer_type=False,
