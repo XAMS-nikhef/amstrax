@@ -19,10 +19,13 @@ class CorrectedAreas(strax.Plugin):
         There are now 3 components of cS2s: cs2_top, cS2_bottom and cs2.
         cs2_top and cs2_bottom are corrected by the corresponding maps,
         and cs2 is the sum of the two.
+        For now the top/bottom parts (cs1_top, cs1_bottom, cs2_top,
+        cs2_bottom) get the same correction factor as the total, split
+        with the peak's area_fraction_top, so top + bottom = total.
 
     """
 
-    __version__ = "0.6.0"
+    __version__ = "0.7.0"
 
     depends_on = ("event_basics", "event_positions")
 
@@ -46,6 +49,15 @@ class CorrectedAreas(strax.Plugin):
             dtype += [
                 (f"{peak_type}cs2", np.float32, f"Corrected area of {peak_name} S2 [PE]"),
             ]
+            for s_i in ("s1", "s2"):
+                for part, label in (("top", "top"), ("bottom", "bottom")):
+                    dtype += [
+                        (
+                            f"{peak_type}c{s_i}_{part}",
+                            np.float32,
+                            f"Corrected area of {peak_name} {s_i.upper()} seen by the {label} array [PE]",
+                        ),
+                    ]
 
         return dtype
 
@@ -76,5 +88,10 @@ class CorrectedAreas(strax.Plugin):
 
             result[f"{peak_type}cs1"] = events[f"{peak_type}s1_area"] * self.get_s1_naive_z_correction(events["z"])
             result[f"{peak_type}cs2"] = events[f"{peak_type}s2_area"] * np.exp(events["drift_time"] / self.elife)
+
+            for s_i in ("s1", "s2"):
+                aft = events[f"{peak_type}{s_i}_area_fraction_top"]
+                result[f"{peak_type}c{s_i}_top"] = result[f"{peak_type}c{s_i}"] * aft
+                result[f"{peak_type}c{s_i}_bottom"] = result[f"{peak_type}c{s_i}"] * (1 - aft)
 
         return result
