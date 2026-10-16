@@ -53,7 +53,7 @@ class PeaksSiPM(strax.Plugin):
     
         # it's a bit silly, but for how strax function find_peaks is structured
         # we need to provide empty channels for the TPC pmts as well
-        return strax.peak_dtype(n_channels=self.config['n_tpc_pmts']+self.config['n_ext_pmts']+self.config['n_sipms'])
+        return amstrax.legacy_peak_dtype(n_channels=self.config['n_tpc_pmts']+self.config['n_ext_pmts']+self.config['n_sipms'])
 
     def compute(self, records_sipm, start, end):
 
@@ -90,6 +90,7 @@ class PeaksSiPM(strax.Plugin):
             min_height=self.config['peak_split_min_height'],
             min_ratio=self.config['peak_split_min_ratio'])
 
-        strax.compute_widths(peaks)
+        amstrax.compute_peak_widths(peaks)
 
-        return peaks
+        # stored in the strax-1.5 peak layout (same format and lineage under strax 1 and 2; amstrax/strax_compat.py)
+        return amstrax.to_dtype(peaks, self.dtype)

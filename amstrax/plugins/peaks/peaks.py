@@ -57,7 +57,7 @@ class Peaks(strax.Plugin):
 
     def infer_dtype(self):
     
-        return strax.peak_dtype(n_channels=self.config['n_tpc_pmts'])
+        return amstrax.legacy_peak_dtype(n_channels=self.config['n_tpc_pmts'])
 
 
     def setup(self):
@@ -96,6 +96,7 @@ class Peaks(strax.Plugin):
             min_height=self.config['peak_split_min_height'],
             min_ratio=self.config['peak_split_min_ratio'])
 
-        strax.compute_widths(peaks)
+        amstrax.compute_peak_widths(peaks)
 
-        return peaks
+        # stored in the strax-1.5 peak layout (same format and lineage under strax 1 and 2; amstrax/strax_compat.py)
+        return amstrax.to_dtype(peaks, self.dtype)
