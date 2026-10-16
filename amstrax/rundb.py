@@ -1,4 +1,5 @@
 import atexit
+import logging
 import os
 import re
 import socket
@@ -63,16 +64,17 @@ _CLIENTS = []
 
 
 def _close_mongo_connections():
+    log = logging.getLogger(__name__)
     for client in _CLIENTS:
         try:
             client.close()
-        except Exception:  # noqa: BLE001 - best effort at exit
-            pass
+        except Exception as e:  # noqa: BLE001 - best effort at exit
+            log.debug(f"closing Mongo client at exit: {e}")
     for server in _TUNNELS.values():
         try:
             server.stop()
-        except Exception:  # noqa: BLE001 - best effort at exit
-            pass
+        except Exception as e:  # noqa: BLE001 - best effort at exit
+            log.debug(f"stopping SSH tunnel at exit: {e}")
 
 
 atexit.register(_close_mongo_connections)
