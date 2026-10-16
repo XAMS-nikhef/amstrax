@@ -1,6 +1,7 @@
 __version__ = "2.2.0"
 
 from .common import *
+from .strax_compat import *
 from .rundb import *
 from .logging_utils import *
 
