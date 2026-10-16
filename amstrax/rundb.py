@@ -1,3 +1,4 @@
+import atexit
 import os
 import re
 import socket
@@ -54,6 +55,29 @@ def get_configs() -> Dict[str, Any]:
 
     return result
 
+# Open SSH tunnels and Mongo clients, closed in that order (clients first) when Python exits. Otherwise the tunnel
+# can close while a pymongo background thread still reconnects, which logs "Could not establish connection ... SSH
+# session not active" at the end of every script (pymongo >= 4.7).
+_TUNNELS = {}
+_CLIENTS = []
+
+
+def _close_mongo_connections():
+    for client in _CLIENTS:
+        try:
+            client.close()
+        except Exception:  # noqa: BLE001 - best effort at exit
+            pass
+    for server in _TUNNELS.values():
+        try:
+            server.stop()
+        except Exception:  # noqa: BLE001 - best effort at exit
+            pass
+
+
+atexit.register(_close_mongo_connections)
+
+
 def establish_ssh_tunnel(daq_host: str, daq_user: str, daq_password: str, mongo_port: str, secret_serving_port: Dict[str, Any]) -> int:
     """Establish an SSH tunnel and return the local bind port."""
 
@@ -69,6 +93,7 @@ def establish_ssh_tunnel(daq_host: str, daq_user: str, daq_password: str, mongo_
         remote_bind_address=('127.0.0.1', mongo_port),
     )
     server.start()
+    _TUNNELS[port_key] = server
     secret_serving_port[port_key] = server.local_bind_port
     return server.local_bind_port
 
@@ -91,7 +116,9 @@ def get_mongo_client(daq_host: str = "",
     
     local_port = establish_ssh_tunnel(daq_host, daq_user, daq_password, mongo_port, secret_serving_port)
 
-    return pymongo.MongoClient(f'mongodb://{user}:{password}@127.0.0.1:{local_port}/{CONFIG["DEFAULT_DBNAME"]}')
+    client = pymongo.MongoClient(f'mongodb://{user}:{password}@127.0.0.1:{local_port}/{CONFIG["DEFAULT_DBNAME"]}')
+    _CLIENTS.append(client)
+    return client
 
 @export
 def get_mongo_collection(detector: str = CONFIG['DEFAULT_DETECTOR'], 
