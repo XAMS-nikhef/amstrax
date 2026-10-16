@@ -8,6 +8,10 @@ import logging
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
+# The job script activates the XAMS environment through this file (not a hard-coded conda env), so a job runs
+# in whichever stack setup.sh points to.
+DEFAULT_SETUP_FILE = "/data/xenon/xams_v2/setup.sh"
+
 condor_template = """
 executable            = {job_executable}
 log                   = {log}
@@ -29,6 +33,7 @@ def submit_job(
     cpus_per_task=1,
     log_dir="logs",
     dry_run=False,
+    setup_file=DEFAULT_SETUP_FILE,
 ):
     """
     Submit a job to HTCondor with the given job string and parameters.
@@ -40,6 +45,7 @@ def submit_job(
     :param cpus_per_task: Number of CPUs per task.
     :param log_dir: Directory to store log and error files.
     :param dry_run: If True, print the job instead of submitting it.
+    :param setup_file: Shell file sourced at the start of the job to activate the environment.
     :return: None
     """
     # Ensure log directory exists
@@ -55,8 +61,7 @@ def submit_job(
     #!/bin/bash
     echo 'Starting job {jobname}'
     echo `date`
-    export PATH=/data/xenon/cfuselli/miniconda-install/bin:$PATH
-    source activate /data/xenon/xams_v2/anaconda/xams
+    source {setup_file}
     {jobstring}
     echo 'Job {jobname} complete.'
     """
