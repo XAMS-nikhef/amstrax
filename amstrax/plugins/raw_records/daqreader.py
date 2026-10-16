@@ -369,7 +369,7 @@ class DAQReader(strax.Plugin):
 
             if len(result_arrays[i]):
                 # dt may differ per subdetector
-                dt = result_arrays[i]['dt'][0]
+                dt = int(result_arrays[i]['dt'][0])   # Python int: numpy 2 keeps int16 * int as int16 (overflow)
                 # Convert time to time in ns since unix epoch.
                 # Ensure the offset is a whole digitizer sample
                 result_arrays[i]['time'] += dt * (self.t0 // dt)
