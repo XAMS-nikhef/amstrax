@@ -61,8 +61,10 @@ def compute_peak_widths(peaks):
 
 @export
 def to_dtype(arr, dtype):
-    """Copy the fields of ``dtype`` from ``arr`` into a new array of that dtype (extra fields of ``arr`` are dropped)."""
+    """Copy the fields of ``dtype`` from ``arr`` into a new array of that dtype. Extra fields of ``arr`` are dropped;
+    fields that ``arr`` lacks stay zero (e.g. ``data_top`` with strax < 1.5, as in the CI test environment)."""
     out = np.zeros(len(arr), dtype=dtype)
     for name in out.dtype.names:
-        out[name] = arr[name]
+        if name in arr.dtype.names:
+            out[name] = arr[name]
     return out

@@ -4,11 +4,19 @@ import strax
 import amstrax
 
 
-def test_legacy_peak_dtype_matches_strax_1():
-    if int(strax.__version__.split(".")[0]) >= 2:
-        return                                  # only strax 1.x still provides this layout itself
+def test_legacy_peak_dtype_matches_strax_1_5_4():
+    if strax.__version__ != "1.5.4":
+        return                                  # the stored layout is that of strax 1.5.4 (production)
     for n in (2, 5, 8):
         assert np.dtype(amstrax.legacy_peak_dtype(n_channels=n)) == np.dtype(strax.peak_dtype(n_channels=n))
+
+
+def test_legacy_peak_dtype_fields():
+    names = np.dtype(amstrax.legacy_peak_dtype(n_channels=5)).names
+    for f in ("time", "length", "dt", "channel", "type", "area", "area_per_channel", "n_hits", "data", "data_top",
+              "width", "area_decile_from_midpoint", "saturated_channel", "n_saturated_channels", "tight_coincidence",
+              "max_gap", "max_goodness_of_split", "max_diff", "min_diff"):
+        assert f in names
 
 
 def test_widths_and_copy_to_legacy_layout():
