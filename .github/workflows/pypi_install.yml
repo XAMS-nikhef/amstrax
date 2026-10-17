@@ -13,15 +13,15 @@ jobs:
     steps:
       # Setup steps
       - name: Setup python
-        uses: actions/setup-python@v4.7.1
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.8'
+          python-version: '3.12'
       - name: Checkout repo
         uses: actions/checkout@v4
       - name: Install dependencies
-        run: pip install wheel
+        run: pip install build
       - name: Build package
-        run: python setup.py sdist bdist_wheel
+        run: python -m build
       # Do the publish
       - name: Publish a Python distribution to PyPI
         # Might want to add but does not work on workflow_dispatch :
