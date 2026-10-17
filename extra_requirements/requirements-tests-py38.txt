@@ -2,7 +2,6 @@
 strax==1.5.4
 numpy==1.24.4
 numba==0.58.1
-pymongo==4.6.3
 pytest
 coverage
 coveralls
