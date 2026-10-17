@@ -1,6 +1,7 @@
 name: Test package
 
-# Trigger this code when a new release is published
+# Tests on the two software stacks that run on STBC: production (Python 3.12, strax 2) and the py38 fallback
+# (Python 3.8, strax 1.5.4). Coverage is reported from the production stack.
 on:
   workflow_dispatch:
   release:
@@ -13,18 +14,18 @@ on:
 
 jobs:
   update:
-    name: "${{ matrix.test }}_py${{ matrix.python-version }}"
+    name: "pytest_py${{ matrix.python-version }}"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: False
       matrix:
-        python-version: [3.8, 3.9, "3.10"]
-        test: [ 'coveralls', 'pytest' ]
-        exclude:
-          - python-version: 3.9
-            test: 'coveralls'
-          - python-version: "3.10"
-            test: 'coveralls'
+        include:
+          - python-version: "3.12"
+            requirements: extra_requirements/requirements-tests.txt
+            coverage: true
+          - python-version: "3.8"
+            requirements: extra_requirements/requirements-tests-py38.txt
+            coverage: false
     steps:
       # Setup and installation
       - name: Checkout repo
@@ -34,7 +35,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-          cache-dependency-path: 'extra_requirements/requirements-tests.txt'
+          cache-dependency-path: ${{ matrix.requirements }}
       - name: install files
         run:
           |
@@ -43,22 +44,21 @@ jobs:
       - name: Install requirements
         run:
           |
-          pip install -r extra_requirements/requirements-tests.txt
-          pip install -e ../amstrax
+          pip install -r ${{ matrix.requirements }}
+          pip install -e .
       - name: Test package
-        # This is running a normal test
-        if: matrix.test == 'pytest'
+        if: ${{ !matrix.coverage }}
         run: |
           pytest -rsxv --durations 0
-      - name: Coveralls
-        # Make the coverage report and upload
+      - name: Test package with coverage
+        if: ${{ matrix.coverage }}
         env:
           NUMBA_DISABLE_JIT: 1
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: matrix.test == 'coveralls'
         run: |
-          coverage run --source=amstrax setup.py test -v
+          coverage run --source=amstrax -m pytest -rsxv --durations 0
+      - name: Coveralls
+        if: ${{ matrix.coverage }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
           coveralls --service=github
-      # Done
-      - name: goodbye
-        run: echo "tests done, bye bye"
