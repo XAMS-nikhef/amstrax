@@ -59,17 +59,9 @@ COMMON_OPT_XAMS = dict(
 
 XAMS_COMMON_CONFIG = dict(
     n_tpc_pmts=5,
-    # Fallback-only channel map.
-    # Authoritative per-run channel maps should come from rundoc
-    # (xams_bookkeeping.channel_map, or daq_config.channel_map as legacy fallback)
-    # and override this default at runtime.
-    channel_map=immutabledict(
-        bottom=(0, 0),
-        top=(1, 4),
-        external=(5,5),
-        sipm=(6, 6),
-        aqmon=(40, 40),  # register strax deadtime
-    ),
+    # No channel_map here: every plugin with a channel_map option reads the run's own map from the run doc
+    # (xams_bookkeeping.channel_map, else daq_config.channel_map, else xams_config.DEFAULT_CHANNEL_MAP).
+    # Setting it in the context would override that per-run lookup for all plugins except the DAQReader.
 )
 
 
