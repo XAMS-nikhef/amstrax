@@ -5,7 +5,7 @@ def open_requirements(path):
     with open(path) as f:
         requires = [
             r.split('/')[-1] if r.startswith('git+') else r
-            for r in f.read().splitlines()]
+            for r in f.read().splitlines() if r.strip() and not r.strip().startswith('#')]
     return requires
 
 
@@ -33,21 +33,19 @@ setuptools.setup(name='amstrax',
                  url='https://github.com/XAMS-nikhef/amstrax',
                  long_description=readme + '\n\n' + history,
                  long_description_content_type="text/markdown",
-                 setup_requires=['pytest-runner'],
                  install_requires=requires,
                  extras_require={
                      'docs': doc_requires,
                  },
                  tests_require=tests_requires,
-                 python_requires=">=3.6",
+                 python_requires=">=3.8",
                  packages=setuptools.find_packages(),
                  classifiers=[
                      'Development Status :: 4 - Beta',
                      'License :: OSI Approved :: BSD License',
                      'Natural Language :: English',
                      'Programming Language :: Python :: 3.8',
-                     'Programming Language :: Python :: 3.9',
-                     'Programming Language :: Python :: 3.10',
+                     'Programming Language :: Python :: 3.12',
                      'Intended Audience :: Science/Research',
                      'Programming Language :: Python :: Implementation :: CPython',
                      'Topic :: Scientific/Engineering :: Physics',
