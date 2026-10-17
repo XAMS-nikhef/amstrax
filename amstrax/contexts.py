@@ -84,6 +84,9 @@ def xams(
         )
 
     st.set_config(XAMS_COMMON_CONFIG)
+    if not init_rundb:
+        # no run database: plugins cannot read the per-run channel map, use the XAMS default
+        st.set_config(dict(channel_map=ax.xams_config.DEFAULT_CHANNEL_MAP))
 
     st.storage = []
     if init_rundb:

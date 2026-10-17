@@ -15,9 +15,11 @@ def _context():
 
 
 def test_context_does_not_set_channel_map():
-    # a channel_map in the context would override the per-run map of every plugin except the DAQReader
+    # a channel_map in the context would override the per-run map of every plugin except the DAQReader;
+    # only an offline context (no run database) gets the default map
     assert "channel_map" not in amstrax.contexts.XAMS_COMMON_CONFIG
-    assert "channel_map" not in amstrax.contexts.xams(init_rundb=False).config
+    st = amstrax.contexts.xams(init_rundb=False)
+    assert dict(st.config["channel_map"]) == dict(amstrax.xams_config.DEFAULT_CHANNEL_MAP)
 
 
 def _records(channels, area_adc=200, length=40):
