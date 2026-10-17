@@ -1,6 +1,7 @@
 import numba
 import numpy as np
 import strax
+from immutabledict import immutabledict
 import amstrax
 
 export, __all__ = strax.exporter()
@@ -13,7 +14,7 @@ class PeaksSiPM(strax.Plugin):
     provides = ('peaks_sipm')
     rechunk_on_save = True
 
-    __version__ = '0.0.2'
+    __version__ = '0.1.0'
 
     peak_gap_threshold = amstrax.XAMSConfig(
         default=300,
@@ -35,25 +36,34 @@ class PeaksSiPM(strax.Plugin):
         default=4,
         help="Minimum ratio between local sum waveform"
         "minimum and maxima on either side, to trigger a split")
-    n_tpc_pmts = amstrax.XAMSConfig(
-        track=False, default=False,
-        help="Number of channels")
-    n_ext_pmts = amstrax.XAMSConfig(
-        track=True, default=1,
-        help="Number of external channels")
-    n_sipms = amstrax.XAMSConfig(
-        track=True, default=1,
-        help="Number of external channels")
+    max_sipm_channel = amstrax.XAMSConfig(
+        track=True, default=7,
+        help="Highest SiPM channel number; peaks store area_per_channel for channels 0..max_sipm_channel")
+    channel_map = amstrax.XAMSConfig(
+        default="rundoc://?path=xams_bookkeeping.channel_map,daq_config.channel_map&fallback=xams_default",
+        type=immutabledict,
+        track=False,
+        help="Map of channel groups of this run (only checked against max_sipm_channel)",
+    )
     gain_to_pe_array = amstrax.XAMSConfig(
         default=None,
         help="Gain to pe array"
     )
 
     def infer_dtype(self):
-    
-        # it's a bit silly, but for how strax function find_peaks is structured
-        # we need to provide empty channels for the TPC pmts as well
-        return amstrax.legacy_peak_dtype(n_channels=self.config['n_tpc_pmts']+self.config['n_ext_pmts']+self.config['n_sipms'])
+        # strax.find_peaks indexes area_per_channel by the absolute channel number, so the array must reach the highest
+        # SiPM channel (the TPC / external channels stay empty)
+        return amstrax.legacy_peak_dtype(n_channels=self.n_channels)
+
+    @property
+    def n_channels(self):
+        return self.config['max_sipm_channel'] + 1
+
+    def setup(self):
+        sipm = self.channel_map.get('sipm')
+        if sipm is not None and sipm[1] > self.config['max_sipm_channel']:
+            raise ValueError(f"SiPM channels {tuple(sipm)} of this run exceed max_sipm_channel "
+                             f"{self.config['max_sipm_channel']}")
 
     def compute(self, records_sipm, start, end):
 
@@ -61,9 +71,12 @@ class PeaksSiPM(strax.Plugin):
   
         if self.gain_to_pe_array is None:
             #FIXME -> numba doesn't like a NumPy array inside a NumPy array, so this will fail in strax.find_peaks()
-            self.to_pe = np.ones(self.config['n_ext_pmts']+self.config['n_tpc_pmts']+self.config['n_sipms'], dtype=np.float32)
+            self.to_pe = np.ones(self.n_channels, dtype=np.float32)
         else:
-            self.to_pe = self.gain_to_pe_array
+            self.to_pe = np.asarray(self.gain_to_pe_array, dtype=np.float32)
+            if len(self.to_pe) < self.n_channels:
+                raise ValueError(f"gain_to_pe_array has {len(self.to_pe)} entries, peaks_sipm needs {self.n_channels} "
+                                 f"(channels 0..{self.config['max_sipm_channel']})")
 
         hits = strax.find_hits(r)
         hits = strax.sort_by_time(hits)
@@ -80,7 +93,7 @@ class PeaksSiPM(strax.Plugin):
             min_channels=1,
             # must have more than one channel (why?)
             # see here https://github.com/AxFoundation/strax/blob/b0ca3cb245275abb84a4c3535544cce2876bd50e/strax/dtypes.py#L190
-            result_dtype=strax.peak_dtype(n_channels=self.config['n_ext_pmts']+self.config['n_tpc_pmts']+self.config['n_sipms']),
+            result_dtype=strax.peak_dtype(n_channels=self.n_channels),
         )
 
         strax.sum_waveform(peaks, hits, r, rlinks, self.to_pe)
