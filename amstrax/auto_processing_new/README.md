@@ -75,7 +75,8 @@ python offline_processing.py \
 - `corrections_version` must cover the run ranges used by each referenced correction file.
 - `PROD0` (`amstrax_files/corrections/_global/_global_PROD0.json`) holds only the approved gains and the
   position map (posrec v2). Every file in it covers all runs: a range with `null` means "not available for these runs"
-  (no approved gains yet → areas in ADC·samples; no map or no gains → x, y, r are NaN). There is no polynomial
+  (no approved gains yet → areas in ADC·samples, positions from the map with (u, v) in ADC units, ~2 mm worse;
+  no map → x, y, r are NaN). PeakPositions uses the latest map by default, also without `corrections_version`. There is no polynomial
   position fallback any more (PeakPositions 2.0.0). New gains: add their run range to a new gain file version and a new
   `_global_PRODn.json` (no extra underscores: the folder is taken from the file name); never edit a released file.
 - For LED calibration modes, `process.py` automatically switches to:

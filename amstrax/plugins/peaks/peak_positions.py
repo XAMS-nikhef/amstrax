@@ -39,9 +39,8 @@ def grid_lookup(u, v, grid):
     return x, y
 
 
-def positions_available(pos_rec_map, gain_to_pe_array):
-    """The map was made with (u, v) from per-anode gains in PE: apply it only when both are set for the run."""
-    return pos_rec_map is not None and gain_to_pe_array is not None
+# latest (u, v) -> (x, y) map in amstrax_files; it holds null for runs before the map's geometry (-> NaN positions)
+DEFAULT_POS_REC_MAP = "file://pos_rec_map?filename=pos_rec_map_v1.json"
 
 
 @export
@@ -51,12 +50,14 @@ class PeakPositions(strax.Plugin):
 
     x_cgr / y_cgr are the top-row (ch1 + ch2) and left-column (ch1 + ch3) fractions of the top area, u, v the
     asymmetries made from them, and x, y, r the position from the (u, v) -> (x, y) map ``pos_rec_map``
-    (e.g. ``pos_rec_map_v1.json``). Without a map or without gains for the run, x, y, r are NaN: there is no
-    fallback (the old cubic polynomial, ``pos_rec_params`` / ``x_corr``, was removed in 2.0.0).
+    (default: the latest map, ``pos_rec_map_v1.json``). The map was made with (u, v) from per-anode gains in PE;
+    for a run without gains (u, v) are in ADC·samples, which shifts positions by ~2 mm (median, r < 24 mm).
+    Without a map for the run (null range, or pos_rec_map=None) x, y, r are NaN. There is no polynomial
+    fallback (``pos_rec_params`` / ``x_corr`` were removed in 2.0.0).
     """
     depends_on = ('peaks', 'peak_basics')
     rechunk_on_save = False
-    __version__ = '2.0.0'
+    __version__ = '2.1.0'
     dtype = [
         ('x_cgr', np.float32,
          'Top-row fraction (ch1 + ch2) of the top area'),
@@ -83,12 +84,9 @@ class PeakPositions(strax.Plugin):
         help="Map of channel groups loaded from rundoc xams_bookkeeping.channel_map",
     )
     pos_rec_map = amstrax.XAMSConfig(
-        default=None,
+        default=DEFAULT_POS_REC_MAP,
         help="(u, v) -> (x, y) lookup grid (dict with uv_min, step, n, x, y; "
-             "file://pos_rec_map?filename=...). Without it x, y, r are NaN.")
-    gain_to_pe_array = amstrax.XAMSConfig(
-        default=None,
-        help="Gains of the run (same option as Peaks). The map needs (u, v) in PE: without gains x, y, r are NaN.")
+             "file://pos_rec_map?filename=...). Default: the latest map. None (or a null range): x, y, r are NaN.")
 
     def compute(self, peaks):
 
@@ -124,7 +122,7 @@ class PeakPositions(strax.Plugin):
         u, v = uv_from_cgr(f_12.astype(np.float64), f_13.astype(np.float64))
         result['u'], result['v'] = u, v
 
-        if positions_available(self.pos_rec_map, self.gain_to_pe_array):
+        if self.pos_rec_map is not None:
             x, y = grid_lookup(u, v, self.pos_rec_map)
         else:
             x = y = np.full(len(peaks), np.nan)
