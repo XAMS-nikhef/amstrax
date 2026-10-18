@@ -33,7 +33,7 @@ This folder is the current production path for XAMS processing on STBC.
 cd /data/xenon/xams_v2/software/amstrax/amstrax/auto_processing_new
 python auto_processing.py \
   --target raw_records peak_basics event_basics event_positions event_info \
-  --corrections_version production_v0 \
+  --corrections_version PROD0 \
   --production \
   --max_jobs 8 \
   --queue short \
@@ -73,11 +73,11 @@ python offline_processing.py \
 ## Notes
 
 - `corrections_version` must cover the run ranges used by each referenced correction file.
-- `production_v0` (`amstrax_files/corrections/_global/_global_production_v0.json`) holds only the approved gains and the
+- `PROD0` (`amstrax_files/corrections/_global/_global_PROD0.json`) holds only the approved gains and the
   position map (posrec v2). Every file in it covers all runs: a range with `null` means "not available for these runs"
   (no approved gains yet → areas in ADC·samples; no map or no gains → x, y, r are NaN). There is no polynomial
   position fallback any more (PeakPositions 2.0.0). New gains: add their run range to a new gain file version and a new
-  `_global_production_vN.json`; never edit a released file.
+  `_global_PRODn.json` (no extra underscores: the folder is taken from the file name); never edit a released file.
 - For LED calibration modes, `process.py` automatically switches to:
   - `raw_records`, `records_led`, `led_calibration`
 - `process.py` now accepts `--set_config_kwargs` and `--set_context_kwargs` for compatibility.
