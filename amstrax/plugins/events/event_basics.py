@@ -18,7 +18,7 @@ class EventBasics(strax.Plugin):
     alternative S2 is selected as the largest S2 other than main S2
     in the time window [main S1 time, main S1 time + max drift time].
     """
-    __version__ = '1.6'
+    __version__ = '1.7'
 
     electron_drift_velocity = amstrax.XAMSConfig(
         default=1.6e-6,
@@ -81,13 +81,13 @@ class EventBasics(strax.Plugin):
 
         dtype += [
             (f's2_x', np.float32,
-             f'Main S2 reconstructed X position, uncorrected [cm]'),
+             f'Main S2 x-position from the pos_rec_map (peak_positions) [mm]'),
             (f's2_y', np.float32,
-             f'Main S2 reconstructed Y position, uncorrected [cm]'),
+             f'Main S2 y-position from the pos_rec_map (peak_positions) [mm]'),
             (f'alt_s2_x', np.float32,
-             f'Alternate S2 reconstructed X position, uncorrected [cm]'),
+             f'Alternate S2 x-position from the pos_rec_map (peak_positions) [mm]'),
             (f'alt_s2_y', np.float32,
-             f'Alternate S2 reconstructed Y position, uncorrected [cm]'),
+             f'Alternate S2 y-position from the pos_rec_map (peak_positions) [mm]'),
             (f'area_before_main_s2', np.float32,
              f'Sum of areas before Main S2 [PE]'),
             (f'large_s2_before_main_s2', np.float32,
@@ -169,13 +169,13 @@ class EventBasics(strax.Plugin):
             # S2 positions
             posrec_dtpye += [
                 (f's2_x_{algo}', np.float32,
-                 f'Main S2 {algo}-reconstructed X position, uncorrected [cm]'),
+                 f'Main S2 x_{algo} of peak_positions'),
                 (f's2_y_{algo}', np.float32,
-                 f'Main S2 {algo}-reconstructed Y position, uncorrected [cm]'),
+                 f'Main S2 y_{algo} of peak_positions'),
                 (f'alt_s2_x_{algo}', np.float32,
-                 f'Alternate S2 {algo}-reconstructed X position, uncorrected [cm]'),
+                 f'Alternate S2 x_{algo} of peak_positions'),
                 (f'alt_s2_y_{algo}', np.float32,
-                 f'Alternate S2 {algo}-reconstructed Y position, uncorrected [cm]')]
+                 f'Alternate S2 y_{algo} of peak_positions')]
 
         return posrec_dtpye
 
@@ -265,9 +265,7 @@ class EventBasics(strax.Plugin):
                     pass
                 elif s_i == 2:
                     
-                    algo = self.pos_rec_labels[0]
-                    peak_properties_to_save += [f'x_{algo}', f'y_{algo}']
-                    peak_properties_to_save += self.posrec_save
+                    peak_properties_to_save += ['x', 'y'] + self.posrec_save
 
                 field_names = [f'{main_or_alt}{s_i}_{name}' for name in peak_properties_to_save]
                 self.copy_largest_peaks_into_event(event,

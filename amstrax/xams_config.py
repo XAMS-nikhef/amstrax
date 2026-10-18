@@ -146,8 +146,11 @@ class XAMSConfig(Config):
         return _as_immutabledict_channel_map(value)
 
     def find_correction_value(self, correction_data, run_id, correction_file=None):
+        """Value of the run range that contains run_id. A range may hold null on purpose ("no correction for these
+        runs", e.g. no approved gains yet): then None is returned. A run in no range at all is an error."""
         run_id = str(run_id).zfill(6)  # Ensure run_id is always 6 digits
         value = None
+        found = False
 
         for run_range in correction_data.keys():
             if "-" in run_range:
@@ -170,14 +173,14 @@ class XAMSConfig(Config):
                 end_run = end_run.zfill(6)
 
                 if start_run <= run_id <= end_run:
-                    value = correction_data[run_range]
+                    value, found = correction_data[run_range], True
                     break
             else:
                 if run_range.zfill(6) == run_id:
-                    value = correction_data[run_range]
+                    value, found = correction_data[run_range], True
                     break
 
-        if value is None:
+        if not found:
             raise ValueError(f"No valid correction found for run_id {run_id} and no fallback is allowed.")
 
         return value
