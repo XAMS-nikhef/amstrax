@@ -1,5 +1,5 @@
-"""Position reconstruction v2 only: the pos_rec_map is applied per peak (peak_positions) when the run has a map and
-gains; event_basics copies the S2 positions, event_positions passes them on. No polynomial fallback."""
+"""Position reconstruction v2 only: the pos_rec_map (default: the latest map) is applied per peak (peak_positions),
+with or without gains; event_basics copies the S2 positions, event_positions passes them on. No polynomial fallback."""
 import unittest
 
 import numpy as np
@@ -66,32 +66,38 @@ class TestPeakPositions(unittest.TestCase):
         return p
 
     def test_no_polynomial(self):
-        p = self._plugin()
+        p = self._plugin(pos_rec_map=None)
         names = p.dtype_for("peak_positions").names
         for f in ("x_corr", "y_corr", "r_corr"):
             self.assertNotIn(f, names)
         self.assertNotIn("pos_rec_params", p.takes_config)
         self.assertNotIn("default_reconstruction_algorithm", p.takes_config)
 
-    def test_map_and_gains(self):
-        p = self._plugin(pos_rec_map=linear_map(), gain_to_pe_array=list(np.ones(8)))
-        r = p.compute(self._peaks())
-        np.testing.assert_allclose(r["x_cgr"][:2], [0.5, 0.75])
-        np.testing.assert_allclose(r["y_cgr"][:2], [0.5, 0.25])
-        # event 1: u = 2 * 0.25 - 1 = -0.5, v = 2 * 0.75 - 1 = 0.5 -> x = -15, y = -10
-        self.assertAlmostEqual(float(r["u"][1]), -0.5, places=6)
-        self.assertAlmostEqual(float(r["v"][1]), 0.5, places=6)
-        self.assertAlmostEqual(float(r["x"][1]), -15.0, places=4)
-        self.assertAlmostEqual(float(r["y"][1]), -10.0, places=4)
-        self.assertAlmostEqual(float(r["r"][1]), np.hypot(15, 10), places=4)
-        self.assertTrue(np.isnan(r["x"][2]))
+    def test_default_is_latest_map(self):
+        from amstrax.plugins.peaks.peak_positions import PeakPositions, DEFAULT_POS_REC_MAP
+        self.assertEqual(PeakPositions.takes_config["pos_rec_map"].default, DEFAULT_POS_REC_MAP)
+        self.assertIn("pos_rec_map_v1.json", DEFAULT_POS_REC_MAP)
 
-    def test_nan_without_map_or_gains(self):
-        for cfg in (dict(), dict(pos_rec_map=linear_map()), dict(gain_to_pe_array=list(np.ones(8)))):
-            r = self._plugin(**cfg).compute(self._peaks())
-            self.assertTrue(np.all(np.isnan(r["x"])), cfg.keys())
-            self.assertTrue(np.all(np.isnan(r["y"])), cfg.keys())
-            self.assertTrue(np.isfinite(r["u"][1]))               # u, v always there
+    def test_map_with_and_without_gains(self):
+        # the map is applied whether or not the run has gains (without gains (u, v) are in ADC units)
+        for cfg in (dict(gain_to_pe_array=list(np.ones(8))), dict()):
+            p = self._plugin(pos_rec_map=linear_map(), **cfg)
+            r = p.compute(self._peaks())
+            np.testing.assert_allclose(r["x_cgr"][:2], [0.5, 0.75])
+            np.testing.assert_allclose(r["y_cgr"][:2], [0.5, 0.25])
+            # event 1: u = 2 * 0.25 - 1 = -0.5, v = 2 * 0.75 - 1 = 0.5 -> x = -15, y = -10
+            self.assertAlmostEqual(float(r["u"][1]), -0.5, places=6)
+            self.assertAlmostEqual(float(r["v"][1]), 0.5, places=6)
+            self.assertAlmostEqual(float(r["x"][1]), -15.0, places=4)
+            self.assertAlmostEqual(float(r["y"][1]), -10.0, places=4)
+            self.assertAlmostEqual(float(r["r"][1]), np.hypot(15, 10), places=4)
+            self.assertTrue(np.isnan(r["x"][2]))
+
+    def test_nan_without_map(self):
+        r = self._plugin(pos_rec_map=None).compute(self._peaks())
+        self.assertTrue(np.all(np.isnan(r["x"])))
+        self.assertTrue(np.all(np.isnan(r["y"])))
+        self.assertTrue(np.isfinite(r["u"][1]))               # u, v always there
 
 
 class TestEventPositions(unittest.TestCase):

@@ -14,8 +14,8 @@ class EventPositions(strax.Plugin):
     Position of the main S2 / S1 pair and the alternative S2: x, y, r, phi and z.
 
     (x, y) are the S2 positions of event_basics (s2_x, s2_y, alt_s2_x, alt_s2_y), which come from the
-    (u, v) -> (x, y) map ``pos_rec_map`` applied in peak_positions (position reconstruction v2). Without a map or
-    without gains for the run they are NaN; there is no fallback (the old cubic polynomial was removed in 2.0.0).
+    (u, v) -> (x, y) map ``pos_rec_map`` applied in peak_positions (position reconstruction v2). Without a map
+    for the run they are NaN; there is no polynomial fallback (removed in 2.0.0).
     u, v are the light-sharing asymmetries of the main S2 (u = left - right, v = top - bottom).
     """
 
