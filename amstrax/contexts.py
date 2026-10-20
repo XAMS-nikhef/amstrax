@@ -107,8 +107,11 @@ def xams(
             pass
 
     st.storage += [
-        strax.DataDirectory(output_folder),
+        # provides the run documents of runs that are not in the run database (simulated runs, xams-sim)
+        strax.DataDirectory(output_folder, provide_run_metadata=True),
     ]
+    if output_folder not in ax.xams_config.RUNDOC_DIRS:
+        ax.xams_config.RUNDOC_DIRS.append(output_folder)
 
     if corrections_version is not None:
         apply_global_correction_version(st, corrections_version)

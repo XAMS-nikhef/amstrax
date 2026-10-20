@@ -186,6 +186,26 @@ class XAMSConfig(Config):
         return value
 
 
+# folders whose `<run>-metadata.json` files serve as run documents for runs that are not in the run database (simulated
+# runs: xams-sim writes them next to their raw records); contexts.xams() adds its output folder
+RUNDOC_DIRS: list = []
+
+
+def _stored_rundoc(run_id):
+    import json
+    from pathlib import Path
+    from bson import json_util
+    try:
+        name = f"{int(run_id):06d}"
+    except (TypeError, ValueError):
+        name = str(run_id)
+    for d in RUNDOC_DIRS:
+        f = Path(d) / f"{name}-metadata.json"
+        if f.exists():
+            return json.loads(f.read_text(), object_hook=json_util.object_hook)
+    return None
+
+
 @export
 def get_rundoc_value(
     run_id: ty.Union[str, int],
@@ -199,8 +219,12 @@ def get_rundoc_value(
     Example:
         get_rundoc_value("007346", "xams_bookkeeping.channel_map")
     """
-    run_col = amstrax.get_mongo_collection(detector)
-    doc = run_col.find_one({"number": int(run_id)})
+    # a stored run document first (simulated runs, xams-sim: never in the run database; data runs have none), so
+    # simulated runs never wait for the database
+    doc = _stored_rundoc(run_id)
+    if not isinstance(doc, dict):
+        run_col = amstrax.get_mongo_collection(detector)
+        doc = run_col.find_one({"number": int(run_id)})
     if not isinstance(doc, dict):
         return default
 
