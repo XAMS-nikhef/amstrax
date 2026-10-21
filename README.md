@@ -5,7 +5,7 @@
 [![PyPI version shields.io](https://img.shields.io/pypi/v/amstrax.svg)](https://pypi.python.org/pypi/amstrax/)
 [![PyPI downloads](https://img.shields.io/pypi/dm/amstrax.svg)](https://pypistats.org/packages/amstrax)
 [![DOI](https://zenodo.org/badge/263576054.svg)](https://zenodo.org/badge/latestdoi/263576054)
-[![Python Versions](https://img.shields.io/pypi/pyversions/amstrax.svg)](https://pypi.python.org/pypi/amstrax)
+[![Python Versions](https://img.shields.io/badge/python-3.8%20%7C%203.12-blue)](https://github.com/XAMS-nikhef/amstrax/actions)
 
 
 ## Documentation
