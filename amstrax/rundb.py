@@ -3,6 +3,7 @@ import logging
 import os
 import re
 import socket
+import threading
 import typing
 from typing import Union, Dict, Any
 import configparser
@@ -60,12 +61,20 @@ def get_configs() -> Dict[str, Any]:
 # can close while a pymongo background thread still reconnects, which logs "Could not establish connection ... SSH
 # session not active" at the end of every script (pymongo >= 4.7).
 _TUNNELS = {}
-_CLIENTS = []
+# One MongoClient per (process, URI), reused by every get_mongo_client() call.
+# A MongoClient is thread-safe and meant to be shared; each new one starts its
+# own monitor threads and connections through the tunnel. Creating one per call
+# leaked them in long-running processes: the XAMS dashboard reached 576 threads
+# and its 1024-file limit after three days (October 2026), after which it could
+# no longer open its static files. The process id is part of the key, so a
+# forked worker builds its own client instead of using the parent's.
+_CLIENTS = {}
+_CLIENTS_LOCK = threading.Lock()
 
 
 def _close_mongo_connections():
     log = logging.getLogger(__name__)
-    for client in _CLIENTS:
+    for client in list(_CLIENTS.values()):
         try:
             client.close()
         except Exception as e:  # noqa: BLE001 - best effort at exit
@@ -118,8 +127,13 @@ def get_mongo_client(daq_host: str = "",
     
     local_port = establish_ssh_tunnel(daq_host, daq_user, daq_password, mongo_port, secret_serving_port)
 
-    client = pymongo.MongoClient(f'mongodb://{user}:{password}@127.0.0.1:{local_port}/{CONFIG["DEFAULT_DBNAME"]}')
-    _CLIENTS.append(client)
+    uri = f'mongodb://{user}:{password}@127.0.0.1:{local_port}/{CONFIG["DEFAULT_DBNAME"]}'
+    key = (os.getpid(), uri)
+    with _CLIENTS_LOCK:
+        client = _CLIENTS.get(key)
+        if client is None:
+            client = pymongo.MongoClient(uri)
+            _CLIENTS[key] = client
     return client
 
 @export
