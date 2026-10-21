@@ -2,6 +2,8 @@ import argparse
 import time
 import os
 import logging
+import signal
+import threading
 from datetime import datetime, timedelta
 import json
 
@@ -19,6 +21,26 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 SETUP_FILE = "/data/xenon/xams_v2/setup.sh"
+
+# CLEAN STOP. Ctrl-C (SIGINT) and SIGTERM (`kill`, `screen -X quit`, a reboot)
+# set this event instead of killing the loop wherever it happens to be. The
+# loop finishes the step it is in - never half a submission, where the condor
+# job exists but the run document does not say so - and stops at the next
+# check or during its sleep, within seconds. A second signal stops at once.
+STOP = threading.Event()
+
+
+def request_stop(signum, frame):
+    if STOP.is_set():
+        log.warning("Second stop request: exiting now.")
+        raise KeyboardInterrupt
+    log.info(f"Stop requested ({signal.Signals(signum).name}); finishing the current step.")
+    STOP.set()
+
+
+def install_stop_handlers():
+    signal.signal(signal.SIGINT, request_stop)
+    signal.signal(signal.SIGTERM, request_stop)
 
 def parse_args():
     """
@@ -63,7 +85,7 @@ def main(args):
     client = amstrax.get_mongo_client()
     processing_db = client["daq"]["processing"]
 
-    while True:
+    while not STOP.is_set():
         # Check if auto-processing is enabled
         auto_processing_on = processing_db.find_one({"name": "auto_processing"})["status"] == "on"
 
@@ -75,8 +97,11 @@ def main(args):
 
         if not run_docs_to_do:
             log.info(f"No runs to process. Sleeping for {nap_time} seconds.")
-            time.sleep(nap_time)
+            STOP.wait(nap_time)
             continue
+
+        if STOP.is_set():
+            break
 
         # Submit new jobs if below max limit
         submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir)
@@ -86,7 +111,10 @@ def main(args):
             break
 
         log.info(f"Sleeping for {nap_time} seconds before next check...")
-        time.sleep(nap_time)
+        STOP.wait(nap_time)
+
+    if STOP.is_set():
+        log.info("Auto-processing stopped cleanly.")
 
 
 def update_task_list(args, runs_col, auto_processing_on):
@@ -134,7 +162,10 @@ def is_job_running_in_condor(run_number):
         condor_q_bin = shutil.which("condor_q")
         if not condor_q_bin:
             raise RuntimeError("condor_q not found in PATH")
-        result = subprocess.run([condor_q_bin, '-nobatch'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        # Own session: a Ctrl-C in the terminal goes to this loop only, which
+        # then stops cleanly, and does not kill condor_q halfway.
+        result = subprocess.run([condor_q_bin, '-nobatch'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                                start_new_session=True)
         if result.returncode != 0:
             raise RuntimeError(f"condor_q command failed: {result.stderr}")
 
@@ -211,6 +242,9 @@ def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
     log.info(f"Submitting jobs for runs: {will_do_run_ids}")
 
     for run_doc in run_docs_to_do[:max_jobs_to_submit]:
+        if STOP.is_set():
+            log.info("Stop requested: no further submissions.")
+            break
         run_id = f'{int(run_doc["number"]):06}'
         job_name = f"process_{run_id}_online"
 
@@ -307,4 +341,5 @@ if __name__ == "__main__":
         log_name, log_name, level=logging.DEBUG, opening_message=f"Using versions: {versions}", logdir=args.logs_path
     )
 
+    install_stop_handlers()
     main(args)
