@@ -95,7 +95,9 @@ def submit_job(
 
     try:
         command = f"condor_submit {condor_file}"
-        subprocess.run(shlex.split(command), check=True)
+        # Own session: a Ctrl-C meant for the auto-processing loop must not
+        # kill condor_submit halfway (the loop stops cleanly after it).
+        subprocess.run(shlex.split(command), check=True, start_new_session=True)
         log.info(f"Job {jobname} submitted successfully.")
         log.info(f"Monitor the state of the job with `condor_q` or `condor_watch_q`.")
     except subprocess.CalledProcessError as e:
