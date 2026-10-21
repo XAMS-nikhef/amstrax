@@ -163,6 +163,11 @@ def context_for_daq_reader(
 def _get_run_doc_for_daq_reader(run_doc: dict, run_id: str, detector: str) -> dict:
     if run_doc is not None:
         return run_doc
+    # a stored run document first (simulated runs, xams-sim: `<run>-metadata.json` next to their data, never in the
+    # run database), as get_rundoc_value does; data runs have none and come from the database
+    stored = ax.xams_config._stored_rundoc(run_id)
+    if isinstance(stored, dict):
+        return stored
     run_col = ax.get_mongo_collection(detector)
     return run_col.find_one({"number": int(run_id)})
 
