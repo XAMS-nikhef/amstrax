@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import timezone
 
 import strax
@@ -236,6 +237,26 @@ def _check_raw_records_exists(st: strax.Context, run_id: str) -> bool:
             if st.is_stored(run_id, plugin_name):
                 return True
     return False
+
+
+def for_mc_run(st: strax.Context, run_id) -> strax.Context:
+    """Context for one simulated run whose corrections come from its run document (MC global versions, e.g. MC1).
+
+    The corrections of a simulated run (xams-sim) are in its own run document: the true values of the simulation and,
+    after a calibration on the reconstructed MC, the calibrated ones (with a version). The rundoc:// addresses of these
+    corrections get the run's current calibration version, so that each calibration has its own lineage and products
+    of an older calibration are never used for a newer one. Other options are unchanged.
+    """
+    version = ax.xams_config.get_rundoc_value(run_id, ax.xams_config.MC_CALIBRATION_VERSION, default=0)
+    over = {}
+    for name, value in st.config.items():
+        if isinstance(value, str) and value.startswith("rundoc://") and ax.xams_config.MC_CORRECTIONS in value:
+            base = re.sub(r"&calibration=\d+", "", value)
+            over[name] = f"{base}&calibration={int(version)}"
+    if not over:
+        raise ValueError("no MC corrections (rundoc://...xamssim.corrections...) in this context: use an MC "
+                         "corrections version (e.g. corrections_version='MC1')")
+    return st.new_context(config=over)
 
 
 def apply_global_correction_version(context: strax.Context, global_version: str) -> None:
