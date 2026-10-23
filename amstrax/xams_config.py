@@ -137,6 +137,14 @@ class XAMSConfig(Config):
             value = get_rundoc_value(run_id=plugin.run_id, path=p.strip(), detector=detector, default=None)
             if value is not None:
                 break
+        calibration = query_params.get("calibration", [None])[0]
+        if calibration is not None:
+            # simulated runs (xams-sim): the corrections of the run's own run document, truth or calibrated; the
+            # calibration version is part of the address (and so of the lineage) and must be the run's current one
+            current = get_rundoc_value(run_id=plugin.run_id, path=MC_CALIBRATION_VERSION, detector=detector, default=0)
+            if int(calibration) != int(current):
+                raise ValueError(f"run {plugin.run_id} has MC calibration version {current}, the context asks for "
+                                 f"{calibration}: make the context with amstrax.contexts.for_mc_run")
         if value is None:
             if fallback == "xams_default":
                 return DEFAULT_CHANNEL_MAP
@@ -189,6 +197,9 @@ class XAMSConfig(Config):
 # folders whose `<run>-metadata.json` files serve as run documents for runs that are not in the run database (simulated
 # runs: xams-sim writes them next to their raw records); contexts.xams() adds its output folder
 RUNDOC_DIRS: list = []
+# simulated runs: the corrections in their run document (xams-sim) and the version of the calibrated ones (0 = truth)
+MC_CORRECTIONS = "xamssim.corrections"
+MC_CALIBRATION_VERSION = "xamssim.corrections.calibrated.version"
 
 
 def _stored_rundoc(run_id):
