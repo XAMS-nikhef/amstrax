@@ -42,6 +42,9 @@ def test_wrong_calibration_version(rundocs):
         fetch(URL + "&calibration=1")
 
 
+TRUTH = "rundoc://?path=xamssim.corrections.truth.elife"
+
+
 def test_for_mc_run(rundocs):
     write_doc(rundocs, {"truth": {"elife": 159000.0}, "calibrated": {"elife": 151200.0, "version": 3}})
     st = amstrax.contexts.xams(output_folder=str(rundocs), init_rundb=False)
@@ -49,5 +52,17 @@ def test_for_mc_run(rundocs):
     st2 = amstrax.contexts.for_mc_run(st, "990001")
     assert st2.config["elife"] == URL + "&calibration=3"
     assert st.config["elife"] == URL + "&calibration=1"          # the original context is unchanged
+    assert amstrax.contexts.for_mc_run(st, "990001", use="truth").config["elife"] == TRUTH
+    assert fetch(TRUTH) == 159000.0                              # truth: no version check, the true value
+    with pytest.raises(ValueError, match="use must be"):
+        amstrax.contexts.for_mc_run(st, "990001", use="calibrated")
+
+
+def test_for_mc_run_before_calibration(rundocs):
+    write_doc(rundocs, {"truth": {"elife": 159000.0}})          # version 0: latest = truth, one lineage
+    st = amstrax.contexts.xams(output_folder=str(rundocs), init_rundb=False)
+    st.set_config(dict(elife=URL))
+    assert amstrax.contexts.for_mc_run(st, "990001").config["elife"] == TRUTH
+    assert amstrax.contexts.for_mc_run(st, "990001", use="truth").config["elife"] == TRUTH
     with pytest.raises(ValueError, match="no MC corrections"):
         amstrax.contexts.for_mc_run(amstrax.contexts.xams(output_folder=str(rundocs), init_rundb=False), "990001")

@@ -239,20 +239,34 @@ def _check_raw_records_exists(st: strax.Context, run_id: str) -> bool:
     return False
 
 
-def for_mc_run(st: strax.Context, run_id) -> strax.Context:
+def for_mc_run(st: strax.Context, run_id, use: str = "latest") -> strax.Context:
     """Context for one simulated run whose corrections come from its run document (MC global versions, e.g. MC1).
 
     The corrections of a simulated run (xams-sim) are in its own run document: the true values of the simulation and,
-    after a calibration on the reconstructed MC, the calibrated ones (with a version). The rundoc:// addresses of these
-    corrections get the run's current calibration version, so that each calibration has its own lineage and products
-    of an older calibration are never used for a newer one. Other options are unchanged.
+    after a calibration on the reconstructed MC, the calibrated ones (with a version).
+
+    use="latest" (default): the run's current corrections. Before any calibration (version 0) these are the true values,
+    with the same addresses as use="truth"; after a calibration the addresses get the calibration version, so that each
+    calibration has its own lineage and products of an older calibration are never used for a newer one.
+    use="truth": only the simulation's own values, whatever calibration is stored (one stable lineage: the reference of
+    the closure test). Other options are unchanged.
     """
-    version = ax.xams_config.get_rundoc_value(run_id, ax.xams_config.MC_CALIBRATION_VERSION, default=0)
+    if use not in ("latest", "truth"):
+        raise ValueError(f"use must be 'latest' or 'truth', not {use!r}")
+    version = int(ax.xams_config.get_rundoc_value(run_id, ax.xams_config.MC_CALIBRATION_VERSION, default=0) or 0)
+    truth_only = use == "truth" or version == 0
     over = {}
     for name, value in st.config.items():
         if isinstance(value, str) and value.startswith("rundoc://") and ax.xams_config.MC_CORRECTIONS in value:
             base = re.sub(r"&calibration=\d+", "", value)
-            over[name] = f"{base}&calibration={int(version)}"
+            if truth_only:
+                m = re.search(r"path=([^&]*)", base)
+                paths = [q for q in m.group(1).split(",") if ".truth." in q] if m else []
+                if not paths:
+                    raise ValueError(f"{name}: no truth path in {value}")
+                over[name] = base.replace(m.group(0), "path=" + ",".join(paths))
+            else:
+                over[name] = f"{base}&calibration={version}"
     if not over:
         raise ValueError("no MC corrections (rundoc://...xamssim.corrections...) in this context: use an MC "
                          "corrections version (e.g. corrections_version='MC1')")
