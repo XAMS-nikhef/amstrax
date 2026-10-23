@@ -198,8 +198,10 @@ class DAQReader(strax.Plugin):
         ended = self.source_finished()
         pre, current, post = self._chunk_paths(chunk_i)
         next_ahead = os.path.exists(self._path(chunk_i + 1))
+        # The last chunk of an ended run has no _post; a run of a single chunk (shorter than one chunk length,
+        # e.g. a short test or a small simulated run) has no _pre either.
         if current and (
-            (pre and post or chunk_i == 0 and post or ended and (pre and not next_ahead))
+            (pre and post or chunk_i == 0 and post or ended and (pre or chunk_i == 0) and not next_ahead)
         ):
             return True
         return False
