@@ -168,7 +168,7 @@ def _get_run_doc_for_daq_reader(run_doc: dict, run_id: str, detector: str) -> di
     stored = ax.xams_config._stored_rundoc(run_id)
     if isinstance(stored, dict):
         return stored
-    run_col = ax.get_mongo_collection(detector)
+    run_col = ax.get_run_collection(run_id, detector)                # runs_mc for simulated runs, else runs_gas
     return run_col.find_one({"number": int(run_id)})
 
 

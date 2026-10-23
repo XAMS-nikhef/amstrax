@@ -223,7 +223,7 @@ def get_rundoc_value(
     # simulated runs never wait for the database
     doc = _stored_rundoc(run_id)
     if not isinstance(doc, dict):
-        run_col = amstrax.get_mongo_collection(detector)
+        run_col = amstrax.get_run_collection(run_id, detector)        # runs_mc for simulated runs, else runs_gas
         doc = run_col.find_one({"number": int(run_id)})
     if not isinstance(doc, dict):
         return default

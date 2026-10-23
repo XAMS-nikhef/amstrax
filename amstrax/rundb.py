@@ -145,11 +145,34 @@ def get_mongo_collection(detector: str = CONFIG['DEFAULT_DETECTOR'],
     client = get_mongo_client(**link_kwargs)
     collections = {
         'xams': 'runs_gas',
-        'xamsl': 'runs_new'
+        'xamsl': 'runs_new',
+        'xams_mc': 'runs_mc',       # simulated runs (xams-sim), numbers MC_RUN_NUMBERS; written by xams-sim only
     }
     if detector not in collections:
         raise NameError(f'detector {detector} is not a valid detector name.')
     return client[runcolname][collections[detector]]
+
+
+# Run numbers of simulated runs (xams-sim): their run documents are in run.runs_mc, never in runs_gas.
+MC_RUN_NUMBERS = (900000, 999999)
+
+
+@export
+def is_mc_run(run_id) -> bool:
+    """True for the run number of a simulated run (xams-sim)."""
+    try:
+        return MC_RUN_NUMBERS[0] <= int(run_id) <= MC_RUN_NUMBERS[1]
+    except (TypeError, ValueError):
+        return False
+
+
+@export
+def get_run_collection(run_id, detector: str = CONFIG['DEFAULT_DETECTOR'], **link_kwargs) -> pymongo.collection.Collection:
+    """The collection that holds the run document of run_id: run.runs_mc for simulated runs of detector xams,
+    otherwise that of the detector (runs_gas)."""
+    if detector == 'xams' and is_mc_run(run_id):
+        detector = 'xams_mc'
+    return get_mongo_collection(detector, **link_kwargs)
 
 @export
 class RunDB(strax.StorageFrontend):
