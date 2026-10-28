@@ -18,7 +18,7 @@ class EventBasics(strax.Plugin):
     alternative S2 is selected as the largest S2 other than main S2
     in the time window [main S1 time, main S1 time + max drift time].
     """
-    __version__ = '1.7'
+    __version__ = '1.8'
 
     electron_drift_velocity = amstrax.XAMSConfig(
         default=1.6e-6,
@@ -106,7 +106,7 @@ class EventBasics(strax.Plugin):
             ('endtime', np.int64, 'end time since unix epoch [ns]'),
             ('area', np.float32, 'area, uncorrected [PE]'),
             ('n_channels', np.int16, 'count of contributing PMTs'),
-            ('n_hits', np.int16, 'count of hits contributing at least one sample to the peak'),
+            ('n_hits', np.int32, 'count of hits contributing at least one sample to the peak'),
             ('max_pmt', np.int16, 'PMT number which contributes the most PE'),
             ('max_pmt_area', np.float32, 'area in the largest-contributing PMT (PE)'),
             ('range_50p_area', np.float32, 'width, 50% area [ns]'),
