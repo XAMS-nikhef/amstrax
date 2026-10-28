@@ -1,7 +1,7 @@
 name: Test package
 
-# Tests on the two software stacks that run on STBC: production (Python 3.12, strax 2) and the py38 fallback
-# (Python 3.8, strax 1.5.4). Coverage is reported from the production stack.
+# Tests on the production software stack of STBC (Python 3.12, strax 2), with coverage. The py38 fallback stack
+# (Python 3.8, strax 1.5.4) is no longer tested: GitHub's runners (Ubuntu 26.04) have no Python 3.8 (October 2026).
 on:
   workflow_dispatch:
   release:
@@ -23,9 +23,6 @@ jobs:
           - python-version: "3.12"
             requirements: extra_requirements/requirements-tests.txt
             coverage: true
-          - python-version: "3.8"
-            requirements: extra_requirements/requirements-tests-py38.txt
-            coverage: false
     steps:
       # Setup and installation
       - name: Checkout repo
