@@ -208,7 +208,17 @@ def handle_running_jobs(runs_col, production=False):
         if should_fail:
             new_status = "failed"
             if production:
-                update_processing_status(run_number, new_status, production=production, is_online=True)
+                # Only if the status is still the one read above: the job may have finished (status 'done', condor job
+                # gone) between the query and the condor check, and a finished run must not be marked failed.
+                result = runs_col.update_one(
+                    {"number": run_number,
+                     "processing_status.status": processing_status["status"],
+                     "processing_status.time": status_time},
+                    {"$set": {"processing_status": {"status": new_status, "time": datetime.now(), "host": "stbc"}}},
+                )
+                if result.modified_count == 0:
+                    log.info(f"Run {run_number} changed status meanwhile, not marked failed.")
+                    continue
                 append_processing_history(
                     run_number,
                     action="online_watchdog",
