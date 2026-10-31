@@ -36,7 +36,6 @@ COMMON_OPT_XAMS = dict(
         ax.EventPositions,
         ax.EventCoincidences,
         ax.CorrectedAreas,
-        ax.EnergyEstimates,
         ax.EventInfo,
         ax.EventWaveform,
         ax.EventAreaPerChannel,
