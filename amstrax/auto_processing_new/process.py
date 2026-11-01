@@ -405,7 +405,9 @@ class RunProcessor:
 
         st = self.amstrax.contexts.xams(
             output_folder=self.output_folder,
-            corrections_version=self.corrections_version
+            corrections_version=self.corrections_version,
+            # the optional event structure v2 types are registered only when they are targets
+            event_structure_v2=any(t in self.amstrax.EVENT_STRUCTURE_V2_TYPES for t in self.targets),
         )
         if self.set_context_kwargs:
             st.set_context_config(self.set_context_kwargs)

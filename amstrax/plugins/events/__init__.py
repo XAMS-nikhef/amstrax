@@ -22,3 +22,6 @@ from .event_waveform import *
 from . import event_coincidences
 from .event_coincidences import *
 
+
+from . import event_structure
+from .event_structure import *

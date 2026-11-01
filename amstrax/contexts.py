@@ -73,6 +73,7 @@ def xams(
         mongo_collname=CONFIG["DEFAULT_COLLECTION"], mongo_dbname=CONFIG["DEFAULT_RUNCOLNAME"], runid_field="number"
     ),
     corrections_version=None,
+    event_structure_v2=False,
     *args,
     **kwargs,
 ):
@@ -113,6 +114,10 @@ def xams(
     ]
     if output_folder not in ax.xams_config.RUNDOC_DIRS:
         ax.xams_config.RUNDOC_DIRS.append(output_folder)
+
+    if event_structure_v2:
+        # optional (not in the auto-processing): event_peaks, sites, events_v2, peak_context
+        st.register(list(ax.EVENT_STRUCTURE_V2))
 
     if corrections_version is not None:
         apply_global_correction_version(st, corrections_version)
