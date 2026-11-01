@@ -7,16 +7,16 @@ jobs:
     name: Quality check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Change __all__ exports for pyflake
         run: |
           bash .github/scripts/pre_pyflakes.sh
       - name: Wemake Python Stylguide
-        uses: wemake-services/wemake-python-styleguide@0.18.0
+        uses: wemake-services/wemake-python-styleguide@1.8.1
         continue-on-error: true
         with:
           reporter: 'github-pr-review'
