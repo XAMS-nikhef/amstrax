@@ -169,10 +169,8 @@ def is_job_running_in_condor(run_number):
         if result.returncode != 0:
             raise RuntimeError(f"condor_q command failed: {result.stderr}")
 
-        for line in result.stdout.splitlines():
-            if str(run_number) in line:  # C = completed
-                return True
-        return False
+        job_name = f"process_{int(run_number):06d}_online"       # the online job script name (submit_new_jobs)
+        return any(job_name in line for line in result.stdout.splitlines())
 
     except Exception as e:
         log.error(f"Error checking condor for run {run_number}: {e}")
@@ -180,10 +178,11 @@ def is_job_running_in_condor(run_number):
 
 def handle_running_jobs(runs_col, production=False):
     """
-    Check and update the status of running jobs. Mark jobs as failed if:
-    - They've been running or submitted for over 30 minutes, OR
-    - Their status is 'submitted'/'running' but no such job exists in condor.
+    Check and update the status of running jobs. A run is marked failed only if its status is 'submitted'/'running'
+    for more than GRACE_MINUTES and no such job exists in condor. Jobs that wait in the queue or run long are left
+    alone (with 100 jobs at once many wait longer than the old 30-minute limit, 28-10-2026); held jobs are condor's.
     """
+    GRACE_MINUTES = 2                    # a job just submitted may not show up in condor_q yet
     query = {"processing_status.status": {"$in": ["submitted", "running"]}}
     projection = {"number": 1, "processing_status": 1}
     run_docs_running = list(runs_col.find(query, projection))
@@ -194,11 +193,8 @@ def handle_running_jobs(runs_col, production=False):
         status_time = processing_status.get("time")
 
         should_fail = False
-
-        # Time threshold
-        if status_time and status_time < datetime.now() - timedelta(minutes=30):
-            log.info(f"Run {run_number} has been {processing_status['status']} for more than 30 minutes.")
-            should_fail = True
+        if status_time and status_time > datetime.now() - timedelta(minutes=GRACE_MINUTES):
+            continue
 
         # Check with condor if job is missing
         if not is_job_running_in_condor(run_number):
@@ -216,7 +212,7 @@ def handle_running_jobs(runs_col, production=False):
                     production=production,
                     host="stbc",
                     is_online=True,
-                    reason="marked failed by watchdog (timeout or missing condor job)",
+                    reason="marked failed by watchdog (no condor job)",
                 )
             else:
                 log.info(f"Would have updated run {run_number} to {new_status}")
