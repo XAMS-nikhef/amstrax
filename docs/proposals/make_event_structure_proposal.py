@@ -66,9 +66,9 @@ def fig_now_vs_new():
         ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.2,rounding_size=0.8", fc=fc, ec=ec, lw=0.8))
         ax.text(x + w / 2, y + h - 1.6, title, ha="center", fontsize=7.6, weight="bold", color=ec)
         ax.text(x + w / 2, y + h - 3.0, lines, ha="center", va="top", fontsize=5.7, linespacing=1.35)
-    tbl(47, 24, 24, 13.5, "events", "one row per event\nn_s1, n_s2, n_sites\ncs1, cs2_top (sum), energy\nquality, dt to prev / next event",
+    tbl(47, 24, 24, 13.5, "events", "one row per event\nn_s1, n_s2, n_sites\ncs1, cs2_top / _bottom (sum), energy\nquality, dt to prev / next event",
         "#E8EEF5", NAVY_)
-    tbl(74, 24, 24.5, 13.5, "sites", "one row per S2 above the\nsite threshold (with main S1)\ndrift_time, x, y, z, r, cs2_top\nrank (by S2 area)",
+    tbl(74, 24, 24.5, 13.5, "sites", "one row per S2 above the\nsite threshold (with main S1)\ndrift_time, x, y, z, r\ncs2_top, cs2_bottom, cs2\nrank (by S2 area)",
         "#FDEBD8", "#C76B12")
     tbl(47, 5, 24, 15.5, "event_peaks", "one row per peak inside\nthe event window, no limit\ntype, rank, dt_s1, area,\nshape, channels; x, y (S2)\nsmall peaks included",
         "#EAF4E6", GREEN_)
@@ -156,14 +156,14 @@ def img(p, w):
 EVENT_COLS = [
     ("identity", "time, endtime, event_number"),
     ("content", "n_peaks, n_s1, n_s2, n_sites"),
-    ("energy", "cs1 (S1 corrected with the S2-weighted position of the sites), cs2_top (sum over sites), energy"),
+    ("energy", "cs1 (S1 corrected with the S2-weighted position of the sites), cs2_top, cs2_bottom, cs2 (sums over sites), energy (from cs2_top)"),
     ("quality", "area_before_main_s2, large_s2_before_main_s2"),
     ("neighbours", "dt_prev_event, dt_next_event (exposure for delayed signals)"),
 ]
 SITE_COLS = [
     ("link", "event_number, peak_index, rank (by S2 area; 1 = main)"),
     ("position", "drift_time (from the main S1), x, y, z, r"),
-    ("corrected", "cs2_top (own position and depth)"),
+    ("corrected", "cs2_top, cs2_bottom, cs2 (own position and depth; bottom can saturate for large S2s)"),
     ("flags", "dt to the previous S2, width vs depth (split S2, photoionisation at t_max)"),
 ]
 PEAK_COLS = [
