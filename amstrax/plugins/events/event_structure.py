@@ -20,7 +20,7 @@ import amstrax
 from amstrax.plugins.events.corrected_areas import W_KEV, CorrectedAreas
 
 export, __all__ = strax.exporter()
-__all__ += ["EVENT_STRUCTURE_V2", "main_interaction"]
+__all__ += ["EVENT_STRUCTURE_V2", "EVENT_STRUCTURE_V2_TYPES", "main_interaction"]
 
 MAX_DRIFT_MARGIN = 1.05     # sites up to 1.05 x drift_time_cathode count as inside the drift region
 CONTEXT_S2_AREAS = (1_000, 10_000)   # peak_context: parents are the last S2s above these areas [PE]
@@ -377,6 +377,7 @@ class PeakContext(strax.Plugin):
 
 
 EVENT_STRUCTURE_V2 = (EventPeaks, Sites, EventsV2, PeakContext)
+EVENT_STRUCTURE_V2_TYPES = ("event_peaks", "sites", "events_v2", "peak_context")
 
 S1_COLUMNS = ("area", "area_fraction_top", "range_50p_area", "n_channels", "tight_coincidence")
 S2_COLUMNS = ("area", "area_fraction_top", "range_50p_area", "range_90p_area")

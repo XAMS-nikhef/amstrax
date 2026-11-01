@@ -122,3 +122,8 @@ def test_off_by_default():
     st = amstrax.contexts.xams(init_rundb=False)
     assert "events_v2" not in st._plugin_class_registry
     assert "event_info" in _context()._plugin_class_registry
+
+
+def test_types_match_plugins():
+    import strax
+    assert set(amstrax.EVENT_STRUCTURE_V2_TYPES) == {t for p in amstrax.EVENT_STRUCTURE_V2 for t in strax.to_str_tuple(p.provides)}
