@@ -180,7 +180,8 @@ CONTEXT_COLS = [
 HOWTO = [
     ("main interaction (flat)", "e = event_info", "amstrax.main_interaction(st, run)  (join, not stored)"),
     ("2nd largest S2", "e['alt_s2_area']", "s[s['rank'] == 2]   (sites)  or  p[(p.type == 2) &amp; (p.rank == 2)]"),
-    ("3rd S2 / all S2s &gt; 500 PE", "not available", "p[(p.type == 2) &amp; (p.area &gt; 500)]"),
+    ("3rd largest S2", "not available", "s[s['rank'] == 3]   (sites)  or  p[(p.type == 2) &amp; (p.rank == 3)]"),
+    ("all S2s &gt; 500 PE", "not available", "p[(p.type == 2) &amp; (p.area &gt; 500)]"),
     ("single scatters", "approximate (alt_s2 &lt; cut)", "ev[ev.n_sites == 1]"),
     ("energy of a double scatter", "main S2 only", "ev.energy  (S1 + all sites)"),
     ("small peaks in the event", "peak_basics + own matching", "p[p.event_number == 17]"),
