@@ -142,6 +142,12 @@ class RunProcessor:
             if "peak_basics_ext" not in self.targets:
                 self.targets.append("peak_basics_ext")
 
+        if ax.has_sipm_data(self.run_doc):
+            # SiPM channels enabled in the run's DAQ config (e.g. the zero-field runs): processed whenever there are data
+            log.info("SiPM channels enabled: adding peak_basics_sipm to the targets.")
+            if "peak_basics_sipm" not in self.targets:
+                self.targets.append("peak_basics_sipm")
+
         return st
 
     def setup_production(self):
@@ -406,8 +412,7 @@ class RunProcessor:
         st = self.amstrax.contexts.xams(
             output_folder=self.output_folder,
             corrections_version=self.corrections_version,
-            # the optional event structure v2 types are registered only when they are targets
-            event_structure_v2=any(t in self.amstrax.EVENT_STRUCTURE_V2_TYPES for t in self.targets),
+            # amstrax 3: the event structure (events, sites, event_peaks, peak_context) is always registered
         )
         if self.set_context_kwargs:
             st.set_context_config(self.set_context_kwargs)

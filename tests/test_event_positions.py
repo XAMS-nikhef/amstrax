@@ -1,5 +1,5 @@
 """Position reconstruction v2 only: the pos_rec_map (default: the latest map) is applied per peak (peak_positions),
-with or without gains; event_basics copies the S2 positions, event_positions passes them on. No polynomial fallback."""
+with or without gains; sites take the position of their S2 peak. No polynomial fallback."""
 import unittest
 
 import numpy as np
@@ -35,11 +35,6 @@ class TestGridLookup(unittest.TestCase):
         u, v = uv_from_cgr(np.array([1.0, 0.5]), np.array([0.5, 1.0]))
         np.testing.assert_allclose(u, [0.0, 1.0])
         np.testing.assert_allclose(v, [1.0, 0.0])
-
-    def test_event_positions_module_still_exports_helpers(self):
-        from amstrax.plugins.events.event_positions import grid_lookup as g, uv_from_cgr as f
-        self.assertIs(g, grid_lookup)
-        self.assertIs(f, uv_from_cgr)
 
 
 class TestPeakPositions(unittest.TestCase):
@@ -98,54 +93,6 @@ class TestPeakPositions(unittest.TestCase):
         self.assertTrue(np.all(np.isnan(r["x"])))
         self.assertTrue(np.all(np.isnan(r["y"])))
         self.assertTrue(np.isfinite(r["u"][1]))               # u, v always there
-
-
-class TestEventPositions(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.st = amstrax.contexts.xams(init_rundb=False)
-        cls.cls = cls.st._plugin_class_registry["event_positions"]
-
-    @staticmethod
-    def _events():
-        names = [f"{p}{c}" for p in ("s2_", "alt_s2_") for c in ("x", "y", "x_cgr", "y_cgr")]
-        dt = [(n, np.float32) for n in names] + [("drift_time", np.int64)] + strax.time_fields
-        ev = np.zeros(3, dtype=dt)
-        ev["time"] = [0, 10, 20]
-        ev["endtime"] = [5, 15, 25]
-        ev["s2_x"] = [1.0, -15.0, np.nan]
-        ev["s2_y"] = [2.0, -10.0, np.nan]
-        ev["s2_x_cgr"] = [0.5, 0.75, np.nan]
-        ev["s2_y_cgr"] = [0.5, 0.25, 0.5]
-        for c in ("x", "y", "x_cgr", "y_cgr"):
-            ev[f"alt_s2_{c}"] = np.nan
-        ev["drift_time"] = [3000, 20000, 39500]
-        return ev
-
-    def _plugin(self):
-        p = self.cls()
-        p.run_id = "999999"
-        p.config = dict(drift_time_gate=3000, drift_time_cathode=39500, gate_cathode_distance=50.5)
-        p.dtype = strax.to_numpy_dtype(p.infer_dtype())
-        return p
-
-    def test_fields(self):
-        names = self._plugin().dtype.names
-        for f in ("x", "y", "r", "phi", "u", "v", "z", "alt_s2_x", "alt_s2_y", "alt_s2_r", "alt_s2_phi"):
-            self.assertIn(f, names)
-
-    def test_positions_from_event_basics(self):
-        p = self._plugin()
-        ev = self._events()
-        r = strax.dict_to_rec(p.compute(ev), dtype=p.dtype)
-        np.testing.assert_allclose(r["x"], ev["s2_x"])
-        np.testing.assert_allclose(r["y"], ev["s2_y"])
-        self.assertAlmostEqual(float(r["r"][1]), np.hypot(15, 10), places=4)
-        self.assertAlmostEqual(float(r["phi"][1]), np.arctan2(-10, -15), places=5)
-        self.assertAlmostEqual(float(r["u"][1]), -0.5, places=6)
-        self.assertAlmostEqual(float(r["v"][1]), 0.5, places=6)
-        self.assertTrue(np.all(np.isnan(r["alt_s2_x"])))
-        np.testing.assert_allclose(r["z"], [0.0, -50.5 * 17000 / 36500, -50.5], rtol=1e-6)
 
 
 class TestNullCorrectionRange(unittest.TestCase):

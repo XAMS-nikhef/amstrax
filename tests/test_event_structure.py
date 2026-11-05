@@ -1,14 +1,14 @@
 import numpy as np
 
 import amstrax
-from amstrax.plugins.events.event_structure import PEAK_FIELDS
-from test_corrected_areas import _corr, _maps
+from amstrax.plugins.events.event_structure import PEAK_FIELDS, W_KEV
+from corr_helpers import _corr, _maps
 
 T0 = 10 ** 18
 
 
 def _context(config=None):
-    st = amstrax.contexts.xams(init_rundb=False, event_structure_v2=True)
+    st = amstrax.contexts.xams(init_rundb=False)
     if config:
         st.set_config(config)
     return st
@@ -72,35 +72,31 @@ def test_sites_mode2():
     assert list(s["in_drift"]) == [True, False, False]                 # 50 us > 1.05 x 39.5 us; no S1 in event 8
 
 
-def test_single_site_matches_corrected_areas():
-    """One in-drift site: cs1, cs2, cs2_top and energy equal those of corrected_areas (mode 1)."""
-    cfg = {"sr_corrections": _corr(), "sr_maps": _maps(s1=0.9, s2=1.1, q=(0.0, 0.01, 1.0))}
+def test_single_site_corrections():
+    """One in-drift site, mode 1: cs1 = S1 / (S1(z) S1(x, y)), cs2_top = S2 AFT exp(t / tau) / S2_top(x, y),
+    energy = W (cs1 / g1 + cs2_top / g2_top) (the formulas of the former corrected_areas)."""
+    q = (0.0, 0.01, 1.0)
+    cfg = {"sr_corrections": _corr(), "sr_maps": _maps(s1=0.9, s2=1.1, q=q)}
     ep = _plugin("event_peaks").compute(_events(), _peaks())
     s = _plugin("sites", cfg).compute(ep)
-    ev = _plugin("events_v2", cfg).compute(_events(), ep, s)
+    ev = _plugin("events", cfg).compute(_events(), ep, s)
     assert list(ev["n_sites"]) == [2, 1] and list(ev["n_sites_in_drift"]) == [1, 0]
-
-    ca = _plugin("corrected_areas", cfg)
-    fields = [("time", np.int64), ("endtime", np.int64), ("z", np.float32), ("drift_time", np.float32),
-              ("alt_s2_interaction_drift_time", np.float32)]
-    for pre in ("", "alt_"):
-        fields += [(f"{pre}s1_area", np.float32), (f"{pre}s2_area", np.float32),
-                   (f"{pre}s2_area_fraction_top", np.float32), (f"{pre}s2_x", np.float32), (f"{pre}s2_y", np.float32)]
-    eb = np.zeros(1, fields)
-    eb["time"], eb["endtime"] = ev["time"][0], ev["endtime"][0]
-    eb["drift_time"], eb["z"] = s["drift_time"][0], s["z"][0]
-    eb["s1_area"], eb["s2_area"], eb["s2_area_fraction_top"] = 1700, 9000, 0.66
-    eb["s2_x"] = eb["s2_y"] = 5
-    ref = ca.compute(eb)
-    for k in ("cs1", "cs2", "cs2_top", "energy"):
-        np.testing.assert_allclose(ev[k][0], ref[k][0], rtol=1e-5, err_msg=k)
+    t_us, z = s["drift_time"][0] / 1e3, s["z"][0]
+    t_ref = 1.45 - z / 1.325
+    s1z = np.polyval(q, t_ref) / np.polyval(q, 21.0)
+    cs1 = 1700 / (s1z * 0.9)
+    cs2 = 9000 * np.exp(t_us / 500.0) / 1.1
+    np.testing.assert_allclose(ev["cs1"][0], cs1, rtol=1e-5)
+    np.testing.assert_allclose(ev["cs2"][0], cs2, rtol=1e-5)
+    np.testing.assert_allclose(ev["cs2_top"][0], 0.66 * cs2, rtol=1e-5)
+    np.testing.assert_allclose(ev["energy"][0], W_KEV * (cs1 / 0.0568 + 0.66 * cs2 / 0.332), rtol=1e-5)
     assert np.isnan(ev["cs1"][1]) and np.isnan(ev["energy"][1])
 
 
-def test_events_v2_counts_and_neighbours():
+def test_events_counts_and_neighbours():
     ep = _plugin("event_peaks").compute(_events(), _peaks())
     s = _plugin("sites").compute(ep)
-    pl = _plugin("events_v2")
+    pl = _plugin("events")
     ev = pl.compute(_events(), ep, s)
     assert list(ev["n_peaks"]) == [4, 1] and list(ev["n_s1"]) == [1, 0] and list(ev["n_s2"]) == [3, 1]
     assert list(ev["s1_peak_index"]) == [0, -1]
@@ -118,12 +114,17 @@ def test_peak_context():
     np.testing.assert_allclose(pc["area_prev_s2_1k"][-1], 2000)
 
 
-def test_off_by_default():
-    st = amstrax.contexts.xams(init_rundb=False)
-    assert "events_v2" not in st._plugin_class_registry
-    assert "event_info" in _context()._plugin_class_registry
+def test_only_the_event_structure():
+    """amstrax 3: the four linked tables on the event windows; the old event format is gone (tag prod4-final)."""
+    reg = amstrax.contexts.xams(init_rundb=False)._plugin_class_registry
+    for t in ("event_windows", "events", "sites", "event_peaks", "peak_context"):
+        assert t in reg
+    for t in ("event_basics", "event_positions", "corrected_areas", "event_info", "events_v2",
+              "event_coincidences", "peak_coincidences"):
+        assert t not in reg
+    assert reg["events"].depends_on == ("event_windows", "event_peaks", "sites")
 
 
 def test_types_match_plugins():
     import strax
-    assert set(amstrax.EVENT_STRUCTURE_V2_TYPES) == {t for p in amstrax.EVENT_STRUCTURE_V2 for t in strax.to_str_tuple(p.provides)}
+    assert set(amstrax.EVENT_TYPES) == {t for p in amstrax.EVENT_PLUGINS for t in strax.to_str_tuple(p.provides)}

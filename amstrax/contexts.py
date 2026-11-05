@@ -30,15 +30,9 @@ COMMON_OPT_XAMS = dict(
         ax.Peaks,
         ax.PeakBasics,
         ax.PeakPositions,
-        # Events
-        ax.Events,
-        ax.EventBasics,
-        ax.EventPositions,
-        ax.EventCoincidences,
-        ax.CorrectedAreas,
-        ax.EventInfo,
-        ax.EventWaveform,
-        ax.EventAreaPerChannel,
+        # Events (amstrax 3: the four linked tables on the event windows; the old event format event_basics ...
+        # event_info is read with the frozen environment of tag prod4-final)
+        *ax.EVENT_PLUGINS,
         # External PMT plugins
         ax.PulseProcessingEXT,
         ax.PeaksEXT,
@@ -47,8 +41,6 @@ COMMON_OPT_XAMS = dict(
         ax.PulseProcessingSiPM,
         ax.PeaksSiPM,
         ax.PeakBasicsSiPM,
-        # Coincidences
-        ax.PeakCoincidences,
         # LED plugins not default
         # ax.RecordsLED,
         # ax.LEDCalibration,
@@ -73,7 +65,7 @@ def xams(
         mongo_collname=CONFIG["DEFAULT_COLLECTION"], mongo_dbname=CONFIG["DEFAULT_RUNCOLNAME"], runid_field="number"
     ),
     corrections_version=None,
-    event_structure_v2=False,
+    event_structure_v2=None,
     *args,
     **kwargs,
 ):
@@ -115,9 +107,7 @@ def xams(
     if output_folder not in ax.xams_config.RUNDOC_DIRS:
         ax.xams_config.RUNDOC_DIRS.append(output_folder)
 
-    if event_structure_v2:
-        # optional (not in the auto-processing): event_peaks, sites, events_v2, peak_context
-        st.register(list(ax.EVENT_STRUCTURE_V2))
+    # event_structure_v2: no effect since amstrax 3 (the event structure is the only one); accepted for old callers
 
     if corrections_version is not None:
         apply_global_correction_version(st, corrections_version)
