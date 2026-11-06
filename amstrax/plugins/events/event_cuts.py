@@ -40,7 +40,8 @@ def main_interaction_arrays(events, sites, peaks):
     out = {k: np.full(n, np.nan) for k in ("s1_area", "s1_aft", "s2_area", "s2_aft", "s2_w50", "drift_time", "x", "y", "z",
                                            "alt_s1_area", "alt_s2_area")}
     en = np.asarray(events["event_number"])
-    eo = np.argsort(en, kind="stable"); es = en[eo]
+    eo = np.argsort(en, kind="stable")
+    es = en[eo]
 
     def rows(keys):
         return _lookup(np.asarray(keys), es, eo)
@@ -48,11 +49,13 @@ def main_interaction_arrays(events, sites, peaks):
     if len(peaks):
         s1 = peaks[(peaks["type"] == 1) & (peaks["dt_s1"] == 0)]
         r, ok = rows(s1["event_number"])
-        out["s1_area"][r[ok]] = s1["area"][ok]; out["s1_aft"][r[ok]] = s1["area_fraction_top"][ok]
+        out["s1_area"][r[ok]] = s1["area"][ok]
+        out["s1_aft"][r[ok]] = s1["area_fraction_top"][ok]
         # time of the largest S2 (also below the site threshold) per event: the alt S1 must come before it
         m2 = peaks[(peaks["type"] == 2) & (peaks["rank"] == 1)]
         t2 = np.full(n, np.iinfo(np.int64).max, dtype=np.int64)
-        r, ok = rows(m2["event_number"]); t2[r[ok]] = m2["time"][ok]
+        r, ok = rows(m2["event_number"])
+        t2[r[ok]] = m2["time"][ok]
         o1 = peaks[(peaks["type"] == 1) & (peaks["dt_s1"] != 0)]
         r, ok = rows(o1["event_number"])
         sel = ok & (o1["time"] < t2[r])
