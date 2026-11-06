@@ -138,27 +138,27 @@ def plot_peaks_area_aft_histogram(
     std_axes()
     plt.tight_layout()
 
-@amstrax.mini_analysis(requires=['event_info'])
+@amstrax.mini_analysis(requires=['events'])
 def event_scatter(context, run_id, events,
                   show_single=True,
                   s=10,
                   color_range=(None, None),
-                  color_dim='s1_area_fraction_top',
+                  color_dim='n_sites',
                   figsize=(7, 5)):
     """Plot a (cS1, cS2) event scatter plot
 
     :param show_single: Show events with only S1s or only S2s just besides
     the axes.
     :param s: Scatter size
-    :param color_dim: Dimension to use for the color. Must be in event_info.
+    :param color_dim: Dimension to use for the color. Must be in events.
     :param color_range: Minimum and maximum color value to show.
     :param figsize: (w, h) figure size to use, or leave None to not make a
     new matplotlib figure.
     """
     if figsize is not None:
         plt.figure(figsize=figsize)
-    if color_dim == 's1_area_fraction_top' and color_range == (None, None):
-        color_range = (0, 0.3)
+    if color_dim == 'n_sites' and color_range == (None, None):
+        color_range = (0, 4)
 
     plt.scatter(np.nan_to_num(events['cs1']).clip(.9, None),
                 np.nan_to_num(events['cs2']).clip(.9, None),
@@ -177,50 +177,10 @@ def event_scatter(context, run_id, events,
     plt.yscale('log')
     plt.ylim(1, None)
 
-    p = context.get_single_plugin(run_id, 'energy_estimates')
-    ax = plt.gca()
-    el_lim = p.cs1_to_e(np.asarray(ax.get_xlim()))
-    ec_lim = p.cs2_to_e(np.asarray(ax.get_ylim()))
-
-    ax2 = ax.twiny()
-    ax2.set_xlim(*el_lim)
-    ax2.set_xscale('log')
-    ax2.set_xlabel("E_light [keVee]")
-
-    ax3 = ax2.twinx()
-    ax3.set_ylim(*ec_lim)
-    ax3.set_yscale('log')
-    ax3.set_ylabel("E_charge [keVee]")
-
-    plt.sca(ax3)
-    plt.plot(el_lim, el_lim, c='k', alpha=0.2)
-    x = np.geomspace(*el_lim, num=1000)
-    e_label = 1.2e-3
-    for e_const, label in [
-        (0.1, ''), (1, '1\nkeV'), (10, '10\nkeV'),
-        (100, '100\nkeV'), (1e3, '1\nMeV'), (1e4, '')]:
-        plt.plot(x, e_const - x, c='k', alpha=0.2)
-        plt.text(e_const - e_label, e_label, label,
-                 bbox=dict(facecolor='white', alpha=0.5, edgecolor='none'),
-                 horizontalalignment='center', verticalalignment='center',
-                 color='k', alpha=0.5)
-
-    plt.sca(ax)
-    if color_range[0] is None:
-        extend = 'neither' if color_range[1] is None else 'max'
-    else:
-        extend = 'min' if color_range[1] is None else 'both'
-    if color_dim == 's1_area_fraction_top':
-        plt.colorbar(label="S1 area fraction top",
-                     extend=extend,
-                     ax=[ax, ax3])
-    else:
-        plt.colorbar(label=color_dim,
-                     extend=extend,
-                     ax=[ax, ax3])
+    plt.colorbar(label=color_dim)
 
 
-@amstrax.mini_analysis(requires=('event_info',))
+@amstrax.mini_analysis(requires=('events',))
 def plot_energy_spectrum(
         events,
         color='b', label=None,
@@ -257,7 +217,7 @@ def plot_energy_spectrum(
         else:
             unit = 'events'
 
-    h = Hist1d(events['e_ces'],
+    h = Hist1d(events['energy'],
                bins=(np.geomspace if geomspace else np.linspace)(
                    min_energy, max_energy, n_bins))
 

@@ -1,26 +1,53 @@
-"""Structured event data model (proposal docs/proposals/XAMS_event_structure_proposal.pdf): four linked tables.
+"""The event data model of amstrax 3 (proposal docs/proposals/XAMS_event_structure_proposal.pdf): four linked tables
+on top of the event windows.
 
-  event_peaks   every peak inside an event window (peaks / peak_basics / peak_positions + event link, rank, dt_s1)
+  event_windows where each event starts and stops (events.py); not an analysis table
+  events        the event as a whole: counts, cS1 (S2-weighted over the sites), sum of cS2 over the sites, energy
   sites         every S2 of an event above ``site_min_s2_area``: drift time, position, corrected S2 (top, bottom, total)
-  events_v2     the event as a whole: counts, cS1 (S2-weighted over the sites), sum of cS2 over the sites, energy
+  event_peaks   every peak inside an event window (peaks / peak_basics / peak_positions + event link, rank, dt_s1)
   peak_context  every peak of the run, linked to the last S2 > 1 kPE and > 10 kPE before it
 
-Linked by event_number and peak_index (row of the peak in the run, counted from the first peak). The plugins only read
-existing data types, so the lineage of the existing ones does not change. Optional: registered only with
-``amstrax.contexts.xams(event_structure_v2=True)``. ``main_interaction()`` gives the flat table (one row per event:
-main S1, main site and its S2) as a join, not stored.
+Linked by event_number and peak_index (row of the peak in the run, counted from the first peak). ``main_interaction()``
+gives the flat table (one row per event: main S1, main site and its S2) as a join, not stored.
 
-Corrections are those of corrected_areas (same options, same two modes), so for an event with one site cs1, cs2,
-cs2_top and energy equal the event_info values.
+Until amstrax 2.x these were optional (event_peaks, sites, events_v2, peak_context next to the old event format
+event_basics ... event_info). From 3.0 they are the only event format; the old one is read with the frozen environment
+of tag prod4-final. Corrections: the same options and two modes as the former corrected_areas, so for an event with one
+site cs1, cs2, cs2_top and energy equal the former event_info values (validated on 65 runs, SR2026.3 corrections step 02).
 """
 import numba
 import numpy as np
 import strax
 import amstrax
-from amstrax.plugins.events.corrected_areas import W_KEV, CorrectedAreas
+from amstrax.plugins.events.events import EventWindows
 
 export, __all__ = strax.exporter()
-__all__ += ["EVENT_STRUCTURE_V2", "EVENT_STRUCTURE_V2_TYPES", "main_interaction"]
+__all__ += ["EVENT_PLUGINS", "EVENT_TYPES", "main_interaction", "W_KEV", "tau_us", "xy_factors"]
+
+W_KEV = 13.7e-3  # average energy per quantum (photon or electron) in LXe [keV]
+
+
+def tau_us(time_ns, tau):
+    """Electron lifetime [us]: {"fixed_us": x} or {"model": "exponential", "params": [p0, p1, p2], "t0_ns": t0} with
+    1/tau [1/us] = p0 + p1 exp(-h / p2), h = hours since t0."""
+    if "fixed_us" in tau:
+        return np.full(len(time_ns), tau["fixed_us"], dtype=np.float64)
+    p0, p1, p2 = tau["params"]
+    h = (np.asarray(time_ns, dtype=np.float64) - tau["t0_ns"]) / 3.6e12
+    return 1 / (p0 + p1 * np.exp(-h / p2))
+
+
+def xy_factors(x, y, m):
+    """Relative S1 and S2_top response of the 4 mm cell of (x, y); NaN outside the map and in cells without a value."""
+    edges = np.asarray(m["edges_mm"])
+    s1 = np.array([[np.nan if v is None else v for v in row] for row in m["s1_rel"]], dtype=np.float64)
+    s2 = np.array([[np.nan if v is None else v for v in row] for row in m["s2_top_rel"]], dtype=np.float64)
+    nb = len(edges) - 1
+    x, y = np.nan_to_num(x, nan=1e9), np.nan_to_num(y, nan=1e9)
+    i = np.clip(np.digitize(x, edges) - 1, 0, nb - 1)
+    j = np.clip(np.digitize(y, edges) - 1, 0, nb - 1)
+    inside = (x >= edges[0]) & (x < edges[-1]) & (y >= edges[0]) & (y < edges[-1])
+    return np.where(inside, s1[i, j], np.nan), np.where(inside, s2[i, j], np.nan)
 
 MAX_DRIFT_MARGIN = 1.05     # sites up to 1.05 x drift_time_cathode count as inside the drift region
 CONTEXT_S2_AREAS = (1_000, 10_000)   # peak_context: parents are the last S2s above these areas [PE]
@@ -76,10 +103,10 @@ def _rank_and_main(ev, ptype, area, time):
 @export
 class EventPeaks(strax.Plugin):
     """Every peak fully inside an event window, with the event it belongs to, its rank by area within its type
-    (1 = largest) and its time after the main S1 (largest S1 before the main S2, as in event_basics)."""
+    (1 = largest) and its time after the main S1 (largest S1 before the main S2, as the former event_basics)."""
 
-    __version__ = "0.1.0"
-    depends_on = ("events", "peak_basics", "peak_positions")
+    __version__ = "1.0.0"
+    depends_on = ("event_windows", "peak_basics", "peak_positions")
     provides = "event_peaks"
     data_kind = "event_peaks"
     parallel = False
@@ -120,8 +147,7 @@ class EventPeaks(strax.Plugin):
 
 
 class _Corrections:
-    """Options and corrections shared with corrected_areas (same names and defaults, so a global version sets them
-    for all plugins)."""
+    """Correction options (the names and defaults of the former corrected_areas, so the global versions set them)."""
 
     drift_time_gate = amstrax.XAMSConfig(default=3000, help="Drift time belonging to the gate in ns")
     drift_time_cathode = amstrax.XAMSConfig(default=39500, help="Drift time belonging to the cathode in ns")
@@ -141,12 +167,12 @@ class _Corrections:
         return slope * (drift_time - self.drift_time_gate)
 
     def s1_response(self, z, x, y):
-        """Relative S1 light collection at (x, y, z): cs1 = S1 / response (as in corrected_areas)."""
+        """Relative S1 light collection at (x, y, z): cs1 = S1 / response."""
         if self.sr_mode:
             s1z = self.sr_maps["s1_z"]
             q = np.asarray(s1z["quadratic_in_drift_us"])
             t_ref = s1z["ref_t_gate_us"] - z / s1z["ref_v_drift_mm_per_us"]
-            f1, _ = CorrectedAreas.xy_factors(x, y, self.sr_maps)
+            f1, _ = xy_factors(x, y, self.sr_maps)
             return np.polyval(q, t_ref) / np.polyval(q, s1z["t_norm_us"]) * f1
         zmin, zmax, y0, a = self.s1_naive_z_correction
         return (y0 + a * z) / (y0 + a * (zmin + zmax) / 2)
@@ -157,13 +183,13 @@ class Sites(_Corrections, strax.Plugin):
     """One row per S2 of an event above ``site_min_s2_area``: an interaction site paired with the main S1.
 
     drift_time = dt_s1 of the S2 (NaN without S1); z as in event_positions; x, y from peak_positions.
-    cs2 = S2 corrected for lifetime and the S2_top (x, y) map (mode 1) or lifetime only (mode 2), as corrected_areas;
+    cs2 = S2 corrected for lifetime and the S2_top (x, y) map (mode 1) or lifetime only (mode 2);
     cs2_top = cs2 x AFT, cs2_bottom = cs2 - cs2_top (no bottom map yet: same correction factor as the total).
     Fake sites (split S2s, photoionisation, trains) are kept; in_drift is False for sites before the main S1 or beyond
     the cathode, and those do not enter the event sums.
     """
 
-    __version__ = "0.1.0"
+    __version__ = "1.0.0"
     depends_on = ("event_peaks",)
     provides = "sites"
     data_kind = "sites"
@@ -206,8 +232,8 @@ class Sites(_Corrections, strax.Plugin):
         r["r"] = np.hypot(p["x"], p["y"])
         r["in_drift"] = (dt >= 0) & (dt <= MAX_DRIFT_MARGIN * self.drift_time_cathode)
         if self.sr_mode:
-            tau = CorrectedAreas.tau_us(p["time"], self.sr_corrections["tau"])
-            _, f2 = CorrectedAreas.xy_factors(p["x"], p["y"], self.sr_maps)
+            tau = tau_us(p["time"], self.sr_corrections["tau"])
+            _, f2 = xy_factors(p["x"], p["y"], self.sr_maps)
             cs2 = p["area"] * np.exp(dt / 1e3 / tau) / f2
         else:
             cs2 = p["area"] * np.exp(dt / self.elife)
@@ -217,18 +243,18 @@ class Sites(_Corrections, strax.Plugin):
 
 
 @export
-class EventsV2(_Corrections, strax.Plugin):
+class Events(_Corrections, strax.Plugin):
     """The event as a whole (no main / alt peak columns: those are rows of event_peaks and sites).
 
     cs1 = S1 / <S1 response>, the response averaged over the in-drift sites weighted with their cs2_top (the charge,
     so roughly the energy, of each site); cs2, cs2_top, cs2_bottom = sums over the in-drift sites;
     energy = W (cs1 / g1 + cs2_top / g2_top) in mode 1 when the run is calibrated, else NaN. For one site this is the
-    energy of corrected_areas. dt_next_event is -1 for the last event of a chunk.
+    energy of the former corrected_areas. dt_next_event is -1 for the last event of a chunk.
     """
 
-    __version__ = "0.1.0"
-    depends_on = ("events", "event_peaks", "sites")
-    provides = "events_v2"
+    __version__ = "1.0.0"
+    depends_on = ("event_windows", "event_peaks", "sites")
+    provides = "events"
     data_kind = "events"
     parallel = False
 
@@ -334,8 +360,8 @@ class PeakContext(strax.Plugin):
     """Every peak of the run (inside and between events) linked to the last S2 > 1 kPE and the last S2 > 10 kPE
     before it (delayed electrons, photoionisation): time since that S2 (center times), its area and its event."""
 
-    __version__ = "0.1.0"
-    depends_on = ("events", "peak_basics")
+    __version__ = "1.0.0"
+    depends_on = ("event_windows", "peak_basics")
     provides = "peak_context"
     data_kind = "peaks"
     parallel = False
@@ -376,8 +402,8 @@ class PeakContext(strax.Plugin):
         return r
 
 
-EVENT_STRUCTURE_V2 = (EventPeaks, Sites, EventsV2, PeakContext)
-EVENT_STRUCTURE_V2_TYPES = ("event_peaks", "sites", "events_v2", "peak_context")
+EVENT_PLUGINS = (EventWindows, EventPeaks, Sites, Events, PeakContext)
+EVENT_TYPES = ("event_windows", "event_peaks", "sites", "events", "peak_context")
 
 S1_COLUMNS = ("area", "area_fraction_top", "range_50p_area", "n_channels", "tight_coincidence")
 S2_COLUMNS = ("area", "area_fraction_top", "range_50p_area", "range_90p_area")
@@ -385,10 +411,10 @@ SITE_COLUMNS = ("drift_time", "x", "y", "z", "r", "cs2", "cs2_top", "cs2_bottom"
 
 
 def main_interaction(st, run_id, **kwargs):
-    """Flat table, one row per event: events_v2 (cs2* = sums over the sites), the main S1 (s1_*), the main site
+    """Flat table, one row per event: events (cs2* = sums over the sites), the main S1 (s1_*), the main site
     (rank 1: drift_time, x, y, z, r, site_cs2*, site_in_drift) and its S2 (s2_*).
-    A join over events_v2, event_peaks and sites (not stored); kwargs go to st.get_df."""
-    ev = st.get_df(run_id, "events_v2", **kwargs)
+    A join over events, event_peaks and sites (not stored); kwargs go to st.get_df."""
+    ev = st.get_df(run_id, "events", **kwargs)
     p = st.get_df(run_id, "event_peaks", **kwargs)
     s = st.get_df(run_id, "sites", **kwargs)
     s1 = p[(p["type"] == 1) & (p["dt_s1"] == 0)][["event_number", *S1_COLUMNS]]

@@ -94,11 +94,11 @@ def reader_channel_map(run_doc):
     return DEFAULT_CHANNEL_MAP
 
 
-def nai_channel_enabled(run_doc):
-    """True/False if the run's DAQ config enables/disables the external NaI detector channel(s)
-    (channel_map "external" group, channel enable mask 0x8120 per board); None if it cannot be decided."""
+def group_channel_enabled(run_doc, group):
+    """True/False if the run's DAQ config enables/disables a channel of a channel_map group ("external" = NaI,
+    "sipm" = SiPMs; channel enable mask 0x8120 per board); None if it cannot be decided."""
     daq_config = _nested_dict(run_doc, "daq_config")
-    ext = reader_channel_map(run_doc).get(NAI_CHANNEL_MAP_KEY)
+    ext = reader_channel_map(run_doc).get(group)
     if not ext:
         return False
     try:
@@ -118,6 +118,20 @@ def nai_channel_enabled(run_doc):
             if first <= int(global_ch) <= last and (mask >> ch) & 1:
                 return True
     return False if decided else None
+
+
+def nai_channel_enabled(run_doc):
+    """True/False if the run's DAQ config enables/disables the external NaI detector channel(s); None if undecidable."""
+    return group_channel_enabled(run_doc, NAI_CHANNEL_MAP_KEY)
+
+
+def has_sipm_data(run_doc):
+    """Should the SiPM data (raw_records_sipm -> peak_basics_sipm) be processed? As for the NaI: only the data decide
+    (the DAQ config enables a SiPM channel); if the config cannot tell, whenever the channel map has a "sipm" group."""
+    enabled = group_channel_enabled(run_doc, "sipm")
+    if enabled is not None:
+        return enabled
+    return bool(reader_channel_map(run_doc).get("sipm"))
 
 
 def has_nai_detector(run_doc):

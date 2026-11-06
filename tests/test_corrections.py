@@ -19,7 +19,7 @@ class TestXamsCorrections(unittest.TestCase):
         # Register a test plugin to verify the configuration setup
         class TestPlugin(strax.Plugin):
             provides = "test"
-            depends_on = ("corrected_areas",)
+            depends_on = ("events",)
             dtype = strax.time_fields
 
             __version__ = "93.0.1"

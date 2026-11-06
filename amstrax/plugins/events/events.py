@@ -5,7 +5,12 @@ import strax
 export, __all__ = strax.exporter()
 
 @export
-class Events(strax.OverlapWindowPlugin):
+class EventWindows(strax.OverlapWindowPlugin):
+    """Event windows around every S2 above trigger_min_area: time, endtime, event_number only. The base of the event
+    tables (events, sites, event_peaks, peak_context; event_structure.py). Until amstrax 2.x this data type was called
+    events."""
+
+    provides = "event_windows"
     trigger_min_area = amstrax.XAMSConfig(
         default=10,
         help='Peaks must have more area (PE) than this to cause events')
@@ -27,7 +32,7 @@ class Events(strax.OverlapWindowPlugin):
         ('time', np.int64, 'Event start time in ns since the unix epoch'),
         ('endtime', np.int64, 'Event end time in ns since the unix epoch')]
     events_seen = 0
-    __version__ = '1.0.2'
+    __version__ = '2.0.0'
 
 
     def get_window_size(self):

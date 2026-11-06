@@ -42,7 +42,7 @@ Typical start command:
 
     cd /data/xenon/xams_v2/software/amstrax/amstrax/auto_processing_new
     python auto_processing.py \
-      --target raw_records peak_basics event_basics event_positions event_info \
+      --target raw_records peak_basics events sites event_peaks peak_context \
       --production \
       --max_jobs 8 \
       --queue short \
@@ -62,7 +62,7 @@ Single-run submit
 
     python auto_processing.py \
       --run_id 007348 \
-      --target peak_basics event_basics event_positions event_info \
+      --target peak_basics events sites event_peaks peak_context \
       --corrections_version ONLINE \
       --production
 
@@ -73,7 +73,7 @@ Offline bulk reprocessing
 
     python offline_processing.py \
       --run_range 7340-7350 \
-      --targets peak_basics event_basics event_positions event_info \
+      --targets peak_basics events sites event_peaks peak_context \
       --amstrax_path /data/xenon/xams_v2/software/amstrax_versioned/v2.1.0 \
       --corrections_version ONLINE \
       --production \
