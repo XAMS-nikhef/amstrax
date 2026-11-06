@@ -261,6 +261,16 @@ class RunProcessor:
                 targets=[],
             )
 
+    def register_stored(self, target):
+        """Run-DB entry for a target that is already stored in this job's output folder (no-op if it is stored
+        elsewhere, e.g. read-only central data seen by a private job, or if the entry exists)."""
+        key = str(self.st.key_for(self.run_id, target))
+        if not os.path.isdir(os.path.join(self.output_folder, key)):
+            return False
+        info = self.get_info_from_processed_data(self.output_folder, target, self.st)
+        self.add_data_entry(data_type=target, location=self.output_folder, **info)
+        return True
+
     def get_info_from_processed_data(self, folder, target, st):
         # Logic for getting info from processed data (similar to the existing one)
         # When the processing succeeds, the data is stored in the output folder
@@ -430,6 +440,9 @@ class RunProcessor:
             for target in self.targets:
                 if self.st.is_stored(self.run_id, target):
                     log.info(f"Skipping {target} for run {self.run_id} as it is already processed.")
+                    # Stored, possibly made in this job as an input of an earlier target (e.g. sites / event_peaks
+                    # with events): register it once (add_data_entry skips an entry that already exists).
+                    self.register_stored(target)
                     self.db_utils.update_target_processing_status(
                         self.run_id,
                         target,
