@@ -33,6 +33,7 @@ COMMON_OPT_XAMS = dict(
         # Events (amstrax 3: the four linked tables on the event windows; the old event format event_basics ...
         # event_info is read with the frozen environment of tag prod4-final)
         *ax.EVENT_PLUGINS,
+        ax.EventCuts,
         # External PMT plugins
         ax.PulseProcessingEXT,
         ax.PeaksEXT,

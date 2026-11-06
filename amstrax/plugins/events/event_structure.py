@@ -22,7 +22,7 @@ import amstrax
 from amstrax.plugins.events.events import EventWindows
 
 export, __all__ = strax.exporter()
-__all__ += ["EVENT_PLUGINS", "EVENT_TYPES", "main_interaction", "W_KEV", "tau_us", "xy_factors"]
+__all__ += ["EVENT_PLUGINS", "EVENT_TYPES", "main_interaction", "W_KEV", "tau_us", "xy_factors", "s2_radial"]
 
 W_KEV = 13.7e-3  # average energy per quantum (photon or electron) in LXe [keV]
 
@@ -48,6 +48,16 @@ def xy_factors(x, y, m):
     j = np.clip(np.digitize(y, edges) - 1, 0, nb - 1)
     inside = (x >= edges[0]) & (x < edges[-1]) & (y >= edges[0]) & (y < edges[-1])
     return np.where(inside, s1[i, j], np.nan), np.where(inside, s2[i, j], np.nan)
+
+
+def s2_radial(x, y, m):
+    """Radial S2_top factor on top of the (x, y) map (SR2026.3 v10: per amplification group for ΔV >= 3.2 kV, where the
+    S2 light pattern on the top array differs from that of the map): f(r) from m["s2_radial"] = {"r_mm": [...], "f": [...]}
+    (1 at r < 15 mm; linear between the ring centres, flat outside); 1 without it."""
+    rad = (m or {}).get("s2_radial")
+    if not rad:
+        return np.ones(len(x), dtype=np.float64)
+    return np.interp(np.hypot(x, y), rad["r_mm"], rad["f"])
 
 MAX_DRIFT_MARGIN = 1.05     # sites up to 1.05 x drift_time_cathode count as inside the drift region
 CONTEXT_S2_AREAS = (1_000, 10_000)   # peak_context: parents are the last S2s above these areas [PE]
@@ -183,13 +193,14 @@ class Sites(_Corrections, strax.Plugin):
     """One row per S2 of an event above ``site_min_s2_area``: an interaction site paired with the main S1.
 
     drift_time = dt_s1 of the S2 (NaN without S1); z as in event_positions; x, y from peak_positions.
-    cs2 = S2 corrected for lifetime and the S2_top (x, y) map (mode 1) or lifetime only (mode 2);
+    cs2 = S2 corrected for lifetime and the S2_top (x, y) map (x the radial factor s2_radial where the maps hold one;
+    mode 1) or lifetime only (mode 2);
     cs2_top = cs2 x AFT, cs2_bottom = cs2 - cs2_top (no bottom map yet: same correction factor as the total).
     Fake sites (split S2s, photoionisation, trains) are kept; in_drift is False for sites before the main S1 or beyond
     the cathode, and those do not enter the event sums.
     """
 
-    __version__ = "1.0.0"
+    __version__ = "1.1.0"
     depends_on = ("event_peaks",)
     provides = "sites"
     data_kind = "sites"
@@ -234,6 +245,7 @@ class Sites(_Corrections, strax.Plugin):
         if self.sr_mode:
             tau = tau_us(p["time"], self.sr_corrections["tau"])
             _, f2 = xy_factors(p["x"], p["y"], self.sr_maps)
+            f2 = f2 * s2_radial(p["x"], p["y"], self.sr_maps)
             cs2 = p["area"] * np.exp(dt / 1e3 / tau) / f2
         else:
             cs2 = p["area"] * np.exp(dt / self.elife)
