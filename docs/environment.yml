@@ -1,8 +1,0 @@
-name: amstrax-docs
-dependencies:
-  - python=3.8
-  - graphviz
-  - pip
-  - pip:
-      - -r ../requirements.txt
-      - -r ../extra_requirements/requirements-docs.txt
