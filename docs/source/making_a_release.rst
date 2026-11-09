@@ -4,6 +4,7 @@ Amstrax - release procedure
 
 Making releases is essential to maintaining the code in order to do
 this one needs to follow the following steps:
+
  - Check which changes where made (which pull requests are merged)
  - Update the ``HISTORY.md`` file
  - Go to the ``amstrax`` folder and increment the version with
