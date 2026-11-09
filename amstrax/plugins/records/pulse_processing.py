@@ -18,23 +18,21 @@ HITFINDER_OPTIONS = tuple([
 
 @export
 class PulseProcessing(strax.Plugin):
-    """
-    Get the specific raw_records of the measurements 
-    (raw_records_v1724 or raw_records_v1730)
-    and split the raw_records into:
-    - records
-    - pulse_counts
-    Apply basic pulse processing:
-        1. Flip the pulse if it is necessary (only for the PMT pulse)
-        2. Calculate the baseline and integrate the waveform
-        3. Find hits
-        4. Filter the record and cut outside the hit bounds
+    """Pulse processing of the TPC PMT channels: raw_records -> records + pulse_counts.
 
-    pulse_counts holds some average information for the individual PMT
-    channels for each chunk of raw_records. This includes e.g.
-    number of recorded pulses, lone_pulses (pulses which do not
-    overlap with any other pulse), or mean values of baseline and
-    baseline rms channel.
+    Per chunk of raw_records (the TPC channels 0 .. n_tpc_pmts - 1; the NaI and SiPM channels are in
+    raw_records_ext / raw_records_sipm and processed by PulseProcessingEXT / PulseProcessingSiPM):
+
+    1. convert to the records data type (strax.raw_to_records) and zero the samples beyond each pulse;
+    2. baseline per channel from the first ``baseline_samples`` samples, and flip the negative PMT pulses
+       (every TPC channel is flipped; the polarity registers of the run are not read);
+    3. integrate each pulse (area in ADC counts x samples).
+
+    No hit finding, filtering or cutting outside hits is done here (hits are found in Peaks).
+    records are saved only when asked for (SaveWhen.TARGET); pulse_counts are always saved.
+
+    pulse_counts: per chunk and channel the number of pulses and of lone pulses (pulses that do not overlap
+    with any other pulse), their summed areas, and the mean baseline and baseline rms.
     """
     __version__ = '0.3.0'
     baseline_samples = amstrax.XAMSConfig(
@@ -80,8 +78,7 @@ class PulseProcessing(strax.Plugin):
     )
        
     def infer_dtype(self,):
-        # The record_length is the same for both raw_records_v1724 and raw_records_v1730
-        # therefore, we can just use one of the two
+        # records have the same record length as the raw_records they come from
         self.record_length = strax.record_length_from_dtype(
             self.deps['raw_records'].dtype_for('raw_records'))
 
@@ -98,8 +95,7 @@ class PulseProcessing(strax.Plugin):
         if self.config['check_raw_record_overlaps']:
             check_overlaps(raw_records, n_channels=3000)
 
-        # Throw away any non-TPC records; this should only happen for XENON1T
-        # converted data
+        # Keep only the TPC channels (the DAQReader already puts NaI / SiPM channels in their own data types)
         raw_records = raw_records[
             raw_records['channel'] < self.config['n_tpc_pmts']]
 
