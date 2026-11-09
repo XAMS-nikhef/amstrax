@@ -195,6 +195,13 @@ def main():
     s = [P("Proposal: a structured event data model in amstrax", h1),
          P("For discussion with the XAMS group. Version 2, 01-11-2026 (v1: 31-10-2026). No code yet. Sizes measured on PROD3 run "
            "7790 (Cs, 97 V/cm; 173 651 events, 779 905 peaks).", sub),
+         box(P("<b>Status (2026-11-09): implemented.</b> amstrax 3.0 / 3.1 (deployed 2026-11-06, PROD5) has this structure as "
+               "the <b>only</b> event format, with two renames: the event table <b>events_v2</b> is now <b>events</b>, and the "
+               "former event windows <b>events</b> are now <b>event_windows</b>. event_basics … event_info are removed (old data "
+               "are read with the frozen environment of tag prod4-final); event_cuts (one boolean per cut) was added in 3.1. "
+               "This note is kept as the design record. The current description of the tables, their columns and the old → new "
+               "column map: docs/notes/XAMS_amstrax_overview.pdf (sections 10–13) and the XAMS handbook, Data processing → "
+               "Event data format."), AMBER),
          box(P("<b>In short.</b> Replace the flat main / alt columns by <b>four linked tables</b>: <b>events</b> (the event as a "
                "whole: counts, total energy, neighbours), <b>sites</b> (one row per S2 interaction site: position and corrected S2), "
                "<b>event_peaks</b> (every peak inside the event, small ones included) and <b>peak_context</b> (every peak of the run, "
