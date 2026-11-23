@@ -22,7 +22,8 @@ import amstrax
 from amstrax.plugins.events.events import EventWindows
 
 export, __all__ = strax.exporter()
-__all__ += ["EVENT_PLUGINS", "EVENT_TYPES", "main_interaction", "W_KEV", "tau_us", "xy_factors", "s2_radial"]
+__all__ += ["EVENT_PLUGINS", "EVENT_TYPES", "main_interaction", "W_KEV", "tau_us", "xy_factors", "s2_radial",
+            "s1_linearity_factor", "s1_linearity_corrected"]
 
 W_KEV = 13.7e-3  # average energy per quantum (photon or electron) in LXe [keV]
 
@@ -58,6 +59,24 @@ def s2_radial(x, y, m):
     if not rad:
         return np.ones(len(x), dtype=np.float64)
     return np.interp(np.hypot(x, y), rad["r_mm"], rad["f"])
+
+
+def s1_linearity_factor(s_bot, p):
+    """Bottom-PMT S1 response relative to linear: f(S) = 1 + a ln(S / S0), S = bottom S1 [PE] clamped to
+    [S_min_PE, S_max_PE] (outside the measured range the factor is held at the clamp)."""
+    s = np.clip(np.asarray(s_bot, dtype=np.float64), p["S_min_PE"], p["S_max_PE"])
+    return 1.0 + p["a"] * np.log(s / p["S0_PE"])
+
+
+def s1_linearity_corrected(area, aft, p):
+    """S1 area with the bottom-PMT non-linearity corrected (SR2026.3 lib/s1_linearity.py, s1_linearity_v1):
+    S_bot = area (1 - AFT), AFT clipped to [0, 1] (NaN -> 0); corrected = area AFT + S_bot / f(S_bot). The top S1 is
+    taken as linear and unchanged."""
+    area = np.asarray(area, dtype=np.float64)
+    aft = np.clip(np.nan_to_num(np.asarray(aft, dtype=np.float64), nan=0.0), 0.0, 1.0)
+    top, bot = area * aft, area * (1.0 - aft)
+    return top + bot / s1_linearity_factor(bot, p)
+
 
 MAX_DRIFT_MARGIN = 1.05     # sites up to 1.05 x drift_time_cathode count as inside the drift region
 CONTEXT_S2_AREAS = (1_000, 10_000)   # peak_context: parents are the last S2s above these areas [PE]
@@ -167,10 +186,19 @@ class _Corrections:
         help="Parameters for the z-dependent S1 correction [zmin, zmax, y0, a] where y0 + a*z is the correction (mode 2)")
     sr_corrections = amstrax.XAMSConfig(default=None, help="per-run constants: lifetime, g1, g2_top, energy_calibrated (mode 1)")
     sr_maps = amstrax.XAMSConfig(default=None, help="S1 / S2_top (x, y) maps and S1(z) of the run range (mode 1)")
+    s1_linearity = amstrax.XAMSConfig(default=None,
+        help="Bottom-PMT S1 non-linearity {a, S0_PE, S_min_PE, S_max_PE} (mode 1 only): the main S1 is corrected as "
+             "area AFT + S_bot / (1 + a ln(clip(S_bot, S_min_PE, S_max_PE) / S0_PE)), S_bot = area (1 - AFT), before "
+             "the division by the S1 response; None (or null for the run) = no correction")
 
     @property
     def sr_mode(self):
         return self.sr_corrections is not None and self.sr_maps is not None
+
+    @property
+    def s1_lin_mode(self):
+        """The bottom-PMT S1 linearity correction is applied (mode 1 and s1_linearity set for the run)."""
+        return self.sr_mode and self.s1_linearity is not None
 
     def z_of(self, drift_time):
         slope = -self.gate_cathode_distance / (self.drift_time_cathode - self.drift_time_gate)
@@ -259,12 +287,15 @@ class Events(_Corrections, strax.Plugin):
     """The event as a whole (no main / alt peak columns: those are rows of event_peaks and sites).
 
     cs1 = S1 / <S1 response>, the response averaged over the in-drift sites weighted with their cs2_top (the charge,
-    so roughly the energy, of each site); cs2, cs2_top, cs2_bottom = sums over the in-drift sites;
+    so roughly the energy, of each site), with S1 the main S1 corrected for the bottom-PMT non-linearity when
+    ``s1_linearity`` is set for the run (mode 1; ``s1_linearity_corrected`` with the AFT of the main S1);
+    cs1_nolin = the same without the linearity correction, s1_lin_factor = cs1 / cs1_nolin (1 without the correction);
+    cs2, cs2_top, cs2_bottom = sums over the in-drift sites;
     energy = W (cs1 / g1 + cs2_top / g2_top) in mode 1 when the run is calibrated, else NaN. For one site this is the
     energy of the former corrected_areas. dt_next_event is -1 for the last event of a chunk.
     """
 
-    __version__ = "1.0.0"
+    __version__ = "1.1.0"
     depends_on = ("event_windows", "event_peaks", "sites")
     provides = "events"
     data_kind = "events"
@@ -279,7 +310,10 @@ class Events(_Corrections, strax.Plugin):
             ("n_sites", np.int32, "Number of sites (S2 > site_min_s2_area)"),
             ("n_sites_in_drift", np.int32, "Number of sites inside the drift region"),
             ("s1_peak_index", np.int64, "peak_index of the main S1; -1 if none"),
-            ("cs1", np.float32, "Main S1 corrected with the cs2_top-weighted response of the sites [PE]"),
+            ("cs1", np.float32, "Main S1 corrected with the cs2_top-weighted response of the sites, and for the "
+                                "bottom-PMT non-linearity when s1_linearity is set [PE]"),
+            ("cs1_nolin", np.float32, "cs1 without the bottom-PMT non-linearity correction [PE]"),
+            ("s1_lin_factor", np.float32, "cs1 / cs1_nolin (1 without the linearity correction); NaN if cs1 is NaN"),
             ("cs2", np.float32, "Sum of cs2 over the in-drift sites [PE]"),
             ("cs2_top", np.float32, "Sum of cs2_top over the in-drift sites [PE]"),
             ("cs2_bottom", np.float32, "Sum of cs2_bottom over the in-drift sites [PE]"),
@@ -307,9 +341,11 @@ class Events(_Corrections, strax.Plugin):
         r["n_sites"] = np.bincount(is_, minlength=n)
 
         s1 = (p["type"] == 1) & (p["dt_s1"] == 0)
-        s1_area = np.full(n, np.nan)
+        s1_area, s1_aft = np.full(n, np.nan), np.full(n, np.nan)
         r["s1_peak_index"] = -1
         r["s1_peak_index"][ip[s1]], s1_area[ip[s1]] = p["peak_index"][s1], p["area"][s1]
+        s1_aft[ip[s1]] = p["area_fraction_top"][s1]
+        s1_lin = s1_linearity_corrected(s1_area, s1_aft, self.s1_linearity) if self.s1_lin_mode else s1_area
 
         d = s["in_drift"]
         sd, idd = s[d], is_[d]
@@ -320,10 +356,13 @@ class Events(_Corrections, strax.Plugin):
         with np.errstate(invalid="ignore", divide="ignore"):
             resp = (np.bincount(idd, w * self.s1_response(sd["z"], sd["x"], sd["y"]), minlength=n)
                     / np.bincount(idd, w, minlength=n))
-            r["cs1"] = s1_area / resp
+            r["cs1_nolin"] = s1_area / resp
+            r["cs1"] = s1_lin / resp
+            lin_factor = s1_lin / s1_area if self.s1_lin_mode else np.ones(n)
         none = r["n_sites_in_drift"] == 0
-        for k in ("cs1", "cs2", "cs2_top", "cs2_bottom"):
+        for k in ("cs1", "cs1_nolin", "cs2", "cs2_top", "cs2_bottom"):
             r[k][none] = np.nan
+        r["s1_lin_factor"] = np.where(np.isnan(r["cs1"]), np.nan, lin_factor)
         c = self.sr_corrections
         r["energy"] = W_KEV * (r["cs1"] / c["g1"] + r["cs2_top"] / c["g2_top"]) if self.sr_mode and c["energy_calibrated"] else np.nan
 

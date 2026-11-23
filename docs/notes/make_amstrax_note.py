@@ -242,7 +242,7 @@ KEYCFG = {
     "EventWindows": ["trigger_min_area", "left_event_extension", "right_event_extension"],
     "EventPeaks": [],
     "Sites": ["site_min_s2_area", "sr_corrections", "sr_maps", "elife", "drift_time_cathode"],
-    "Events": ["sr_corrections", "sr_maps", "s1_naive_z_correction"],
+    "Events": ["sr_corrections", "sr_maps", "s1_linearity", "s1_naive_z_correction"],
     "PeakContext": [],
     "EventCuts": ["event_cut_references"],
     "PulseProcessingEXT": [], "PeaksEXT": [], "PeakBasicsEXT": [],
@@ -811,7 +811,8 @@ def main():
          P("<b>Corrections</b> (Sites, Events; options of _Corrections, the names of the former corrected_areas). Mode 1, "
            "when sr_corrections and sr_maps are set (PROD5): cs2 = S2 · exp(drift_time / τ(t)) / f2(x, y) with the "
            "electron lifetime τ of the run, the S2_top (x, y) map and the radial S2_top factor where the maps hold one; "
-           "cs1 = S1 / response, the S1 (x, y) map × S1(drift time) averaged over the in-drift sites with weight cs2_top; "
+           "cs1 = S1 / response, the S1 (x, y) map × S1(drift time) averaged over the in-drift sites with weight cs2_top, "
+           "S1 corrected for the bottom-PMT non-linearity where s1_linearity is set (cs1_nolin without it); "
            "energy if the run is calibrated. Mode 2 (no maps): cs2 = S2 · exp(drift_time / elife), cs1 with the naive "
            "linear z correction. cs2_top = cs2 · AFT, cs2_bottom = cs2 − cs2_top. For an event with one site the values "
            "equal those of the former event_info (validated on 65 runs).", small),
