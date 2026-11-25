@@ -32,14 +32,19 @@ NAVY_, BLUE_, ORANGE_, GREEN_, GREY_ = "#1F3A5F", "#4C78A8", "#C76B12", "#3B7D34
 
 
 def save(fig, name):
-    fig.savefig(FIG / f"{name}.png", dpi=300); fig.savefig(FIG / f"{name}.pdf"); plt.close(fig)
+    fig.savefig(FIG / f"{name}.png", dpi=300)
+    fig.savefig(FIG / f"{name}.pdf")
+    plt.close(fig)
     return FIG / f"{name}.png"
 
 
 def fig_chain():
     """The TPC chain now (unchanged for every run) and the parallel 2 Vpp chain with the merge at peak level."""
     fig = plt.figure(figsize=(7.4, 2.9))
-    ax = fig.add_axes([0, 0, 1, 1]); ax.set_xlim(0, 100); ax.set_ylim(0, 40); ax.axis("off")
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.set_xlim(0, 100)
+    ax.set_ylim(0, 40)
+    ax.axis("off")
 
     def node(x, y, w, txt, fc, ec, bold=False):
         ax.add_patch(FancyBboxPatch((x, y), w, 5.2, boxstyle="round,pad=0.25,rounding_size=0.8", fc=fc, ec=ec, lw=0.8))
@@ -60,10 +65,12 @@ def fig_chain():
     node(1, 11, 11.5, "raw_records_he", "#FDEBD8", ORANGE_)
     node(16, 11, 11.5, "records_he", "#FDEBD8", ORANGE_)
     node(31, 11, 22, "peak_areas_he  (area per channel\nof records_he in each peak window)", "#FDEBD8", ORANGE_)
-    arrow((12.8, 13.6), (15.7, 13.6), ORANGE_); arrow((27.8, 13.6), (30.7, 13.6), ORANGE_)
+    arrow((12.8, 13.6), (15.7, 13.6), ORANGE_)
+    arrow((27.8, 13.6), (30.7, 13.6), ORANGE_)
     arrow((37, 27.7), (37, 16.7), ORANGE_, "--")
     node(57, 11, 24, "peak_basics_dr  (saturated channels\nreplaced: area_he x range ratio)", "#E3F2E1", GREEN_, bold=True)
-    arrow((53.3, 13.6), (56.7, 13.6), GREEN_); arrow((51.7, 27.7), (63, 16.7), GREEN_, "--")
+    arrow((53.3, 13.6), (56.7, 13.6), GREEN_)
+    arrow((51.7, 27.7), (63, 16.7), GREEN_, "--")
     arrow((81.3, 13.6), (84, 27.7), GREEN_)
     ax.text(86, 21, "SR-2026.4 context:\nevents read\npeak_basics_dr", fontsize=6.2, color=GREEN_, va="center")
     ax.text(1, 4.5, "daqreader: the group 'tpc_he' of the run's channel map -> raw_records_he (today every channel outside "
@@ -73,7 +80,8 @@ def fig_chain():
 
 
 FD = "/System/Library/Fonts/Supplemental/"
-pdfmetrics.registerFont(TTFont("Arial", FD + "Arial.ttf")); pdfmetrics.registerFont(TTFont("Arial-Bold", FD + "Arial Bold.ttf"))
+pdfmetrics.registerFont(TTFont("Arial", FD + "Arial.ttf"))
+pdfmetrics.registerFont(TTFont("Arial-Bold", FD + "Arial Bold.ttf"))
 pdfmetrics.registerFont(TTFont("Arial-Italic", FD + "Arial Italic.ttf"))
 pdfmetrics.registerFont(TTFont("Courier-Mono", FD + "Courier New.ttf"))
 registerFontFamily("Arial", normal="Arial", bold="Arial-Bold", italic="Arial-Italic", boldItalic="Arial-Bold")
