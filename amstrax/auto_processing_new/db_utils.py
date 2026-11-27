@@ -55,6 +55,20 @@ def update_processing_status(run_id, status, reason=None, host='stbc', productio
         log.info(f"Would update run {run_id} to status {status} (dry run).")
 
 
+def set_provisional_gains(run_id, provisional, corrections_version, production=False):
+    """Run-document field provisional_gains = {value, corrections_version, time}: True if the run was processed with
+    gains carried forward from the last calibration (open range of an online gains file), so it must be reprocessed
+    when its own gains are in. Written by the online loop at every submission, so a later submission with real gains
+    sets it back to False. A top-level field, because processing_status is replaced at every status change."""
+    entry = {"value": bool(provisional), "corrections_version": corrections_version, "time": datetime.datetime.now()}
+    if production:
+        amstrax.get_mongo_collection().update_one({"number": int(run_id)}, {"$set": {"provisional_gains": entry}})
+        if provisional:
+            log.info(f"Run {run_id}: provisional gains ({corrections_version})")
+    else:
+        log.info(f"Would set provisional_gains of run {run_id} to {entry} (dry run)")
+
+
 def update_target_processing_status(
     run_id,
     target,

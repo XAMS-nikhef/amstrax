@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import json
 
 from job_submission import submit_job
-from db_utils import update_processing_status, append_processing_history
+from db_utils import update_processing_status, append_processing_history, set_provisional_gains
 
 
 import subprocess
@@ -21,6 +21,15 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 SETUP_FILE = "/data/xenon/xams_v2/setup.sh"
+
+# CORRECTIONS VERSION FROM THE RUN DATABASE (amstrax_files docs/corrections_workflow.md, 2026-11-27).
+# With --corrections_version db the loop reads the version in every iteration from daq.settings
+# {name: "online_corrections_version", value: "ONLINE"}: changing it is one database write, no restart.
+# Without that document the loop uses DEFAULT_ONLINE_VERSION; if the database cannot be read it keeps the version
+# of the previous iteration. Any other value of --corrections_version is used as given (as before).
+DB_VERSION = "db"
+SETTING_ONLINE_VERSION = "online_corrections_version"
+DEFAULT_ONLINE_VERSION = "ONLINE"
 
 # CLEAN STOP. Ctrl-C (SIGINT) and SIGTERM (`kill`, `screen -X quit`, a reboot)
 # set this event instead of killing the loop wherever it happens to be. The
@@ -63,7 +72,9 @@ def parse_args():
     parser.add_argument("--set_config_kwargs", type=json.loads, default={}, help="Dictionary of kwargs to pass to set_config.")
     parser.add_argument("--set_context_kwargs", type=json.loads, default={}, help="Dictionary of kwargs to pass to set_context.")
     parser.add_argument("--amstrax_path", default=None, help="Path to the amstrax directory.")
-    parser.add_argument("--corrections_version", default=None, help="Version of corrections to use.")
+    parser.add_argument("--corrections_version", default=None,
+                        help="Version of corrections to use; 'db' = read it from the run database (daq.settings "
+                             "online_corrections_version) in every iteration.")
     parser.add_argument("--queue", default="short", help="Queue to submit jobs to. See Nikhef docs for options.")
     parser.add_argument("--n_failures_max", type=int, help="Maximum number of failures before marking a run as failed.", default=3)
     parser.add_argument("--min_run_number", type=int, help="Minimum run number to process.", default=6000)
@@ -84,10 +95,17 @@ def main(args):
 
     client = amstrax.get_mongo_client()
     processing_db = client["daq"]["processing"]
+    settings_col = client["daq"]["settings"] if getattr(args, "corrections_version", None) == DB_VERSION else None
+    corrections_version = None
 
     while not STOP.is_set():
         # Check if auto-processing is enabled
         auto_processing_on = processing_db.find_one({"name": "auto_processing"})["status"] == "on"
+
+        new_version = resolve_corrections_version(args, settings_col, corrections_version)
+        if new_version != corrections_version:
+            log.info(f"Corrections version for new jobs: {new_version} (was {corrections_version})")
+            corrections_version = new_version
 
         # Update task list and check for new runs
         run_docs_to_do = update_task_list(args, runs_col, auto_processing_on)
@@ -104,7 +122,7 @@ def main(args):
             break
 
         # Submit new jobs if below max limit
-        submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir)
+        submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir, corrections_version=corrections_version)
 
         if args.run_id:
             log.info("Finished processing run.")
@@ -115,6 +133,53 @@ def main(args):
 
     if STOP.is_set():
         log.info("Auto-processing stopped cleanly.")
+
+
+def resolve_corrections_version(args, settings_col, previous=None):
+    """The corrections version for the jobs of this iteration (see DB_VERSION above)."""
+    given = getattr(args, "corrections_version", None)
+    if given != DB_VERSION:
+        return given
+    try:
+        doc = settings_col.find_one({"name": SETTING_ONLINE_VERSION})
+    except Exception as e:                                     # noqa: BLE001
+        log.error(f"Cannot read daq.settings {SETTING_ONLINE_VERSION}: {e}; keeping {previous or DEFAULT_ONLINE_VERSION}")
+        return previous or DEFAULT_ONLINE_VERSION
+    value = (doc or {}).get("value")
+    if not value:
+        if previous is None:
+            log.warning(f"No daq.settings {SETTING_ONLINE_VERSION}: using {DEFAULT_ONLINE_VERSION}")
+        return DEFAULT_ONLINE_VERSION
+    return str(value)
+
+
+def provisional_gains(corrections_version, run_id, get_correction=None):
+    """True if the run takes its gains from the open last range of an online gains file (`_online` / `_dev`, range
+    ending in '*' or 999999): gains carried forward from the last calibration, not its own. Such runs are flagged in
+    the run document and reprocessed when their own gains are in (corrections workflow, point 3). False when the
+    version has fixed gains or the files cannot be read."""
+    if not corrections_version:
+        return False
+    if get_correction is None:
+        import amstrax
+        get_correction = amstrax.get_correction
+    try:
+        name = get_correction(f"_global_{corrections_version}.json").get("gain_to_pe_array")
+        if not isinstance(name, str) or not (name.endswith("_online.json") or "_dev" in name):
+            return False
+        ranges = get_correction(name)
+    except Exception as e:                                     # noqa: BLE001
+        log.warning(f"provisional_gains: cannot read the gains of {corrections_version}: {e}")
+        return False
+    n = int(run_id)
+    for key in ranges:
+        if "-" not in key:
+            continue
+        start, end = key.split("-", 1)
+        open_end = end in ("*", "999999")
+        if (0 if start == "*" else int(start)) <= n <= (999999 if open_end else int(end)):
+            return open_end
+    return False
 
 
 def update_task_list(args, runs_col, auto_processing_on):
@@ -218,10 +283,13 @@ def handle_running_jobs(runs_col, production=False):
                 log.info(f"Would have updated run {run_number} to {new_status}")
 
 
-def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
+def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir, corrections_version=None):
     """
     Submit new jobs if the current number of running/submitted jobs is below the max_jobs limit.
+    corrections_version: the version of this iteration (resolve_corrections_version); default args.corrections_version.
     """
+    if corrections_version is None and args.corrections_version != DB_VERSION:
+        corrections_version = args.corrections_version
     query = {"processing_status.status": {"$in": ["submitted", "running"]}}
     projection = {"number": 1, "processing_status": 1}
     run_docs_running = list(runs_col.find(query, projection))
@@ -252,8 +320,8 @@ def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
         arguments.append(f"--run_id {run_id}")
         arguments.append(f"--targets {targets}")
         arguments.append(f"--output_folder {args.output_folder}")
-        if args.corrections_version:
-            arguments.append(f"--corrections_version {args.corrections_version}")
+        if corrections_version:
+            arguments.append(f"--corrections_version {corrections_version}")
         if args.amstrax_path:
             arguments.append(f"--amstrax_path {args.amstrax_path}")
         if args.production:
@@ -292,6 +360,7 @@ def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
         echo `date`
         """
 
+        provisional = provisional_gains(corrections_version, run_id)
         if args.production:
             submit_job(
                 jobstring=jobstring,
@@ -305,6 +374,8 @@ def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
             update_processing_status(
                 run_id, "submitted", pull={"tags": {"name": "process"}}, production=args.production, is_online=True
             )
+            if corrections_version:                    # without corrections there are no gains to flag
+                set_provisional_gains(run_id, provisional, corrections_version, production=args.production)
             append_processing_history(
                 run_id,
                 action="online_submit",
@@ -314,7 +385,8 @@ def submit_new_jobs(args, runs_col, run_docs_to_do, amstrax_dir):
                 is_online=True,
                 job_name=job_name,
                 targets=list(args.target),
-                corrections_version=args.corrections_version,
+                corrections_version=corrections_version,
+                provisional_gains=provisional,
                 amstrax_path=args.amstrax_path,
                 queue=args.queue,
                 mem=args.mem,
