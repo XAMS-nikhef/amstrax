@@ -41,7 +41,7 @@ class PeakBasicsSiPM(strax.Plugin):
     s2_min_area_fraction_top = amstrax.XAMSConfig(
         default=0, help="Minimum area fraction top for S2s")
     s1_max_area_fraction_top = amstrax.XAMSConfig(
-        default=.2, help="Maximum area fraction top for S1s")
+        default=1.0, help="Maximum area fraction top for S1s (1.0 = no cut; the versions set their own; 0.2 dated from areas in ADC)")
     dtype = [
         (('Start time of the peak (ns since unix epoch)',
           'time'), np.int64),
